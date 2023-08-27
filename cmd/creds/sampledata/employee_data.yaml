@@ -1,0 +1,21 @@
+- credName:             "EmployeeCredential"
+  claims:
+    name:               "Perico Perez"
+    given_name:         "Perico"
+    family_name:        "Perez"
+    preferred_username: "Pepe"
+    email:              "pepe.perez@gmaily.com"
+    roles:
+    - target:           "did:elsi:HappyPets"
+      names:            ["nivel1", "nivel2"]
+
+- credName:             "EmployeeCredential"
+  claims:
+    name:               "Juan Juanez"
+    given_name:         "Juan"
+    family_name:        "Juanez"
+    preferred_username: "john"
+    email:              "juan.juanez@gmaily.com"
+    roles:
+    - target:           "did:elsi:HappyPets"
+      names:            ["nivel2"]
