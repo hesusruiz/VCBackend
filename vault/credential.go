@@ -210,7 +210,26 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 	// The serialized credential
 	fmt.Println("**** Serialized Credential ****")
 	rawJSONCred = b.Bytes()
-	fmt.Printf("%v\n\n", string(rawJSONCred))
+
+	// Compact the serialized representation by Unmarshall and Marshall
+	var temporal any
+	err = json.Unmarshal(rawJSONCred, &temporal)
+	if err != nil {
+		zlog.Logger.Error().Err(err).Send()
+		return "", nil, err
+	}
+	rawJSONCred, err = json.Marshal(temporal)
+	if err != nil {
+		zlog.Logger.Error().Err(err).Send()
+		return "", nil, err
+	}
+	prettyJSONCred, err := json.MarshalIndent(temporal, "", "   ")
+	if err != nil {
+		zlog.Logger.Error().Err(err).Send()
+		return "", nil, err
+	}
+
+	fmt.Printf("%v\n", string(prettyJSONCred))
 	fmt.Println("**** End Serialized Credential ****")
 
 	// Store credential

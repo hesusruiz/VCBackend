@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/utils"
 	qrcode "github.com/skip2/go-qrcode"
@@ -37,6 +38,7 @@ func setupIssuer(s *Server) {
 
 	// Define the prefix for Issuer routes
 	issuerRoutes := s.Group(issuerPrefix)
+	issuerRoutes.Use(cors.New())
 
 	// Forms for new credential
 	issuerRoutes.Get("/newcredential", csrfHandler, issuer.IssuerPageNewCredentialFormDisplay)
@@ -75,7 +77,7 @@ func (i *Issuer) IssuerPageDisplayQRURL(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// QR code for cross-device SIOP
-	template := "{{protocol}}://{{hostname}}{{prefix}}/credential/{{id}}"
+	template := "openid-credential-offer://{{hostname}}{{prefix}}/credential/{{id}}"
 	t := fasttemplate.New(template, "{{", "}}")
 	str := t.ExecuteString(map[string]interface{}{
 		"protocol": c.Protocol(),
@@ -94,12 +96,23 @@ func (i *Issuer) IssuerPageDisplayQRURL(c *fiber.Ctx) error {
 	base64Img := base64.StdEncoding.EncodeToString(png)
 	base64Img = "data:image/png;base64," + base64Img
 
+	// URL to direct the wallet to retrieve the credential
+	template = "{{protocol}}://{{hostname}}/static/wallet?command=getvc&vcid={{id}}"
+	t = fasttemplate.New(template, "{{", "}}")
+	str = t.ExecuteString(map[string]interface{}{
+		"protocol": c.Protocol(),
+		"hostname": c.Hostname(),
+		"prefix":   issuerPrefix,
+		"id":       id,
+	})
+
 	// Render index
 	m := fiber.Map{
 		"issuerPrefix":   issuerPrefix,
 		"verifierPrefix": verifierPrefix,
 		"walletPrefix":   walletPrefix,
 		"qrcode":         base64Img,
+		"url":            str,
 	}
 	return c.Render("issuer_present_qr", m)
 }

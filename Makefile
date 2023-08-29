@@ -7,7 +7,7 @@ credentials:
 datamodel:
 	go generate ./ent
 
-issuer:
+genissuer:
 	go run cmd/issuers/main.go
 
 cleandb:
@@ -16,4 +16,6 @@ cleandb:
 	rm -f wallet.sqlite
 
 serve:
+	faster
 	go run .
+

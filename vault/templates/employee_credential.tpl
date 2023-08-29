@@ -1,5 +1,5 @@
-{{define "EmployeeCredential"}}
-{{ $now := now | unixEpoch }}
+{{define "EmployeeCredential" -}}
+{{ $now := now | unixEpoch -}}
 {
     "@context": [
         "https://www.w3.org/ns/credentials/v2",
@@ -13,14 +13,6 @@
     "issuanceDate": "{{ $now }}",
     "validFrom": "{{ $now }}",
     "expirationDate": "{{ add $now 10000 }}",
-    "credentialSubject": {
-        "id": "{{.subjectDID}}",
-        "roles": {{toJson .claims.roles}},
-        "name": "{{.claims.name}}",
-        "given_name": "{{.claims.given_name}}",
-        "family_name": "{{.claims.family_name}}",
-        "preferred_username": "{{.claims.preferred_username}}",
-        "email": "{{.claims.email}}"
-    }
+    "credentialSubject": {{toPrettyJson .claims}}
 }
 {{end}}

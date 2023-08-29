@@ -15,31 +15,41 @@
 </main>
 
 <script>
-    const intervalID = setInterval(pollServer, 1000, 'nonce');
+    // Schedule a poll to the server each second, until either an error or success is received
+    setTimeout(pollServer, 1000)
 
     async function pollServer(a) {
         try {
             const response = await fetch('{{.verifierPrefix}}/poll/{{.state}}')
             if (!response.ok) {
+                // Stop polling if we receive an error from the transport
                 window.alert("A server error happened.")
-                location = "/verifier"
+                location = "{{.verifierPrefix}}"
                 return
             }
             const data = await response.text()
             if (data === "expired") {
+                // Stop polling if the session expired in the server and present a message
                 location = "{{.verifierPrefix}}/loginexpired"
                 return
             }
             if (data === "pending") {
+                // Poll again in 1 second
+                console.log("pending")
+                setTimeout(pollServer, 1000)
                 return
             }
 
+            // At this point we know the server has received valid data from the wallet
+            // Stop polling and present the logged in screen
             console.log("Received:", data)
             location = "{{.verifierPrefix}}/receivecredential/{{.state}}"
             return
+
         } catch (error) {
+            // Stop polling if we receive an error from the transport
             window.alert("A server error happened.")
-            location = "/verifier"
+            location = "{{.verifierPrefix}}"
             return
         }
     }

@@ -123,6 +123,7 @@ async function loginUser() {
             },
         }
 
+        // Include the session identifier
         var wholeData = {
             response: data,
             session: session
@@ -137,8 +138,9 @@ async function loginUser() {
             },
             credentials: 'include',
             mode: 'cors',
-            body: JSON.stringify(wholeData) // body data type must match "Content-Type" header
+            body: JSON.stringify(wholeData)
         });
+        // Check for an error from the server
         if (!response.ok) {
             var errorText = await response.text()
             console.log(errorText)

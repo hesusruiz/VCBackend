@@ -34,7 +34,7 @@ func setupVerifier(s *Server) {
 
 	// Pages
 
-	// Display a QR code for mobile wallet or a link for enterprise wallet
+	// Display a QR code to login for mobile wallet or a link for enterprise wallet
 	verifierRoutes.Get("/displayqr", verifier.VerifierPageDisplayQRSIOP)
 
 	// Error page when login session has expired without the user sending the credential
@@ -53,7 +53,6 @@ func setupVerifier(s *Server) {
 
 	// Used by the login page from the browser, to check successful login or expiration
 	verifierRoutes.Get("/poll/:state", verifier.VerifierAPIPoll)
-
 	verifierRoutes.Get("/token/:state", verifier.VerifierAPIToken)
 
 	// Start the SIOP flows
@@ -65,6 +64,7 @@ func setupVerifier(s *Server) {
 
 }
 
+// Serve /displayqr route
 func (v *Verifier) VerifierPageDisplayQRSIOP(c *fiber.Ctx) error {
 
 	// Generate the state that will be used for checking expiration and also successful logon
@@ -103,6 +103,7 @@ func (v *Verifier) VerifierPageDisplayQRSIOP(c *fiber.Ctx) error {
 	return c.Render("verifier_present_qr", m)
 }
 
+// Serve /loginexpired route
 func (v *Verifier) VerifierPageLoginExpired(c *fiber.Ctx) error {
 	m := fiber.Map{
 		"prefix": verifierPrefix,
@@ -114,17 +115,9 @@ func (v *Verifier) VerifierPageStartSIOPSameDevice(c *fiber.Ctx) error {
 
 	state := c.Query("state")
 
-	const scope = "dsba.credentials.presentation.PacketDeliveryService"
+	const scope = "dsba.credentials.presentation.EmployeeCredential"
 	const response_type = "vp_token"
 	redirect_uri := c.Protocol() + "://" + c.Hostname() + verifierPrefix + "/authenticationresponse"
-
-	// template := "https://hesusruiz.github.io/faster/?scope={{scope}}" +
-	// 	"&response_type={{response_type}}" +
-	// 	"&response_mode=post" +
-	// 	"&client_id={{client_id}}" +
-	// 	"&redirect_uri={{redirect_uri}}" +
-	// 	"&state={{state}}" +
-	// 	"&nonce={{nonce}}"
 
 	walletUri := c.Protocol() + "://" + c.Hostname() + walletPrefix + "/selectcredential"
 	template := walletUri + "/?scope={{scope}}" +
@@ -166,6 +159,13 @@ func (v *Verifier) VerifierPageReceiveCredential(c *fiber.Ctx) error {
 
 	claims := string(rawCred)
 
+	var p any
+	err := json.Unmarshal(rawCred, &p)
+	if err != nil {
+		return err
+	}
+	prettyClaims, _ := json.MarshalIndent(p, "", "  ")
+
 	// Create an access token from the credential
 	accessToken, err := v.server.verifierVault.CreateAccessToken(claims, v.server.cfg.String("verifier.id"))
 	if err != nil {
@@ -190,7 +190,7 @@ func (v *Verifier) VerifierPageReceiveCredential(c *fiber.Ctx) error {
 		"issuerPrefix":   issuerPrefix,
 		"verifierPrefix": verifierPrefix,
 		"walletPrefix":   walletPrefix,
-		"claims":         claims,
+		"claims":         string(prettyClaims),
 		"prefix":         verifierPrefix,
 	}
 	return c.Render("verifier_receivedcredential", m)
@@ -338,10 +338,6 @@ func (v *Verifier) VerifierAPIAuthenticationResponseVP(c *fiber.Ctx) error {
 	return c.SendString("ok")
 }
 
-type verifiableCredential struct {
-	Credential *json.RawMessage `json:"credential"`
-}
-
 func (v *Verifier) VerifierAPIAuthenticationResponse(c *fiber.Ctx) error {
 
 	// Get the state
@@ -350,15 +346,39 @@ func (v *Verifier) VerifierAPIAuthenticationResponse(c *fiber.Ctx) error {
 	// We should receive the credential in the body as JSON
 	body := c.Body()
 	v.server.logger.Infof("Authenticate for state '%s' with %s", state, body)
+
 	// Decode into a map
+	authResponse, err := yaml.ParseJson(string(body))
+	if err != nil {
+		v.server.logger.Errorw("invalid vp received", zap.Error(err))
+		return err
+	}
 
-	vc := &verifiableCredential{}
-	json.Unmarshal(body, vc)
+	vp_token := authResponse.String("vp_token")
 
-	// Validate the credential
-	v.server.logger.Infof("Store credential %s", *vc.Credential)
+	// Decode VP from B64Url
+	rawVP, err := base64.RawURLEncoding.DecodeString(vp_token)
+	if err != nil {
+		return err
+	}
+
+	vp, err := yaml.ParseJson(string(rawVP))
+	if err != nil {
+		v.server.logger.Errorw("invalid vp received", zap.Error(err))
+		return err
+	}
+	credentials := vp.List("verifiableCredential")
+	firstCredential := credentials[0]
+
+	serialCredential, err := json.Marshal(firstCredential)
+	if err != nil {
+		return err
+	}
+	fmt.Println(serialCredential)
+	v.server.logger.Infof("Credential: %s", serialCredential)
+
 	// Set the credential in storage, and wait for the polling from client
-	v.server.storage.Set(state, *vc.Credential, 10*time.Second)
+	v.server.storage.Set(state, serialCredential, 10*time.Second)
 
 	v.server.logger.Infof("Stored for state %s", state)
 	return c.SendString("ok")
@@ -427,7 +447,7 @@ func createAuthenticationRequest(verifierDID string, redirect_uri string, state 
 	// This specifies the type of credential that the Verifier will accept
 	// TODO: In this use case it is hardcoded, which is enough if the Verifier is simple and uses
 	// only one type of credential for authentication its users.
-	const scope = "dsba.credentials.presentation.PacketDeliveryService"
+	const scope = "dsba.credentials.presentation.EmployeeCredential"
 
 	// The response type should be 'vp_token'
 	const response_type = "vp_token"

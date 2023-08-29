@@ -7,7 +7,7 @@
     email:              "pepe.perez@gmaily.com"
     roles:
     - target:           "did:elsi:HappyPets"
-      names:            ["nivel1", "nivel2"]
+      names:            ["Financiero", "Superjefa"]
 
 - credName:             "EmployeeCredential"
   claims:
@@ -18,4 +18,5 @@
     email:              "juan.juanez@gmaily.com"
     roles:
     - target:           "did:elsi:HappyPets"
-      names:            ["nivel2"]
+      names:            ["Ex-empleado"]
+
