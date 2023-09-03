@@ -30,7 +30,7 @@ window.MHR.register("LogsPage", class LogsPage extends window.MHR.AbstractPage {
 
         <ul class="w3-ul">
             ${items.map(
-            ({timestamp, desc}, i) => html`<li>${shortDate(timestamp)}-${desc}</li>`
+            ({timestamp, desc, item}, i) => html`<li>${shortDate(timestamp)}-${desc} ${item}</li>`
             )}
         </ul>
 

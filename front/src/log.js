@@ -39,11 +39,10 @@ export var log = {
     
     },
         
-    log(_desc) {
+    log(_desc, ...additional) {
         if (LOG_ALL) {
-            var args = Array.prototype.slice.call(arguments, 1);
-            console.log(_desc, args)
-            this.mylog_entry("N", _desc, args)
+            console.log(_desc, ...additional)
+            this.mylog_entry("N", _desc, ...additional)
         }
     },
 

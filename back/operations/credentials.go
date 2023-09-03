@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/hesusruiz/vcbackend/internal/util"
 )
 
 type EmployeeCredentialData struct {
@@ -68,7 +69,7 @@ func (m *Manager) CreateServiceCredential(credIn map[string]any) (string, []byte
 	credIn["issuerDID"] = m.cfg.String("issuer.DID")
 
 	// Check if the user is already registered. We use the email as a unique identifier
-	usr, err := m.v.UserByID(credIn["email"].(string))
+	usr, err := m.vault.UserByID(credIn["email"].(string))
 	if err != nil {
 		return "", nil, fiber.NewError(fiber.StatusInternalServerError, "error searching for user")
 	}
@@ -76,7 +77,7 @@ func (m *Manager) CreateServiceCredential(credIn map[string]any) (string, []byte
 	// Create a new user if it does not exist yet, with a default password
 	if usr == nil {
 		userName := credIn["familyName"].(string) + ", " + credIn["firstName"].(string)
-		usr, err = m.v.CreateNaturalPersonWithKey(credIn["email"].(string), userName, "ThePassword")
+		usr, err = m.vault.CreateNaturalPersonWithKey(credIn["email"].(string), userName, "ThePassword")
 		if err != nil {
 			return "", nil, fiber.NewError(fiber.StatusInternalServerError, "error creating new user")
 		}
@@ -95,7 +96,7 @@ func (m *Manager) CreateServiceCredential(credIn map[string]any) (string, []byte
 
 	credIn["subjectDID"] = "did:key:" + usr.ID
 
-	return m.v.CreateCredentialJWTFromMap(credIn)
+	return m.vault.CreateCredentialJWTFromMap(credIn)
 
 }
 
@@ -105,7 +106,7 @@ type CredentialSummary struct {
 }
 
 func (m *Manager) GetAllCredentials() ([]CredentialSummary, error) {
-	rawCreds := m.v.GetAllCredentials()
+	rawCreds := m.vault.GetAllCredentials()
 
 	credentials := make([]CredentialSummary, len(rawCreds))
 
@@ -127,7 +128,7 @@ func (m *Manager) GetCredential(credID string) (claims string, err error) {
 
 	// Check if the credential already exists
 
-	rawCred, err := m.v.Client.Credential.Get(context.Background(), credID)
+	rawCred, err := m.vault.Client.Credential.Get(context.Background(), credID)
 	if err != nil {
 		return "", err
 	}
@@ -167,20 +168,13 @@ func (m *Manager) GetCredentialLD(credID string) (claims string, err error) {
 
 	// Check if the credential already exists
 
-	rawCred, err := m.v.Client.Credential.Get(context.Background(), credID)
+	rawCred, err := m.vault.Client.Credential.Get(context.Background(), credID)
 	if err != nil {
 		return "", err
 	}
 
-	s := prettyFormatJSON(rawCred.Raw)
+	s := util.PrettyFormatJSON(rawCred.Raw)
 
 	return s, nil
 
-}
-
-func prettyFormatJSON(in []byte) string {
-	decoded := &fiber.Map{}
-	json.Unmarshal(in, decoded)
-	out, _ := json.MarshalIndent(decoded, "", "  ")
-	return string(out)
 }

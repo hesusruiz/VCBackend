@@ -41,9 +41,11 @@ type UserEdges struct {
 	Dids []*DID `json:"dids,omitempty"`
 	// Credentials holds the value of the credentials edge.
 	Credentials []*Credential `json:"credentials,omitempty"`
+	// Authncredentials holds the value of the authncredentials edge.
+	Authncredentials []*WebauthnCredential `json:"authncredentials,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // KeysOrErr returns the Keys value or an error if the edge
@@ -71,6 +73,15 @@ func (e UserEdges) CredentialsOrErr() ([]*Credential, error) {
 		return e.Credentials, nil
 	}
 	return nil, &NotLoadedError{edge: "credentials"}
+}
+
+// AuthncredentialsOrErr returns the Authncredentials value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) AuthncredentialsOrErr() ([]*WebauthnCredential, error) {
+	if e.loadedTypes[3] {
+		return e.Authncredentials, nil
+	}
+	return nil, &NotLoadedError{edge: "authncredentials"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -159,6 +170,11 @@ func (u *User) QueryDids() *DIDQuery {
 // QueryCredentials queries the "credentials" edge of the User entity.
 func (u *User) QueryCredentials() *CredentialQuery {
 	return (&UserClient{config: u.config}).QueryCredentials(u)
+}
+
+// QueryAuthncredentials queries the "authncredentials" edge of the User entity.
+func (u *User) QueryAuthncredentials() *WebauthnCredentialQuery {
+	return (&UserClient{config: u.config}).QueryAuthncredentials(u)
 }
 
 // Update returns a builder for updating this User.

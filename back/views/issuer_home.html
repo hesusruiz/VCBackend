@@ -2,18 +2,39 @@
 
 <main class="w3-container">
 
-
     {{if .credlist}}
     <h3>Credentials</h3>
 
     <div class="w3-row">
-        {{range .credlist}}
+    {{range .credlist}}
 
         <div class="w3-half w3-container w3-margin-bottom">
             <div class="w3-card-4">
                 <div class=" w3-container w3-margin-bottom color-primary">
-                    <h4>{{.Id}}</h4>
+                    <h5>Employee</h5>
                 </div>
+
+                {{with mustFromJson .PrettyCred}}
+
+                <div class="w3-container">
+                    <img src="https://www.w3schools.com/w3css/img_avatar3.png" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
+                    <p class="w3-large">{{.credentialSubject.name}}</p>
+                    <hr>
+                <div class="w3-row-padding">
+
+                    {{with .credentialSubject.position}}
+                    <p class="w3-margin-bottom5">{{.department}}</p>
+                    <p class="w3-margin-bottom5">{{.secretariat}}</p>
+                    <p class="w3-margin-bottom5">{{.directorate}}</p>
+                    <p class="w3-margin-bottom5">{{.subdirectorate}}</p>
+                    <p class="w3-margin-bottom5">{{.service}}</p>
+                    <p class="w3-margin-bottom5">{{.section}}</p>
+                    {{end}}
+
+                </div>
+                
+                </div>
+                {{end}}
 
                 <div class="w3-container w3-padding-16">
                     <a href="{{$.issuerPrefix}}/creddetails/{{.Id}}" class="btn-primary">Details</a>
@@ -23,7 +44,7 @@
             </div>
         </div>
 
-        {{end}}
+    {{end}}
     </div>
 
     {{else}}

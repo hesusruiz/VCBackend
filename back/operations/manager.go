@@ -3,31 +3,26 @@ package operations
 import (
 	"github.com/hesusruiz/vcbackend/vault"
 	"github.com/hesusruiz/vcutils/yaml"
-
-	zlog "github.com/rs/zerolog/log"
 )
 
 type Manager struct {
-	v   *vault.Vault
-	cfg *yaml.YAML
+	vault *vault.Vault
+	cfg   *yaml.YAML
 }
 
-func NewManager(cfg *yaml.YAML) *Manager {
-
-	// Open the Vault
-	v, err := vault.New(cfg)
-	if err != nil {
-		zlog.Panic().Err(err).Send()
-	}
+func NewManager(v *vault.Vault, cfg *yaml.YAML) *Manager {
 
 	manager := &Manager{
-		v:   v,
-		cfg: cfg,
+		vault: v,
+		cfg:   cfg,
 	}
 	return manager
 
 }
 
 func (m *Manager) User() *User {
-	return &User{db: m.v.Client}
+	return &User{
+		db:    m.vault.Client,
+		vault: m.vault,
+	}
 }

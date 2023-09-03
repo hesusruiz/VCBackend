@@ -24,12 +24,13 @@ type config struct {
 
 // hooks per client, for fast access.
 type hooks struct {
-	Credential    []ent.Hook
-	DID           []ent.Hook
-	NaturalPerson []ent.Hook
-	PrivateKey    []ent.Hook
-	PublicKey     []ent.Hook
-	User          []ent.Hook
+	Credential         []ent.Hook
+	DID                []ent.Hook
+	NaturalPerson      []ent.Hook
+	PrivateKey         []ent.Hook
+	PublicKey          []ent.Hook
+	User               []ent.Hook
+	WebauthnCredential []ent.Hook
 }
 
 // Options applies the options on the config object.

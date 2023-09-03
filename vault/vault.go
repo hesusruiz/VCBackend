@@ -204,14 +204,15 @@ func (v *Vault) CreateUserWithKey(userid string, name string, usertype string, p
 
 func (v *Vault) CreateOrGetUserWithDIDKey(userid string, name string, usertype string, password string) (usr *ent.User, did string, err error) {
 
-	// Return an error if the user already exists
+	// Return the user and DID if they already exist.
+	// It is an error if the DID does not exist for a user
 	usr, _ = v.Client.User.Get(context.Background(), userid)
 	if usr != nil {
 		did, err := v.GetDIDForUser(userid)
 		if err != nil {
 			return nil, "", err
 		}
-		return nil, did, nil
+		return usr, did, nil
 	}
 
 	// Calculate the password to store
@@ -225,6 +226,7 @@ func (v *Vault) CreateOrGetUserWithDIDKey(userid string, name string, usertype s
 		Create().
 		SetID(userid).
 		SetName(name).
+		SetDisplayname(name).
 		SetType(usertype).
 		SetPassword(hashedPassword).
 		Save(context.Background())

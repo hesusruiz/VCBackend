@@ -1,6 +1,6 @@
 import {
   log
-} from "../chunks/chunk-FVTRWWP3.js";
+} from "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-KRYK5JSZ.js";
 
 // front/node_modules/js-base64/base64.mjs
@@ -169,15 +169,32 @@ window.MHR.register("SIOPSelectCredential", class SIOPSelectCredential extends w
   }
   async enter(qrData) {
     let html = this.html;
-    console.log("Inside SIOPSelectCredential:", qrData);
+    log.log("Inside SIOPSelectCredential:", qrData);
     if (qrData == null) {
-      qrData = "No data received";
+      log.error("No URL has been specified");
+      gotoPage("ErrorPage", {
+        title: "Error",
+        msg: "No URL has been specified"
+      });
+      return;
     }
     qrData = qrData.replace("openid://?", "");
     var params = new URLSearchParams(qrData);
     var redirect_uri = params.get("redirect_uri");
     var state = params.get("state");
-    console.log("state", state, "redirect_uri", redirect_uri);
+    var scope = params.get("scope");
+    log.log("state", state, "redirect_uri", redirect_uri);
+    log.log("redirect_uri", redirect_uri);
+    log.log("scope", scope);
+    var credentialType = "Employee";
+    if (scope != "dsba.credentials.presentation.Employee") {
+      log.error("invalid scope:", scope);
+      gotoPage("ErrorPage", {
+        title: "Error",
+        msg: "Invalid credential requested"
+      });
+      return;
+    }
     let total = 0;
     if (!!window.localStorage.getItem("W3C_VC_LD_TOTAL")) {
       total = parseInt(window.localStorage.getItem("W3C_VC_LD_TOTAL"));
@@ -199,57 +216,57 @@ window.MHR.register("SIOPSelectCredential", class SIOPSelectCredential extends w
         qrContent.push(window.localStorage.getItem(currentId));
       }
     }
-    console.log("credential", qrContent);
+    log.log("credential", qrContent);
     let theHtml = html`
-            <p></p>
-            <div class="w3-row">
+        <p></p>
+        <div class="w3-row">
 
-                <div class="w3-half w3-container w3-margin-bottom">
-                    <div class="w3-card-4">
-                        <div class=" w3-container w3-margin-bottom color-primary">
-                            <h4>Authorization Request received</h4>
-                        </div>
-
-                        <div class=" w3-container">
-                        <p>
-                            The Verifier has requested a Verifiable Credential to perform authentication.
-                        </p>
-                        <p>
-                            If you want to send the credential, click the button "Send Credential".
-                        </p>
-                        </div>
-            
-                        <div class="w3-container w3-padding-16">
-                            <btn-primary @click=${() => sendCredential(redirect_uri, qrContent, state)}>${T("Send Credential")}</btn-primary>
-                        </div>
-            
+            <div class="w3-half w3-container w3-margin-bottom">
+                <div class="w3-card-4">
+                    <div class=" w3-container w3-margin-bottom color-primary">
+                        <h4>Authorization Request received</h4>
                     </div>
-                </div>            
-            </div>
+
+                    <div class=" w3-container">
+                    <p>
+                        The Verifier has requested a Verifiable Credential of type ${credentialType} to perform authentication.
+                    </p>
+                    <p>
+                        If you want to send the credential, click the button "Send Credential".
+                    </p>
+                    </div>
+        
+                    <div class="w3-container w3-padding-16">
+                        <btn-primary @click=${() => sendCredential(redirect_uri, qrContent, state)}>${T("Send Credential")}</btn-primary>
+                    </div>
+        
+                </div>
+            </div>            
+        </div>
         `;
     this.render(theHtml);
   }
 });
 async function sendCredential(backEndpoint, credential, state) {
-  console.log("sending POST to:", backEndpoint + "?state=" + state);
+  log.log("sending POST to:", backEndpoint + "?state=" + state);
   var ps = {
     id: "Placeholder - not yet evaluated.",
     definition_id: "Example definition."
   };
   log.log("The credential: " + credential);
   var vpToken = {
-    context: ["https://www.w3.org/2018/credentials/v1"],
+    context: ["https://www.w3.org/ns/credentials/v2"],
     type: ["VerifiablePresentation"],
     verifiableCredential: JSON.parse("[" + credential + "]"),
     holder: "did:my:wallet"
   };
-  console.log("The encoded credential " + gBase64.encodeURI(JSON.stringify(vpToken)));
+  log.log("The encoded credential ", gBase64.encodeURI(JSON.stringify(vpToken)));
   var formAttributes = {
     "vp_token": gBase64.encodeURI(JSON.stringify(vpToken)),
     "presentation_submission": gBase64.encodeURI(JSON.stringify(ps))
   };
   var formBody = JSON.stringify(formAttributes);
-  console.log("The body: " + formBody);
+  log.log("The body: " + formBody);
   try {
     let response = await fetch(backEndpoint + "?state=" + state, {
       method: "POST",
@@ -260,23 +277,207 @@ async function sendCredential(backEndpoint, credential, state) {
       },
       body: formBody
     });
-    if (response.ok) {
-      gotoPage("ErrorPage", {
-        title: "Error",
-        msg: "Error sending the credential"
-      });
-      return null;
+    if (response.status == 404) {
+      var email = await response.text();
+      log.log("credential sent, registering user", email);
+      let error = await registerUser(email, state);
+      if (error == null) {
+        log.log("Authenticator credential sent successfully to server");
+        gotoPage("MessagePage", {
+          title: "Credential sent",
+          msg: "Registration successful"
+        });
+      } else {
+        log.error(error);
+        gotoPage("ErrorPage", {
+          title: "Error",
+          msg: "Error sending the credential"
+        });
+      }
+      return;
     }
-    gotoPage("MessagePage", {
-      title: "Credential sent",
-      msg: "The credential has been sent to the Verifier"
-    });
-    return null;
-  } catch (error) {
+    if (response.status == 200) {
+      var email = await response.text();
+      log.log("credential sent, authenticating user", email);
+      let error = await loginUser(email, state);
+      if (error) {
+        log.error(error);
+        gotoPage("ErrorPage", {
+          title: "Error",
+          msg: "Error sending the credential"
+        });
+      } else {
+        log.log("Authenticator credential sent successfully to server");
+        gotoPage("MessagePage", {
+          title: "Credential sent",
+          msg: "Authentication successful"
+        });
+      }
+      return;
+    }
+    log.error("error sending credential", response.status);
     gotoPage("ErrorPage", {
       title: "Error",
       msg: "Error sending the credential"
     });
-    return null;
+    return;
+  } catch (error) {
+    log.error(error);
+    gotoPage("ErrorPage", {
+      title: "Error",
+      msg: "Error sending the credential"
+    });
+    return;
   }
+}
+var apiPrefix = "/webauthn";
+async function registerUser(username, state) {
+  try {
+    var response = await fetch(apiPrefix + "/register/begin/" + username + "?state=" + state, { credentials: "include" });
+    if (!response.ok) {
+      var errorText = await response.text();
+      log.log(errorText);
+      return "error";
+    }
+    var responseJSON = await response.json();
+    var credentialCreationOptions = responseJSON.options;
+    var session = responseJSON.session;
+    log.log("Received CredentialCreationOptions", credentialCreationOptions);
+    log.log("Session:", session);
+    credentialCreationOptions.publicKey.challenge = bufferDecode(credentialCreationOptions.publicKey.challenge);
+    credentialCreationOptions.publicKey.user.id = bufferDecode(credentialCreationOptions.publicKey.user.id);
+    if (credentialCreationOptions.publicKey.excludeCredentials) {
+      for (var i = 0; i < credentialCreationOptions.publicKey.excludeCredentials.length; i++) {
+        credentialCreationOptions.publicKey.excludeCredentials[i].id = bufferDecode(credentialCreationOptions.publicKey.excludeCredentials[i].id);
+      }
+    }
+    log.log("creating new Authenticator credential");
+    try {
+      var credential = await navigator.credentials.create({
+        publicKey: credentialCreationOptions.publicKey
+      });
+    } catch (error) {
+      log.error(error);
+      return error;
+    }
+    log.log("Authenticator created Credential", credential);
+    let attestationObject = credential.response.attestationObject;
+    let clientDataJSON = credential.response.clientDataJSON;
+    let rawId = credential.rawId;
+    var data = {
+      id: credential.id,
+      rawId: bufferEncode(rawId),
+      type: credential.type,
+      response: {
+        attestationObject: bufferEncode(attestationObject),
+        clientDataJSON: bufferEncode(clientDataJSON)
+      }
+    };
+    var wholeData = {
+      response: data,
+      session
+    };
+    log.log("sending Authenticator credential to server");
+    var response = await fetch(apiPrefix + "/register/finish/" + username + "?state=" + state, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "session_id": session
+      },
+      credentials: "include",
+      mode: "cors",
+      body: JSON.stringify(wholeData)
+    });
+    if (!response.ok) {
+      var errorText = await response.text();
+      log.log(errorText);
+      return "error";
+    }
+    log.log("Authenticator credential sent successfully to server");
+    return;
+  } catch (error) {
+    log.error(error);
+    return error;
+  }
+}
+async function loginUser(username, state) {
+  try {
+    var response = await fetch(apiPrefix + "/login/begin/" + username + "?state=" + state, { credentials: "include" });
+    if (!response.ok) {
+      log.error("error requesting CredentialRequestOptions", response.status);
+      return "error";
+    }
+    var responseJSON = await response.json();
+    var credentialRequestOptions = responseJSON.options;
+    var session = responseJSON.session;
+    log.log("Received CredentialRequestOptions", credentialRequestOptions);
+    credentialRequestOptions.publicKey.challenge = bufferDecode(credentialRequestOptions.publicKey.challenge);
+    credentialRequestOptions.publicKey.allowCredentials.forEach(function(listItem) {
+      listItem.id = bufferDecode(listItem.id);
+    });
+    try {
+      var assertion = await navigator.credentials.get({
+        publicKey: credentialRequestOptions.publicKey
+      });
+      if (assertion == null) {
+        log.error("null assertion received from authenticator device");
+        return "error";
+      }
+    } catch (error) {
+      log.error(error);
+      return error;
+    }
+    log.log("Authenticator created Assertion", assertion);
+    let authData = assertion.response.authenticatorData;
+    let clientDataJSON = assertion.response.clientDataJSON;
+    let rawId = assertion.rawId;
+    let sig = assertion.response.signature;
+    let userHandle = assertion.response.userHandle;
+    var data = {
+      id: assertion.id,
+      rawId: bufferEncode(rawId),
+      type: assertion.type,
+      response: {
+        authenticatorData: bufferEncode(authData),
+        clientDataJSON: bufferEncode(clientDataJSON),
+        signature: bufferEncode(sig),
+        userHandle: bufferEncode(userHandle)
+      }
+    };
+    var wholeData = {
+      response: data,
+      session
+    };
+    try {
+      var response = await fetch(apiPrefix + "/login/finish/" + username + "?state=" + state, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "session_id": session
+        },
+        credentials: "include",
+        mode: "cors",
+        body: JSON.stringify(wholeData)
+      });
+      if (!response.ok) {
+        var errorText = await response.text();
+        log.log(errorText);
+        return "error";
+      }
+      return;
+    } catch (error) {
+      log.error(error);
+      return error;
+    }
+  } catch (error) {
+    log.error(error);
+    return error;
+  }
+}
+function bufferDecode(value) {
+  return Uint8Array.from(atob(value), (c) => c.charCodeAt(0));
+}
+function bufferEncode(value) {
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(value))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+  ;
 }

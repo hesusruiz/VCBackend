@@ -252,7 +252,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
 
         // Handle a SIOP AuthenticationRequest QR
         if (qrType === QR_SIOP_URL) {
-            console.log("Going to ", "SIOPSelectCredential", qrData)
+            log.log("Going to ", "SIOPSelectCredential", qrData)
             window.MHR.gotoPage("SIOPSelectCredential", qrData)
             return true;
         }

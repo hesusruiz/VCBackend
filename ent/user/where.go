@@ -782,6 +782,34 @@ func HasCredentialsWith(preds ...predicate.Credential) predicate.User {
 	})
 }
 
+// HasAuthncredentials applies the HasEdge predicate on the "authncredentials" edge.
+func HasAuthncredentials() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(AuthncredentialsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AuthncredentialsTable, AuthncredentialsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAuthncredentialsWith applies the HasEdge predicate on the "authncredentials" edge with a given conditions (other predicates).
+func HasAuthncredentialsWith(preds ...predicate.WebauthnCredential) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(AuthncredentialsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AuthncredentialsTable, AuthncredentialsColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(func(s *sql.Selector) {

@@ -1,6 +1,6 @@
 import {
   log
-} from "../chunks/chunk-FVTRWWP3.js";
+} from "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-KRYK5JSZ.js";
 
 // front/src/pages/DisplayVC.js

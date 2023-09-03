@@ -61,3 +61,4 @@ btn-primary.w3-disabled:hover,btn-primary:disabled:hover{box-shadow:none}
 }
 
 .w3-half-centered{margin:auto;max-width: 500px;}
+.w3-margin-bottom5{margin-bottom:5px!important;margin-top:0px!important;margin-left:20px!important}

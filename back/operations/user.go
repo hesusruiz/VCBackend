@@ -6,6 +6,7 @@ import (
 
 	"github.com/hesusruiz/vcbackend/ent"
 	"github.com/hesusruiz/vcbackend/ent/user"
+	"github.com/hesusruiz/vcbackend/vault"
 
 	"github.com/duo-labs/webauthn/protocol"
 	"github.com/duo-labs/webauthn/webauthn"
@@ -15,6 +16,7 @@ import (
 // User represents the user model
 // It implements the webauthn.User interface
 type User struct {
+	vault       *vault.Vault
 	db          *ent.Client
 	entuser     *ent.User
 	id          string
@@ -25,7 +27,7 @@ type User struct {
 
 func (u *User) Create(name string, displayName string) (*User, error) {
 
-	u.id = randomString()
+	u.id = name
 	u.name = name
 	u.displayName = displayName
 
@@ -56,19 +58,23 @@ func (u *User) GetByName(name string) (*User, error) {
 
 }
 
-func (u *User) GetOrCreate(name string, displayName string) (*User, error) {
+func (u *User) CreateOrGet(userid string, displayName string) (*User, error) {
 	var err error
 
-	// Search for the user
-	_, err = u.GetByName(name)
-
-	if ent.IsNotFound(err) {
-		// User was not found, create a new user
-		return u.Create(name, displayName)
-	} else {
-		// Return the retrieved user, or an error
-		return u, err
+	entuser, _, err := u.vault.CreateOrGetUserWithDIDKey(userid, userid, "naturalperson", "ThePassword")
+	if err != nil {
+		return nil, err
 	}
+
+	u.id = entuser.ID
+	u.name = entuser.Name
+	u.displayName = entuser.Displayname
+	u.entuser = entuser
+
+	// Get the credentials
+	u.WebAuthnCredentials()
+
+	return u, nil
 
 }
 
@@ -93,35 +99,34 @@ func (u User) WebAuthnIcon() string {
 }
 
 // AddCredential associates the credential to the user
-// func (u *User) AddCredential(cred webauthn.Credential) {
-// 	if u.entuser == nil {
-// 		zlog.Panic().Msg("User model not initialized")
-// 	}
+func (u *User) AddCredential(cred webauthn.Credential) {
+	if u.entuser == nil {
+		zlog.Panic().Msg("User model not initialized")
+	}
 
-// 	u.db.WebauthnCredential.Create().
-// 		SetID(string(cred.ID)).
-// 		SetCredential(cred).
-// 		SetUser(u.entuser).
-// 		SaveX(context.Background())
+	u.db.WebauthnCredential.Create().
+		SetID(string(cred.ID)).
+		SetCredential(cred).
+		SetUser(u.entuser).
+		SaveX(context.Background())
 
-// }
+}
 
 // WebAuthnCredentials returns credentials owned by the user
 func (u *User) WebAuthnCredentials() []webauthn.Credential {
-	return nil
-	// if u.entuser == nil {
-	// 	zlog.Panic().Msg("User model not initialized")
-	// }
+	if u.entuser == nil {
+		zlog.Panic().Msg("User model not initialized")
+	}
 
-	// entCreds := u.db.User.QueryCredentials(u.entuser).AllX(context.Background())
+	entCreds := u.db.User.QueryAuthncredentials(u.entuser).AllX(context.Background())
 
-	// u.credentials = make([]webauthn.Credential, len(entCreds))
+	u.credentials = make([]webauthn.Credential, len(entCreds))
 
-	// for i, ec := range entCreds {
-	// 	u.credentials[i] = ec.Credential
-	// }
+	for i, ec := range entCreds {
+		u.credentials[i] = ec.Credential
+	}
 
-	// return u.credentials
+	return u.credentials
 }
 
 // CredentialExcludeList returns a CredentialDescriptor array filled

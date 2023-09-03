@@ -1,22 +1,31 @@
-- credName:             "EmployeeCredential"
+- credName:             "dsba.credentials.presentation.Employee"
   claims:
-    name:               "Perico Perez"
-    given_name:         "Perico"
-    family_name:        "Perez"
-    preferred_username: "Pepe"
-    email:              "pepe.perez@gmaily.com"
-    roles:
-    - target:           "did:elsi:HappyPets"
-      names:            ["Financiero", "Superjefa"]
+    name:               "John Doe"
+    given_name:         "John"
+    family_name:        "Doe"
+    preferred_username: "John"
+    email:              "john.doe@gmaily.com"
+    position:
+      department:       "Department One"
+      secretariat:      "Secretaria Two"
+      directorate:      "General Direction of Many things"
+      subdirectorate:   "Subdirection of some things"
+      service:          "Service of Good things"
+      section:          "Section of really good things"
+      title:            "Manager of only one thing"
 
-- credName:             "EmployeeCredential"
+- credName:             "dsba.credentials.presentation.Employee"
   claims:
-    name:               "Juan Juanez"
-    given_name:         "Juan"
-    family_name:        "Juanez"
-    preferred_username: "john"
-    email:              "juan.juanez@gmaily.com"
-    roles:
-    - target:           "did:elsi:HappyPets"
-      names:            ["Ex-empleado"]
-
+    name:               "Anna Smith"
+    given_name:         "Anna"
+    family_name:        "Smith"
+    preferred_username: "Anna"
+    email:              "anna.smith@gmaily.com"
+    position:
+      department:       "Department One"
+      secretariat:      "Secretaria Two"
+      directorate:      "General Direction of Many things"
+      subdirectorate:   "Subdirection of some things"
+      service:          "Service of Good things"
+      section:          "Section of really good things"
+      title:            "Manager of another thing"

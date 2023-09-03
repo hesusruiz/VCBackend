@@ -1,7 +1,7 @@
 import "../chunks/chunk-65N62L2T.js";
 import {
   log
-} from "../chunks/chunk-FVTRWWP3.js";
+} from "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-KRYK5JSZ.js";
 
 // front/src/pages/LogsPage.js
@@ -27,7 +27,7 @@ window.MHR.register("LogsPage", class LogsPage extends window.MHR.AbstractPage {
 
         <ul class="w3-ul">
             ${items.map(
-      ({ timestamp, desc }, i) => html2`<li>${shortDate(timestamp)}-${desc}</li>`
+      ({ timestamp, desc, item }, i) => html2`<li>${shortDate(timestamp)}-${desc} ${item}</li>`
     )}
         </ul>
 

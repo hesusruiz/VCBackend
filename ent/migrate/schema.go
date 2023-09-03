@@ -139,6 +139,28 @@ var (
 		Columns:    UsersColumns,
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 	}
+	// WebauthnCredentialsColumns holds the columns for the "webauthn_credentials" table.
+	WebauthnCredentialsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "credential", Type: field.TypeJSON},
+		{Name: "user_authncredentials", Type: field.TypeString},
+	}
+	// WebauthnCredentialsTable holds the schema information for the "webauthn_credentials" table.
+	WebauthnCredentialsTable = &schema.Table{
+		Name:       "webauthn_credentials",
+		Columns:    WebauthnCredentialsColumns,
+		PrimaryKey: []*schema.Column{WebauthnCredentialsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "webauthn_credentials_users_authncredentials",
+				Columns:    []*schema.Column{WebauthnCredentialsColumns[4]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		CredentialsTable,
@@ -147,6 +169,7 @@ var (
 		PrivateKeysTable,
 		PublicKeysTable,
 		UsersTable,
+		WebauthnCredentialsTable,
 	}
 )
 
@@ -156,4 +179,5 @@ func init() {
 	DiDsTable.ForeignKeys[0].RefTable = UsersTable
 	PrivateKeysTable.ForeignKeys[0].RefTable = NaturalPersonsTable
 	PrivateKeysTable.ForeignKeys[1].RefTable = UsersTable
+	WebauthnCredentialsTable.ForeignKeys[0].RefTable = UsersTable
 }

@@ -48,9 +48,9 @@ ssikit:
   essifURL: localhost:7010
 
 webauthn:
-  RPDisplayName: "Gaia-X AISBL"
-  RPID: "localhost"
-  RPOrigin: "http://localhost:3000"
-  AuthenticatorAttachment: "platform"
+  RPDisplayName: "EvidenceLedger"
+  RPID: "evolving-catfish-honestly.ngrok-free.app"
+  RPOrigin: "https://evolving-catfish-honestly.ngrok-free.app"
+  AuthenticatorAttachment: "cross-platform"
   UserVerification: "required"
 

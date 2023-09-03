@@ -16,6 +16,7 @@ import (
 	"github.com/hesusruiz/vcbackend/ent/predicate"
 	"github.com/hesusruiz/vcbackend/ent/privatekey"
 	"github.com/hesusruiz/vcbackend/ent/user"
+	"github.com/hesusruiz/vcbackend/ent/webauthncredential"
 )
 
 // UserQuery is the builder for querying User entities.
@@ -28,9 +29,10 @@ type UserQuery struct {
 	fields     []string
 	predicates []predicate.User
 	// eager-loading edges.
-	withKeys        *PrivateKeyQuery
-	withDids        *DIDQuery
-	withCredentials *CredentialQuery
+	withKeys             *PrivateKeyQuery
+	withDids             *DIDQuery
+	withCredentials      *CredentialQuery
+	withAuthncredentials *WebauthnCredentialQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -126,6 +128,28 @@ func (uq *UserQuery) QueryCredentials() *CredentialQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(credential.Table, credential.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.CredentialsTable, user.CredentialsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAuthncredentials chains the current query on the "authncredentials" edge.
+func (uq *UserQuery) QueryAuthncredentials() *WebauthnCredentialQuery {
+	query := &WebauthnCredentialQuery{config: uq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(webauthncredential.Table, webauthncredential.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.AuthncredentialsTable, user.AuthncredentialsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
 		return fromU, nil
@@ -309,14 +333,15 @@ func (uq *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:          uq.config,
-		limit:           uq.limit,
-		offset:          uq.offset,
-		order:           append([]OrderFunc{}, uq.order...),
-		predicates:      append([]predicate.User{}, uq.predicates...),
-		withKeys:        uq.withKeys.Clone(),
-		withDids:        uq.withDids.Clone(),
-		withCredentials: uq.withCredentials.Clone(),
+		config:               uq.config,
+		limit:                uq.limit,
+		offset:               uq.offset,
+		order:                append([]OrderFunc{}, uq.order...),
+		predicates:           append([]predicate.User{}, uq.predicates...),
+		withKeys:             uq.withKeys.Clone(),
+		withDids:             uq.withDids.Clone(),
+		withCredentials:      uq.withCredentials.Clone(),
+		withAuthncredentials: uq.withAuthncredentials.Clone(),
 		// clone intermediate query.
 		sql:    uq.sql.Clone(),
 		path:   uq.path,
@@ -354,6 +379,17 @@ func (uq *UserQuery) WithCredentials(opts ...func(*CredentialQuery)) *UserQuery 
 		opt(query)
 	}
 	uq.withCredentials = query
+	return uq
+}
+
+// WithAuthncredentials tells the query-builder to eager-load the nodes that are connected to
+// the "authncredentials" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithAuthncredentials(opts ...func(*WebauthnCredentialQuery)) *UserQuery {
+	query := &WebauthnCredentialQuery{config: uq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withAuthncredentials = query
 	return uq
 }
 
@@ -425,10 +461,11 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = uq.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			uq.withKeys != nil,
 			uq.withDids != nil,
 			uq.withCredentials != nil,
+			uq.withAuthncredentials != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -534,6 +571,35 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 				return nil, fmt.Errorf(`unexpected foreign-key "user_credentials" returned %v for node %v`, *fk, n.ID)
 			}
 			node.Edges.Credentials = append(node.Edges.Credentials, n)
+		}
+	}
+
+	if query := uq.withAuthncredentials; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[string]*User)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.Authncredentials = []*WebauthnCredential{}
+		}
+		query.withFKs = true
+		query.Where(predicate.WebauthnCredential(func(s *sql.Selector) {
+			s.Where(sql.InValues(user.AuthncredentialsColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.user_authncredentials
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "user_authncredentials" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "user_authncredentials" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.Authncredentials = append(node.Edges.Authncredentials, n)
 		}
 	}
 

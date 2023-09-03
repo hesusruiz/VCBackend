@@ -241,7 +241,7 @@ h6 {
 hr {
   border: 0;
   border-top: 1px solid #eee;
-  margin: 20px 0;
+  margin: 5px 0;
 }
 .w3-image {
   max-width: 100%;
@@ -904,11 +904,14 @@ a {
 }
 .w3-container,
 .w3-panel {
-  padding: 0em 16px;
+  padding: 0em 5px;
 }
 .w3-panel {
   margin-top: 16px;
   margin-bottom: 16px;
+}
+.w3-padding-left {
+  padding-left: 16px;
 }
 .w3-code,
 .w3-codespan {
@@ -1368,4 +1371,10 @@ btn-danger,
 .w3-half-centered {
   margin: auto;
   max-width: 500px;
+}
+.w3-margin-bottom5 {
+  margin-bottom: 5px !important;
+  margin-top: 0px !important;
+  margin-left: 0px !important;
+  font-size: 12px !important;
 }

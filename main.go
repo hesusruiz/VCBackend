@@ -3,14 +3,12 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/hesusruiz/vcbackend/back/handlers"
-	"github.com/hesusruiz/vcbackend/back/operations"
-	"github.com/hesusruiz/vcbackend/internal/jwk"
 	"github.com/hesusruiz/vcbackend/vault"
 	"github.com/hesusruiz/vcutils/yaml"
 
@@ -37,25 +35,12 @@ const verifierPrefix = "/verifier/api/v1"
 const walletPrefix = "/wallet/api/v1"
 
 var (
+	sameDevice = false
+
 	prod       = flag.Bool("prod", false, "Enable prefork in Production")
 	configFile = flag.String("config", LookupEnvOrString("CONFIG_FILE", defaultConfigFile), "path to configuration file")
 	password   = flag.String("pass", LookupEnvOrString("PASSWORD", defaultPassword), "admin password for the server")
 )
-
-// Server is the struct holding the state of the server
-type Server struct {
-	*fiber.App
-	cfg           *yaml.YAML
-	WebAuthn      *handlers.WebAuthnHandler
-	Operations    *operations.Manager
-	issuerVault   *vault.Vault
-	verifierVault *vault.Vault
-	walletvault   *vault.Vault
-	issuerDID     string
-	verifierDID   string
-	logger        *zap.SugaredLogger
-	storage       *memory.Storage
-}
 
 func LookupEnvOrString(key string, defaultVal string) string {
 	if val, ok := os.LookupEnv(key); ok {
@@ -65,32 +50,28 @@ func LookupEnvOrString(key string, defaultVal string) string {
 }
 
 func main() {
-	BackendServer()
-}
-
-func BackendServer() {
-
-	// Create the server instance
-	s := &Server{}
 
 	// Read configuration file
 	cfg := readConfiguration(*configFile)
 
+	// Create the HTTP server
+	s := handlers.NewServer(cfg)
+
 	// Create the logger and store in Server so all handlers can use it
 	if cfg.String("server.environment") == "production" {
-		s.logger = zap.Must(zap.NewProduction()).Sugar()
+		s.Logger = zap.Must(zap.NewProduction()).Sugar()
 	} else {
-		s.logger = zap.Must(zap.NewDevelopment()).Sugar()
+		s.Logger = zap.Must(zap.NewDevelopment()).Sugar()
 	}
 	zap.WithCaller(true)
-	defer s.logger.Sync()
+	defer s.Logger.Sync()
 
 	// Parse command-line flags
 	flag.Parse()
 
 	// Create the template engine using the templates in the configured directory
 	templateDir := cfg.String("server.templateDir", defaultTemplateDir)
-	templateEngine := html.New(templateDir, ".html")
+	templateEngine := html.New(templateDir, ".html").AddFuncMap(sprig.FuncMap())
 
 	if cfg.String("server.environment") == "development" {
 		// Just for development time. Disable when in production
@@ -106,20 +87,20 @@ func BackendServer() {
 
 	// Create a Fiber instance and set it in our Server struct
 	s.App = fiber.New(fiberCfg)
-	s.cfg = cfg
+	s.Cfg = cfg
 
 	// Connect to the different store engines
-	s.issuerVault = vault.Must(vault.New(yaml.New(cfg.Map("issuer"))))
-	s.verifierVault = vault.Must(vault.New(yaml.New(cfg.Map("verifier"))))
-	s.walletvault = vault.Must(vault.New(yaml.New(cfg.Map("wallet"))))
+	s.IssuerVault = vault.Must(vault.New(yaml.New(cfg.Map("issuer"))))
+	s.VerifierVault = vault.Must(vault.New(yaml.New(cfg.Map("verifier"))))
+	s.WalletVault = vault.Must(vault.New(yaml.New(cfg.Map("wallet"))))
 
 	// Create the issuer and verifier users
 	// TODO: the password is only for testing
-	_, s.issuerDID, _ = s.issuerVault.CreateOrGetUserWithDIDKey(cfg.String("issuer.id"), cfg.String("issuer.name"), "legalperson", cfg.String("issuer.password"))
-	_, s.verifierDID, _ = s.verifierVault.CreateOrGetUserWithDIDKey(cfg.String("verifier.id"), cfg.String("verifier.name"), "legalperson", cfg.String("verifier.password"))
+	// _, s.IssuerDID, _ = s.IssuerVault.CreateOrGetUserWithDIDKey(cfg.String("issuer.id"), cfg.String("issuer.name"), "legalperson", cfg.String("issuer.password"))
+	_, s.VerifierDID, _ = s.VerifierVault.CreateOrGetUserWithDIDKey(cfg.String("verifier.id"), cfg.String("verifier.name"), "legalperson", cfg.String("verifier.password"))
 
-	// Backend Operations, with its DB connection configuration
-	s.Operations = operations.NewManager(cfg)
+	// // Backend Operations for the Verifier
+	// s.Operations = operations.NewManager(s.VerifierVault, cfg)
 
 	// Recover panics from the HTTP handlers so the server continues running
 	s.Use(recover.New(recover.Config{EnableStackTrace: true}))
@@ -128,20 +109,19 @@ func BackendServer() {
 	s.Use(cors.New())
 
 	// Create a storage entry for logon expiration
-	s.storage = memory.New()
-	defer s.storage.Close()
+	s.SessionStorage = memory.New()
+	defer s.SessionStorage.Close()
 
-	// WebAuthn
-	// app.WebAuthn = handlers.NewWebAuthnHandler(app.App, app.Operations, cfg)
+	// // WebAuthn
+	// s.WebAuthn = handlers.NewWebAuthnHandler(s, cfg)
 
 	// ##########################
 	// Application Home pages
 	s.Get("/", s.HandleHome)
-	s.Get("/issuer", s.HandleIssuerHome)
-	s.Get("/verifier", s.HandleVerifierHome)
+	s.Get("/walletprovider", s.HandleWalletProviderHome)
 
 	// Info base path
-	s.Get("/info", s.GetBackendInfo)
+	// s.Get("/info", s.GetBackendInfo)
 
 	// WARNING! This is just for development. Disable this in production by using the config file setting
 	if cfg.String("server.environment") == "development" {
@@ -149,9 +129,9 @@ func BackendServer() {
 	}
 
 	// Setup the Issuer, Wallet and Verifier routes
-	setupIssuer(s)
-	setupEnterpriseWallet(s)
-	setupVerifier(s)
+	setupIssuer(s, cfg)
+	setupEnterpriseWallet(s, cfg)
+	SetupVerifier(s, cfg)
 
 	// setupCoreRoutes(s)
 
@@ -161,102 +141,6 @@ func BackendServer() {
 	// Start the server
 	log.Fatal(s.Listen(cfg.String("server.listenAddress")))
 
-}
-
-type backendInfo struct {
-	IssuerDID   string `json:"issuerDid"`
-	VerifierDID string `json:"verifierDid"`
-}
-
-func (s *Server) GetBackendInfo(c *fiber.Ctx) error {
-	info := backendInfo{IssuerDID: s.issuerDID, VerifierDID: s.verifierDID}
-
-	return c.JSON(info)
-}
-
-func (s *Server) HandleHome(c *fiber.Ctx) error {
-
-	// Render index
-	return c.Render("index", "")
-}
-
-func (s *Server) HandleStop(c *fiber.Ctx) error {
-	os.Exit(0)
-	return nil
-}
-
-func (s *Server) HandleIssuerHome(c *fiber.Ctx) error {
-
-	// Get the list of credentials
-	credsSummary, err := s.Operations.GetAllCredentials()
-	if err != nil {
-		return err
-	}
-
-	// Render template
-	m := fiber.Map{
-		"issuerPrefix":   issuerPrefix,
-		"verifierPrefix": verifierPrefix,
-		"walletPrefix":   walletPrefix,
-		"prefix":         issuerPrefix,
-		"credlist":       credsSummary,
-	}
-	return c.Render("issuer_home", m)
-}
-
-func (s *Server) HandleVerifierHome(c *fiber.Ctx) error {
-
-	// Render template
-	m := fiber.Map{
-		"issuerPrefix":   issuerPrefix,
-		"verifierPrefix": verifierPrefix,
-		"walletPrefix":   walletPrefix,
-		"prefix":         verifierPrefix,
-	}
-	return c.Render("verifier_home", m)
-}
-
-func generateNonce() string {
-	b := make([]byte, 16)
-	io.ReadFull(rand.Reader, b)
-	nonce := base64.RawURLEncoding.EncodeToString(b)
-	return nonce
-}
-
-var sameDevice = false
-
-type jwkSet struct {
-	Keys []*jwk.JWK `json:"keys"`
-}
-
-func (s *Server) VerifierAPIJWKS(c *fiber.Ctx) error {
-
-	// Get public keys from Verifier
-	pubkeys, err := s.verifierVault.PublicKeysForUser(s.cfg.String("verifier.id"))
-	if err != nil {
-		return err
-	}
-
-	keySet := jwkSet{pubkeys}
-
-	return c.JSON(keySet)
-
-}
-
-func (s *Server) HandleAuthenticationRequest(c *fiber.Ctx) error {
-
-	// Get the list of credentials
-	credsSummary, err := s.Operations.GetAllCredentials()
-	if err != nil {
-		return err
-	}
-
-	// Render template
-	m := fiber.Map{
-		"prefix":   verifierPrefix,
-		"credlist": credsSummary,
-	}
-	return c.Render("wallet_selectcredential", m)
 }
 
 // readConfiguration reads a YAML file and creates an easy-to navigate structure
@@ -272,70 +156,9 @@ func readConfiguration(configFile string) *yaml.YAML {
 	return cfg
 }
 
-// // DID handling
-// func (srv *Server) CoreAPICreateDID(c *fiber.Ctx) error {
-
-// 	// body := c.Body()
-
-// 	// Call the SSI Kit
-// 	agent := fiber.Post(srv.ssiKit.custodianUrl + "/did/create")
-// 	bodyRequest := fiber.Map{
-// 		"method": "key",
-// 	}
-// 	agent.JSON(bodyRequest)
-// 	agent.ContentType("application/json")
-// 	agent.Set("accept", "application/json")
-// 	_, returnBody, errors := agent.Bytes()
-// 	if len(errors) > 0 {
-// 		srv.logger.Errorw("error calling SSI Kit", zap.Errors("errors", errors))
-// 		return fmt.Errorf("error calling SSI Kit: %v", errors[0])
-// 	}
-
-// 	c.Set("Content-Type", "application/json")
-// 	return c.Send(returnBody)
-
-// }
-
-// func (srv *Server) CoreAPIListCredentialTemplates(c *fiber.Ctx) error {
-
-// 	// Call the SSI Kit
-// 	agent := fiber.Get(srv.ssiKit.signatoryUrl + "/v1/templates")
-// 	agent.Set("accept", "application/json")
-// 	_, returnBody, errors := agent.Bytes()
-// 	if len(errors) > 0 {
-// 		srv.logger.Errorw("error calling SSI Kit", zap.Errors("errors", errors))
-// 		return fmt.Errorf("error calling SSI Kit: %v", errors[0])
-// 	}
-
-// 	c.Set("Content-Type", "application/json")
-// 	return c.Send(returnBody)
-
-// }
-
-// func (srv *Server) CoreAPIGetCredentialTemplate(c *fiber.Ctx) error {
-
-// 	id := c.Params("id")
-// 	if len(id) == 0 {
-// 		return fmt.Errorf("no template id specified")
-// 	}
-
-// 	// Call the SSI Kit
-// 	agent := fiber.Get(srv.ssiKit.signatoryUrl + "/v1/templates/" + id)
-// 	agent.Set("accept", "application/json")
-// 	_, returnBody, errors := agent.Bytes()
-// 	if len(errors) > 0 {
-// 		srv.logger.Errorw("error calling SSI Kit", zap.Errors("errors", errors))
-// 		return fmt.Errorf("error calling SSI Kit: %v", errors[0])
-// 	}
-
-// 	c.Set("Content-Type", "application/json")
-// 	return c.Send(returnBody)
-
-// }
-
-func prettyFormatJSON(in []byte) string {
-	decoded := &fiber.Map{}
-	json.Unmarshal(in, decoded)
-	out, _ := json.MarshalIndent(decoded, "", "  ")
-	return string(out)
+func generateNonce() string {
+	b := make([]byte, 16)
+	io.ReadFull(rand.Reader, b)
+	nonce := base64.RawURLEncoding.EncodeToString(b)
+	return nonce
 }

@@ -24,6 +24,7 @@
             if (!response.ok) {
                 // Stop polling if we receive an error from the transport
                 window.alert("A server error happened.")
+                // Go to home page
                 location = "{{.verifierPrefix}}"
                 return
             }
@@ -43,7 +44,20 @@
             // At this point we know the server has received valid data from the wallet
             // Stop polling and present the logged in screen
             console.log("Received:", data)
-            location = "{{.verifierPrefix}}/receivecredential/{{.state}}"
+
+            if (data == "completed") {
+                location = "{{.verifierPrefix}}/logincompleted/{{.state}}"
+                return
+            }
+
+            if (data === "authenticating" || data === "registering") {
+                location = "{{.verifierPrefix}}/receivecredential/{{.state}}"
+                return
+            }
+
+            window.alert("Unexpected state received.")
+            // Go to home page
+            location = "{{.verifierPrefix}}"
             return
 
         } catch (error) {

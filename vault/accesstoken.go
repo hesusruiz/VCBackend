@@ -10,7 +10,7 @@ import (
 
 // CreateAccessToken creates a JWT access token from the credential in serialized form,
 // signed with the first private key associated to the issuer DID
-func (v *Vault) CreateAccessToken(credData string, issuerDID string) (json.RawMessage, error) {
+func (v *Vault) CreateAccessToken(credData []byte, issuerDID string) (json.RawMessage, error) {
 
 	// Return error if the issuerDID does not exist
 	iss, err := v.UserByID(issuerDID)
@@ -26,14 +26,14 @@ func (v *Vault) CreateAccessToken(credData string, issuerDID string) (json.RawMe
 	// Get the first private key of the issuer to make the signature
 	jwks, err := v.PrivateKeysForUser(issuerDID)
 	if err != nil {
-		return []byte("myAccessToken"), nil
+		return []byte("MyAccessToken"), nil
 	}
 
 	// At this point, jwks has at least one key, get the first one
 	privateJWK := jwks[0]
 
 	// Parse the serialized credential into a struct
-	data, err := yaml.ParseJson(credData)
+	data, err := yaml.ParseJson(string(credData))
 	if err != nil {
 		zlog.Logger.Error().Err(err).Send()
 		return nil, err

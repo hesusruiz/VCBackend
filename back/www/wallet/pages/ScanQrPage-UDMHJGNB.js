@@ -7,7 +7,7 @@ import {
 } from "../chunks/chunk-65N62L2T.js";
 import {
   log
-} from "../chunks/chunk-FVTRWWP3.js";
+} from "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-KRYK5JSZ.js";
 
 // front/src/pages/ScanQrPage.js
@@ -170,7 +170,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
       return;
     }
     if (qrType === QR_SIOP_URL) {
-      console.log("Going to ", "SIOPSelectCredential", qrData);
+      log.log("Going to ", "SIOPSelectCredential", qrData);
       window.MHR.gotoPage("SIOPSelectCredential", qrData);
       return true;
     }

@@ -17,43 +17,47 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/gofiber/fiber/v2/utils"
+	"github.com/gofiber/storage/memory"
 	zlog "github.com/rs/zerolog/log"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type WebAuthnHandler struct {
-	WebAuthn     *webauthn.WebAuthn
-	Operations   *operations.Manager
-	SessionStore *session.Store
+	rootServer      *Server
+	stateSession    *memory.Storage
+	operations      *operations.Manager
+	WebAuthn        *webauthn.WebAuthn
+	webAuthnSession *session.Store
 }
 
-func NewWebAuthnHandler(f *fiber.App, o *operations.Manager, cfg *yaml.YAML) *WebAuthnHandler {
+func NewWebAuthnHandler(back *Server, sess *memory.Storage, ops *operations.Manager, cfg *yaml.YAML) *WebAuthnHandler {
 	var err error
 
 	rpDisplayName := cfg.String("webauthn.RPDisplayName")
 	rpID := cfg.String("webauthn.RPID")
 	rpOrigin := cfg.String("webauthn.RPOrigin")
-	authenticatorAttachment := protocol.AuthenticatorAttachment(cfg.String("webauthn.AuthenticatorAttachment"))
+	// authenticatorAttachment := protocol.AuthenticatorAttachment(cfg.String("webauthn.AuthenticatorAttachment"))
 	userVerification := protocol.UserVerificationRequirement(cfg.String("webauthn.UserVerification"))
 
-	// Create the server object
-	server := new(WebAuthnHandler)
+	// Create the s object
+	s := new(WebAuthnHandler)
 
-	// Set the transaction and storage manager
-	server.Operations = o
+	s.rootServer = back
+	s.operations = ops
+	s.stateSession = sess
 
 	// The session store (in-memory, with cookies)
-	server.SessionStore = session.New(session.Config{Expiration: 24 * time.Hour})
-	server.SessionStore.RegisterType(webauthn.SessionData{})
+	s.webAuthnSession = session.New(session.Config{Expiration: 24 * time.Hour})
+	s.webAuthnSession.RegisterType(webauthn.SessionData{})
 
-	server.WebAuthn, err = webauthn.New(&webauthn.Config{
+	s.WebAuthn, err = webauthn.New(&webauthn.Config{
 		RPDisplayName: rpDisplayName, // display name for your site
 		RPID:          rpID,          // generally the domain name for your site
 		RPOrigin:      rpOrigin,
 		AuthenticatorSelection: protocol.AuthenticatorSelection{
-			AuthenticatorAttachment: authenticatorAttachment, // Can also be "cross-platform" for USB keys or sw implementations
-			UserVerification:        userVerification,
+			// AuthenticatorAttachment: authenticatorAttachment, // Can also be "cross-platform" for USB keys or sw implementations
+			UserVerification: userVerification,
 		},
 	})
 
@@ -61,22 +65,22 @@ func NewWebAuthnHandler(f *fiber.App, o *operations.Manager, cfg *yaml.YAML) *We
 		zlog.Panic().Err(err).Msg("failed to create WebAuthn from config")
 	}
 
-	server.AddRoutes(f)
+	s.AddRoutes(back)
 
-	return server
+	return s
 
 }
 
-func (s *WebAuthnHandler) AddRoutes(f *fiber.App) {
+func (s *WebAuthnHandler) AddRoutes(f *Server) {
 
-	wa := f.Group("/webauthn")
+	waRouteGroup := f.Group("/webauthn")
 
-	wa.Get("/register/begin/:username", s.BeginRegistration)
-	wa.Post("/register/finish/:username", s.FinishRegistration)
-	wa.Get("/login/begin/:username", s.BeginLogin)
-	wa.Post("/login/finish/:username", s.FinishLogin)
-	wa.Get("/creds/list", s.ListCredentials)
-	wa.Get("/logoff", s.Logoff)
+	waRouteGroup.Get("/register/begin/:username", s.BeginRegistration)
+	waRouteGroup.Post("/register/finish/:username", s.FinishRegistration)
+	waRouteGroup.Get("/login/begin/:username", s.BeginLogin)
+	waRouteGroup.Post("/login/finish/:username", s.FinishLogin)
+	waRouteGroup.Get("/creds/list", s.ListCredentials)
+	waRouteGroup.Get("/logoff", s.Logoff)
 }
 
 func (s *WebAuthnHandler) BeginRegistration(c *fiber.Ctx) error {
@@ -93,10 +97,13 @@ func (s *WebAuthnHandler) BeginRegistration(c *fiber.Ctx) error {
 	username := utils.CopyString(usernameParam)
 	displayName := strings.Split(username, "@")[0]
 
+	// Get the state from the URL parameters
+	//	state := c.Query("state")
+
 	zlog.Info().Str("username", username).Msg("BeginRegistration started")
 
 	// get user from the Storage
-	user, err := s.Operations.User().GetOrCreate(username, displayName)
+	user, err := s.operations.User().CreateOrGet(username, displayName)
 	if err != nil {
 		return err
 	}
@@ -107,11 +114,8 @@ func (s *WebAuthnHandler) BeginRegistration(c *fiber.Ctx) error {
 		credCreationOpts.CredentialExcludeList = user.CredentialExcludeList()
 	}
 
-	fmt.Println("======== CREDENTIAL EXCLUDE LIST")
-	printJSON(user.CredentialExcludeList())
-
 	// generate PublicKeyCredentialCreationOptions, session data
-	options, sessionData, err := s.WebAuthn.BeginRegistration(
+	options, waSessionData, err := s.WebAuthn.BeginRegistration(
 		user,
 		registerOptions,
 	)
@@ -124,15 +128,15 @@ func (s *WebAuthnHandler) BeginRegistration(c *fiber.Ctx) error {
 	}
 
 	// Use a session to track the request/reply
-	sess, err := s.SessionStore.Get(c)
+	waSession, err := s.webAuthnSession.Get(c)
 	if err != nil {
 		return err
 	}
 
-	sess.Set("wasession", sessionData)
-	sessionID := sess.ID()
+	waSession.Set("wasession", waSessionData)
+	sessionID := waSession.ID()
 	// Save session
-	if err := sess.Save(); err != nil {
+	if err := waSession.Save(); err != nil {
 		panic(err)
 	}
 
@@ -149,65 +153,86 @@ type RegistrationResponse struct {
 }
 
 func (s *WebAuthnHandler) FinishRegistration(c *fiber.Ctx) error {
+
+	// Get username from the path of the HTTP request
+	username := c.Params("username")
+	if username == "" {
+		err := fmt.Errorf("must supply a valid username i.e. foo@bar.com")
+		zlog.Error().Err(err).Send()
+		return err
+	}
+
+	// Get the state that was used to track the whole authentication process, including Verifiable Credential
+	stateKey := c.Query("state")
+
+	stateContent, _ := s.stateSession.Get(stateKey)
+	if len(stateContent) < 2 {
+		return fiber.NewError(fiber.StatusInternalServerError, "status invalid")
+	}
+
+	zlog.Info().Str("username", username).Str("state", stateKey).Uint("status", uint(stateContent[0])).Msg("FinishRegistration started")
+
+	// Get user from Storage
+	user, err := s.operations.User().GetByName(username)
+
+	// It is an error if the user doesn't exist
+	if err != nil {
+		zlog.Error().Err(err).Msg("Error in userDB.GetUser")
+		return err
+	}
+
+	// Parse the request body into the RegistrationResponse structure
+	p := new(RegistrationResponse)
+	if err := c.BodyParser(p); err != nil {
+		return err
+	}
+
+	// Parse the WebAuthn member
+	parsedResponse, err := ParseCredentialCreationResponse(p.Response)
+	if err != nil {
+		return err
+	}
+
+	// Retrieve the session that was created in BeginRegistration
+	sess, err := s.webAuthnSession.Get(c)
+	if err != nil {
+		return err
+	}
+
+	v := sess.Get("wasession")
+	if v == nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "web authn session not found")
+	}
+	wasession, ok := v.(webauthn.SessionData)
+	if !ok {
+		return fiber.NewError(fiber.StatusInternalServerError, "web authn session not found")
+	}
+
+	// Create the credential
+	credential, err := s.WebAuthn.CreateCredential(user, wasession, parsedResponse)
+	if err != nil {
+		return err
+	}
+
+	// Add the new credential to the user
+	user.AddCredential(*credential)
+
+	creds := user.WebAuthnCredentials()
+	fmt.Println("======== LIST of CREDENTIALS")
+	printJSON(creds)
+
+	// Destroy the session
+	sess.Destroy()
+
+	// Set the status to completed
+	stateContent[0] = StateCompleted
+
+	// And update the status for the poller to retrieve it
+	s.stateSession.Set(stateKey, stateContent, StateExpiration)
+
+	zlog.Info().Str("username", username).Str("state", stateKey).Uint("status", uint(stateContent[0])).Msg("FinishRegistration started")
+
 	return nil
-
-	// // Get username from the path of the HTTP request
-	// username := c.Params("username")
-	// if username == "" {
-	// 	err := fmt.Errorf("must supply a valid username i.e. foo@bar.com")
-	// 	zlog.Error().Err(err).Send()
-	// 	return err
-	// }
-
-	// zlog.Info().Str("username", username).Msg("FinishRegistration started")
-
-	// // Get user from Storage
-	// user, err := s.Operations.User().GetByName(username)
-
-	// // It is an error if the user doesn't exist
-	// if err != nil {
-	// 	zlog.Error().Err(err).Msg("Error in userDB.GetUser")
-	// 	return err
-	// }
-
-	// // Parse the request body into the RegistrationResponse structure
-	// p := new(RegistrationResponse)
-	// if err := c.BodyParser(p); err != nil {
-	// 	return err
-	// }
-
-	// // Parse the WebAuthn member
-	// parsedResponse, err := ParseCredentialCreationResponse(p.Response)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // Use a session to track the request/reply
-	// sess, err := s.SessionStore.Get(c)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// v := sess.Get("wasession")
-	// wasession := v.(webauthn.SessionData)
-
-	// // Create the credential
-	// // credential, err := s.WebAuthn.CreateCredential(user, wasession, parsedResponse)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // Add the new credential to the user
-	// // user.AddCredential(*credential)
-
-	// creds := user.WebAuthnCredentials()
-	// fmt.Println("======== LIST of CREDENTIALS")
-	// printJSON(creds)
-
-	// // Destroy the session
-	// sess.Destroy()
-
-	// return nil
 }
 
 func (s *WebAuthnHandler) BeginLogin(c *fiber.Ctx) error {
@@ -222,40 +247,41 @@ func (s *WebAuthnHandler) BeginLogin(c *fiber.Ctx) error {
 
 	zlog.Info().Str("username", username).Msg("BeginLogin started")
 
-	user, err := s.Operations.User().GetByName(username)
+	// Get user from Database
+	user, err := s.operations.User().GetByName(username)
 
-	// Get user from Storage
-	// user, err := s.UserDB.GetUser(username)
 	// It is an error if the user doesn't exist
 	if err != nil {
 		zlog.Error().Err(err).Msg("Error in userDB.GetUser")
-		return err
+		return fiber.NewError(fiber.StatusNotFound, "user not found")
 	}
 
-	// generate PublicKeyCredentialRequestOptions, session data
+	// Generate PublicKeyCredentialRequestOptions, session data
 	options, sessionData, err := s.WebAuthn.BeginLogin(user)
 	if err != nil {
 		zlog.Error().Err(err).Msg("Error in webAuthn.BeginLogin")
 		return err
 	}
 
-	// Use a session to track the request/reply
-	sess, err := s.SessionStore.Get(c)
+	// Use a httpSession to track the request/reply
+	httpSession, err := s.webAuthnSession.Get(c)
 	if err != nil {
 		return err
 	}
 
-	sess.Set("wasession", sessionData)
-	sessionID := sess.ID()
+	// Store the data associated to a given key
+	httpSession.Set("wasession", sessionData)
 
 	// Save session
-	if err := sess.Save(); err != nil {
+	if err := httpSession.Save(); err != nil {
 		panic(err)
 	}
 
+	zlog.Info().Str("username", username).Msg("BeginLogin finished")
+
 	return c.JSON(fiber.Map{
 		"options": options,
-		"session": sessionID,
+		"session": httpSession.ID(),
 	})
 
 }
@@ -275,10 +301,18 @@ func (s *WebAuthnHandler) FinishLogin(c *fiber.Ctx) error {
 		return err
 	}
 
-	zlog.Info().Str("username", username).Msg("FinishLogin started")
+	// Get the state that was used to track the whole authentication process, including Verifiable Credential
+	stateKey := c.Query("state")
+
+	stateContent, _ := s.stateSession.Get(stateKey)
+	if len(stateContent) < 2 {
+		return fiber.NewError(fiber.StatusInternalServerError, "status invalid")
+	}
+
+	zlog.Info().Str("username", username).Str("state", stateKey).Uint("status", uint(stateContent[0])).Msg("FinishLogin started")
 
 	// Get user from Storage
-	user, err := s.Operations.User().GetByName(username)
+	user, err := s.operations.User().GetByName(username)
 
 	// It is an error if the user doesn't exist
 	if err != nil {
@@ -298,12 +332,12 @@ func (s *WebAuthnHandler) FinishLogin(c *fiber.Ctx) error {
 	}
 
 	// Use a session to track the request/reply
-	sess, err := s.SessionStore.Get(c)
+	httpSession, err := s.webAuthnSession.Get(c)
 	if err != nil {
 		return err
 	}
 
-	v := sess.Get("wasession")
+	v := httpSession.Get("wasession")
 	wasession := v.(webauthn.SessionData)
 
 	// in an actual implementation we should perform additional
@@ -319,11 +353,19 @@ func (s *WebAuthnHandler) FinishLogin(c *fiber.Ctx) error {
 		zlog.Warn().Msg("The authenticator may be cloned")
 	}
 
-	sess.Set("username", username)
+	httpSession.Set("username", username)
 	// Save session
-	if err := sess.Save(); err != nil {
+	if err := httpSession.Save(); err != nil {
 		panic(err)
 	}
+
+	// Set the status to completed
+	stateContent[0] = StateCompleted
+
+	// And update the status for the poller to retrieve it
+	s.stateSession.Set(stateKey, stateContent, StateExpiration)
+
+	zlog.Info().Str("username", username).Str("state", stateKey).Uint("status", uint(stateContent[0])).Msg("FinishLogin finished")
 
 	// handle successful login
 	return c.JSON("Login Success")
@@ -332,7 +374,7 @@ func (s *WebAuthnHandler) FinishLogin(c *fiber.Ctx) error {
 func (s *WebAuthnHandler) Logoff(c *fiber.Ctx) error {
 
 	// Use a session to track the request/reply
-	sess, err := s.SessionStore.Get(c)
+	sess, err := s.webAuthnSession.Get(c)
 	if err != nil {
 		return err
 	}
@@ -347,7 +389,7 @@ func (s *WebAuthnHandler) Logoff(c *fiber.Ctx) error {
 func (s *WebAuthnHandler) ListCredentials(c *fiber.Ctx) error {
 
 	// Use a session to track the request/reply
-	sess, err := s.SessionStore.Get(c)
+	sess, err := s.webAuthnSession.Get(c)
 	if err != nil {
 		return err
 	}
@@ -364,7 +406,7 @@ func (s *WebAuthnHandler) ListCredentials(c *fiber.Ctx) error {
 	zlog.Info().Str("username", username).Msg("User is logged in")
 
 	// Get user from Storage
-	user, err := s.Operations.User().GetByName(username)
+	user, err := s.operations.User().GetByName(username)
 	if err != nil {
 		zlog.Warn().Msg("user not found")
 		return err

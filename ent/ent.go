@@ -16,6 +16,7 @@ import (
 	"github.com/hesusruiz/vcbackend/ent/privatekey"
 	"github.com/hesusruiz/vcbackend/ent/publickey"
 	"github.com/hesusruiz/vcbackend/ent/user"
+	"github.com/hesusruiz/vcbackend/ent/webauthncredential"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -36,12 +37,13 @@ type OrderFunc func(*sql.Selector)
 // columnChecker returns a function indicates if the column exists in the given column.
 func columnChecker(table string) func(string) error {
 	checks := map[string]func(string) bool{
-		credential.Table:    credential.ValidColumn,
-		did.Table:           did.ValidColumn,
-		naturalperson.Table: naturalperson.ValidColumn,
-		privatekey.Table:    privatekey.ValidColumn,
-		publickey.Table:     publickey.ValidColumn,
-		user.Table:          user.ValidColumn,
+		credential.Table:         credential.ValidColumn,
+		did.Table:                did.ValidColumn,
+		naturalperson.Table:      naturalperson.ValidColumn,
+		privatekey.Table:         privatekey.ValidColumn,
+		publickey.Table:          publickey.ValidColumn,
+		user.Table:               user.ValidColumn,
+		webauthncredential.Table: webauthncredential.ValidColumn,
 	}
 	check, ok := checks[table]
 	if !ok {

@@ -3,19 +3,38 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/hesusruiz/vcbackend/back/handlers"
+	"github.com/hesusruiz/vcbackend/back/operations"
+	"github.com/hesusruiz/vcbackend/vault"
+	"github.com/hesusruiz/vcutils/yaml"
+	zlog "github.com/rs/zerolog/log"
 	"go.uber.org/zap"
 )
 
-type Wallet struct {
-	server *Server
+type EnterpriseWallet struct {
+	rootServer *handlers.Server
+	vault      *vault.Vault
+	cfg        *yaml.YAML
+	operations *operations.Manager
+	did        string
 }
 
 // setupEnterpriseWallet sreates and setups the Enterprise Wallet routes
-func setupEnterpriseWallet(s *Server) {
+func setupEnterpriseWallet(s *handlers.Server, cfg *yaml.YAML) {
 
-	wallet := &Wallet{s}
+	wallet := &EnterpriseWallet{}
+
+	wallet.rootServer = s
+	wallet.cfg = cfg
+
+	// The Enterprise Wallet is associated to the Issuer, so we connect to the Issuer store engine
+	wallet.vault = vault.Must(vault.New(yaml.New(cfg.Map("issuer"))))
+
+	// Backend Operations for the Verifier
+	wallet.operations = operations.NewManager(wallet.vault, cfg)
 
 	// Define the prefix for Wallet routes
 	walletRoutes := s.Group(walletPrefix)
@@ -28,7 +47,7 @@ func setupEnterpriseWallet(s *Server) {
 
 }
 
-func (w *Wallet) WalletPageSelectCredential(c *fiber.Ctx) error {
+func (w *EnterpriseWallet) WalletPageSelectCredential(c *fiber.Ctx) error {
 
 	type authRequest struct {
 		Scope         string `query:"scope"`
@@ -46,7 +65,7 @@ func (w *Wallet) WalletPageSelectCredential(c *fiber.Ctx) error {
 	}
 
 	// Get the list of credentials
-	credsSummary, err := w.server.Operations.GetAllCredentials()
+	credsSummary, err := w.operations.GetAllCredentials()
 	if err != nil {
 		return err
 	}
@@ -63,23 +82,21 @@ func (w *Wallet) WalletPageSelectCredential(c *fiber.Ctx) error {
 	return c.Render("wallet_selectcredential", m)
 }
 
-func (w *Wallet) WalletPageSendCredential(c *fiber.Ctx) error {
+func (w *EnterpriseWallet) WalletPageSendCredential(c *fiber.Ctx) error {
 
 	// Get the ID of the credential
 	credID := c.Query("id")
-	w.server.logger.Info("credID", credID)
 
 	// Get the url where we have to send the credential
 	redirect_uri := c.Query("redirect_uri")
-	w.server.logger.Info("redirect_uri", redirect_uri)
 
 	// Get the state nonce
 	state := c.Query("state")
-	w.server.logger.Info("state", state)
+
+	zlog.Info().Str("credID", credID).Str("redirect_uri", redirect_uri).Str("state", state).Msg("WalletPageSendCredential")
 
 	// Get the raw credential from the Vault
-	// TODO: change to the vault of the wallet without relying on the issuer
-	rawCred, err := w.server.issuerVault.Client.Credential.Get(context.Background(), credID)
+	rawCred, err := w.vault.Client.Credential.Get(context.Background(), credID)
 	if err != nil {
 		return err
 	}
@@ -100,13 +117,11 @@ func (w *Wallet) WalletPageSendCredential(c *fiber.Ctx) error {
 
 	// Send the request.
 	// We are interested only in the success of the request.
-	code, _, errors := agent.Bytes()
-	if len(errors) > 0 {
-		w.server.logger.Errorw("error sending credential", zap.Errors("errors", errors))
-		return fmt.Errorf("error sending credential: %v", errors[0])
+	code, body, _ := agent.Bytes()
+	if code != http.StatusOK {
+		err = fmt.Errorf(string(body))
+		zlog.Err(err).Send()
 	}
-
-	fmt.Println("code:", code)
 
 	// Tell the user that it was OK
 	m := fiber.Map{
@@ -116,13 +131,13 @@ func (w *Wallet) WalletPageSendCredential(c *fiber.Ctx) error {
 		"prefix":         verifierPrefix,
 		"error":          "",
 	}
-	if code < 200 || code > 299 {
-		m["error"] = fmt.Sprintf("Error calling server: %v", code)
+	if code != http.StatusOK {
+		m["error"] = fmt.Sprintf("Error calling server: %s", err)
 	}
 	return c.Render("wallet_credentialsent", m)
 }
 
-func (w *Wallet) WalletAPICreatePresentation(creds []string, holder string) (string, error) {
+func (w *EnterpriseWallet) WalletAPICreatePresentation(creds []string, holder string) (string, error) {
 
 	type inputCreatePresentation struct {
 		Vcs       []string `json:"vcs,omitempty"`
@@ -134,7 +149,7 @@ func (w *Wallet) WalletAPICreatePresentation(creds []string, holder string) (str
 		HolderDid: holder,
 	}
 
-	custodianURL := w.server.cfg.String("ssikit.custodianURL")
+	custodianURL := w.rootServer.Cfg.String("ssikit.custodianURL")
 
 	// Call the SSI Kit
 	agent := fiber.Post(custodianURL + "/credentials/present")
@@ -142,7 +157,7 @@ func (w *Wallet) WalletAPICreatePresentation(creds []string, holder string) (str
 	agent.JSON(postBody)
 	_, returnBody, errors := agent.Bytes()
 	if len(errors) > 0 {
-		w.server.logger.Errorw("error calling SSI Kit", zap.Errors("errors", errors))
+		w.rootServer.Logger.Errorw("error calling SSI Kit", zap.Errors("errors", errors))
 		return "", fmt.Errorf("error calling SSI Kit: %v", errors[0])
 	}
 

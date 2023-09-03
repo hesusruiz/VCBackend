@@ -15,6 +15,7 @@ import (
 	"github.com/hesusruiz/vcbackend/ent/privatekey"
 	"github.com/hesusruiz/vcbackend/ent/publickey"
 	"github.com/hesusruiz/vcbackend/ent/user"
+	"github.com/hesusruiz/vcbackend/ent/webauthncredential"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
@@ -38,6 +39,8 @@ type Client struct {
 	PublicKey *PublicKeyClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// WebauthnCredential is the client for interacting with the WebauthnCredential builders.
+	WebauthnCredential *WebauthnCredentialClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -57,6 +60,7 @@ func (c *Client) init() {
 	c.PrivateKey = NewPrivateKeyClient(c.config)
 	c.PublicKey = NewPublicKeyClient(c.config)
 	c.User = NewUserClient(c.config)
+	c.WebauthnCredential = NewWebauthnCredentialClient(c.config)
 }
 
 // Open opens a database/sql.DB specified by the driver name and
@@ -88,14 +92,15 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		Credential:    NewCredentialClient(cfg),
-		DID:           NewDIDClient(cfg),
-		NaturalPerson: NewNaturalPersonClient(cfg),
-		PrivateKey:    NewPrivateKeyClient(cfg),
-		PublicKey:     NewPublicKeyClient(cfg),
-		User:          NewUserClient(cfg),
+		ctx:                ctx,
+		config:             cfg,
+		Credential:         NewCredentialClient(cfg),
+		DID:                NewDIDClient(cfg),
+		NaturalPerson:      NewNaturalPersonClient(cfg),
+		PrivateKey:         NewPrivateKeyClient(cfg),
+		PublicKey:          NewPublicKeyClient(cfg),
+		User:               NewUserClient(cfg),
+		WebauthnCredential: NewWebauthnCredentialClient(cfg),
 	}, nil
 }
 
@@ -113,14 +118,15 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		Credential:    NewCredentialClient(cfg),
-		DID:           NewDIDClient(cfg),
-		NaturalPerson: NewNaturalPersonClient(cfg),
-		PrivateKey:    NewPrivateKeyClient(cfg),
-		PublicKey:     NewPublicKeyClient(cfg),
-		User:          NewUserClient(cfg),
+		ctx:                ctx,
+		config:             cfg,
+		Credential:         NewCredentialClient(cfg),
+		DID:                NewDIDClient(cfg),
+		NaturalPerson:      NewNaturalPersonClient(cfg),
+		PrivateKey:         NewPrivateKeyClient(cfg),
+		PublicKey:          NewPublicKeyClient(cfg),
+		User:               NewUserClient(cfg),
+		WebauthnCredential: NewWebauthnCredentialClient(cfg),
 	}, nil
 }
 
@@ -155,6 +161,7 @@ func (c *Client) Use(hooks ...Hook) {
 	c.PrivateKey.Use(hooks...)
 	c.PublicKey.Use(hooks...)
 	c.User.Use(hooks...)
+	c.WebauthnCredential.Use(hooks...)
 }
 
 // CredentialClient is a client for the Credential schema.
@@ -820,7 +827,129 @@ func (c *UserClient) QueryCredentials(u *User) *CredentialQuery {
 	return query
 }
 
+// QueryAuthncredentials queries the authncredentials edge of a User.
+func (c *UserClient) QueryAuthncredentials(u *User) *WebauthnCredentialQuery {
+	query := &WebauthnCredentialQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(webauthncredential.Table, webauthncredential.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.AuthncredentialsTable, user.AuthncredentialsColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *UserClient) Hooks() []Hook {
 	return c.hooks.User
+}
+
+// WebauthnCredentialClient is a client for the WebauthnCredential schema.
+type WebauthnCredentialClient struct {
+	config
+}
+
+// NewWebauthnCredentialClient returns a client for the WebauthnCredential from the given config.
+func NewWebauthnCredentialClient(c config) *WebauthnCredentialClient {
+	return &WebauthnCredentialClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `webauthncredential.Hooks(f(g(h())))`.
+func (c *WebauthnCredentialClient) Use(hooks ...Hook) {
+	c.hooks.WebauthnCredential = append(c.hooks.WebauthnCredential, hooks...)
+}
+
+// Create returns a builder for creating a WebauthnCredential entity.
+func (c *WebauthnCredentialClient) Create() *WebauthnCredentialCreate {
+	mutation := newWebauthnCredentialMutation(c.config, OpCreate)
+	return &WebauthnCredentialCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of WebauthnCredential entities.
+func (c *WebauthnCredentialClient) CreateBulk(builders ...*WebauthnCredentialCreate) *WebauthnCredentialCreateBulk {
+	return &WebauthnCredentialCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for WebauthnCredential.
+func (c *WebauthnCredentialClient) Update() *WebauthnCredentialUpdate {
+	mutation := newWebauthnCredentialMutation(c.config, OpUpdate)
+	return &WebauthnCredentialUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *WebauthnCredentialClient) UpdateOne(wc *WebauthnCredential) *WebauthnCredentialUpdateOne {
+	mutation := newWebauthnCredentialMutation(c.config, OpUpdateOne, withWebauthnCredential(wc))
+	return &WebauthnCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *WebauthnCredentialClient) UpdateOneID(id string) *WebauthnCredentialUpdateOne {
+	mutation := newWebauthnCredentialMutation(c.config, OpUpdateOne, withWebauthnCredentialID(id))
+	return &WebauthnCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for WebauthnCredential.
+func (c *WebauthnCredentialClient) Delete() *WebauthnCredentialDelete {
+	mutation := newWebauthnCredentialMutation(c.config, OpDelete)
+	return &WebauthnCredentialDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *WebauthnCredentialClient) DeleteOne(wc *WebauthnCredential) *WebauthnCredentialDeleteOne {
+	return c.DeleteOneID(wc.ID)
+}
+
+// DeleteOne returns a builder for deleting the given entity by its id.
+func (c *WebauthnCredentialClient) DeleteOneID(id string) *WebauthnCredentialDeleteOne {
+	builder := c.Delete().Where(webauthncredential.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &WebauthnCredentialDeleteOne{builder}
+}
+
+// Query returns a query builder for WebauthnCredential.
+func (c *WebauthnCredentialClient) Query() *WebauthnCredentialQuery {
+	return &WebauthnCredentialQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a WebauthnCredential entity by its id.
+func (c *WebauthnCredentialClient) Get(ctx context.Context, id string) (*WebauthnCredential, error) {
+	return c.Query().Where(webauthncredential.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *WebauthnCredentialClient) GetX(ctx context.Context, id string) *WebauthnCredential {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a WebauthnCredential.
+func (c *WebauthnCredentialClient) QueryUser(wc *WebauthnCredential) *UserQuery {
+	query := &UserQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := wc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(webauthncredential.Table, webauthncredential.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, webauthncredential.UserTable, webauthncredential.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(wc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *WebauthnCredentialClient) Hooks() []Hook {
+	return c.hooks.WebauthnCredential
 }

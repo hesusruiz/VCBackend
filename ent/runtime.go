@@ -12,6 +12,7 @@ import (
 	"github.com/hesusruiz/vcbackend/ent/publickey"
 	"github.com/hesusruiz/vcbackend/ent/schema"
 	"github.com/hesusruiz/vcbackend/ent/user"
+	"github.com/hesusruiz/vcbackend/ent/webauthncredential"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -114,4 +115,23 @@ func init() {
 	userDescID := userFields[0].Descriptor()
 	// user.IDValidator is a validator for the "id" field. It is called by the builders before save.
 	user.IDValidator = userDescID.Validators[0].(func(string) error)
+	webauthncredentialMixin := schema.WebauthnCredential{}.Mixin()
+	webauthncredentialMixinFields0 := webauthncredentialMixin[0].Fields()
+	_ = webauthncredentialMixinFields0
+	webauthncredentialFields := schema.WebauthnCredential{}.Fields()
+	_ = webauthncredentialFields
+	// webauthncredentialDescCreateTime is the schema descriptor for create_time field.
+	webauthncredentialDescCreateTime := webauthncredentialMixinFields0[0].Descriptor()
+	// webauthncredential.DefaultCreateTime holds the default value on creation for the create_time field.
+	webauthncredential.DefaultCreateTime = webauthncredentialDescCreateTime.Default.(func() time.Time)
+	// webauthncredentialDescUpdateTime is the schema descriptor for update_time field.
+	webauthncredentialDescUpdateTime := webauthncredentialMixinFields0[1].Descriptor()
+	// webauthncredential.DefaultUpdateTime holds the default value on creation for the update_time field.
+	webauthncredential.DefaultUpdateTime = webauthncredentialDescUpdateTime.Default.(func() time.Time)
+	// webauthncredential.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	webauthncredential.UpdateDefaultUpdateTime = webauthncredentialDescUpdateTime.UpdateDefault.(func() time.Time)
+	// webauthncredentialDescID is the schema descriptor for id field.
+	webauthncredentialDescID := webauthncredentialFields[0].Descriptor()
+	// webauthncredential.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	webauthncredential.IDValidator = webauthncredentialDescID.Validators[0].(func(string) error)
 }

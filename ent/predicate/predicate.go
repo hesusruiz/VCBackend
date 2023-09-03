@@ -23,3 +23,6 @@ type PublicKey func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
+
+// WebauthnCredential is the predicate function for webauthncredential builders.
+type WebauthnCredential func(*sql.Selector)

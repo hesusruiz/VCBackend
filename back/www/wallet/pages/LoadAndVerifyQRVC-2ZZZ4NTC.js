@@ -1,13 +1,13 @@
 import {
   log
-} from "../chunks/chunk-FVTRWWP3.js";
+} from "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-KRYK5JSZ.js";
 
 // front/src/pages/LoadAndVerifyQRVC.js
 var gotoPage = window.MHR.gotoPage;
 var goHome = window.MHR.goHome;
 var PRE_AUTHORIZED_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:pre-authorized_code";
-window.MHR.register("LoadAndVerifyQRVC", class LoadAndSaveQRVC extends window.MHR.AbstractPage {
+window.MHR.register("LoadAndVerifyQRVC", class LoadAndVerifyQRVC extends window.MHR.AbstractPage {
   constructor(id) {
     super(id);
   }

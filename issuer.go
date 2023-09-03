@@ -10,21 +10,39 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/utils"
+	"github.com/hesusruiz/vcbackend/back/handlers"
+	"github.com/hesusruiz/vcbackend/back/operations"
+	"github.com/hesusruiz/vcbackend/internal/util"
+	"github.com/hesusruiz/vcbackend/vault"
+	"github.com/hesusruiz/vcutils/yaml"
 	qrcode "github.com/skip2/go-qrcode"
 	"github.com/valyala/fasttemplate"
 )
 
 type Issuer struct {
-	server *Server
+	rootServer *handlers.Server
+	vault      *vault.Vault
+	cfg        *yaml.YAML
+	operations *operations.Manager
+	did        string
 }
 
 // setupIssuer creates and setups the Issuer routes
-func setupIssuer(s *Server) {
+func setupIssuer(s *handlers.Server, cfg *yaml.YAML) {
 
-	issuer := &Issuer{s}
+	issuer := &Issuer{}
+	issuer.rootServer = s
+	issuer.cfg = cfg
 
-	// // Connect to the Issuer store engine
-	// s.issuerVault = vault.Must(vault.New(yaml.New(s.cfg.Map("issuer"))))
+	// Connect to the Issuer store engine
+	issuer.vault = vault.Must(vault.New(yaml.New(cfg.Map("issuer"))))
+
+	// Create the issuer and verifier users
+	// TODO: the password is only for testing
+	_, issuer.did, _ = issuer.vault.CreateOrGetUserWithDIDKey(cfg.String("issuer.id"), cfg.String("issuer.name"), "legalperson", cfg.String("issuer.password"))
+
+	// Backend Operations for the Verifier
+	issuer.operations = operations.NewManager(issuer.vault, cfg)
 
 	// CSRF for protecting the forms
 	csrfHandler := csrf.New(csrf.Config{
@@ -35,6 +53,8 @@ func setupIssuer(s *Server) {
 		Expiration:     1 * time.Hour,
 		KeyGenerator:   utils.UUID,
 	})
+
+	s.Get("/issuer", issuer.HandleIssuerHome)
 
 	// Define the prefix for Issuer routes
 	issuerRoutes := s.Group(issuerPrefix)
@@ -60,10 +80,29 @@ func setupIssuer(s *Server) {
 
 }
 
+func (i *Issuer) HandleIssuerHome(c *fiber.Ctx) error {
+
+	// Get the list of credentials
+	credsSummary, err := i.operations.GetAllCredentials()
+	if err != nil {
+		return err
+	}
+
+	// Render template
+	m := fiber.Map{
+		"issuerPrefix":   issuerPrefix,
+		"verifierPrefix": verifierPrefix,
+		"walletPrefix":   walletPrefix,
+		"prefix":         issuerPrefix,
+		"credlist":       credsSummary,
+	}
+	return c.Render("issuer_home", m)
+}
+
 func (i *Issuer) IssuerAPIAllCredentials(c *fiber.Ctx) error {
 
 	// Get the list of credentials
-	credsSummary, err := i.server.Operations.GetAllCredentials()
+	credsSummary, err := i.operations.GetAllCredentials()
 	if err != nil {
 		return err
 	}
@@ -123,7 +162,7 @@ func (i *Issuer) IssuerAPICredential(c *fiber.Ctx) error {
 	credID := c.Params("id")
 
 	// Get the raw credential from the Vault
-	rawCred, err := i.server.issuerVault.Client.Credential.Get(context.Background(), credID)
+	rawCred, err := i.vault.Client.Credential.Get(context.Background(), credID)
 	if err != nil {
 		return err
 	}
@@ -162,17 +201,17 @@ type waltResponse struct {
 }
 
 func (i *Issuer) CreateNewCredential(c *fiber.Ctx) error {
-	i.server.logger.Info("Create a new credential")
+	i.rootServer.Logger.Info("Create a new credential")
 	// The user submitted the form. Get all the data
 	newCred := &NewCredentialForm{}
 	if err := c.BodyParser(newCred); err != nil {
-		i.server.logger.Infof("Error parsing: %s", err)
+		i.rootServer.Logger.Infof("Error parsing: %s", err)
 		return err
 	}
 
 	credentialString, err := i.createNewCredential(newCred)
 	if err != nil {
-		i.server.logger.Infof("Error: %s", err)
+		i.rootServer.Logger.Infof("Error: %s", err)
 		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
@@ -282,19 +321,19 @@ func (i *Issuer) IssuerPageNewCredentialFormPost(c *fiber.Ctx) error {
 		return err
 	}
 
-	m := fiber.Map{}
 	str, err := i.createNewCredential(newCred)
 	if err != nil && err.Error() == "invalid_credential" {
+		m := fiber.Map{}
 		m["Errormessage"] = "Enter all fields"
 		return c.Render("issuer_newcredential", m)
 	}
 
 	// Render
-	m = fiber.Map{
+	m := fiber.Map{
 		"issuerPrefix":   issuerPrefix,
 		"verifierPrefix": verifierPrefix,
 		"walletPrefix":   walletPrefix,
-		"claims":         prettyFormatJSON(str),
+		"claims":         util.PrettyFormatJSON(str),
 		"prefix":         issuerPrefix,
 	}
 	return c.Render("creddetails", m)
@@ -309,7 +348,7 @@ func (i *Issuer) IssuerPageCredentialDetails(c *fiber.Ctx) error {
 	// Get the ID of the credential
 	credID := c.Params("id")
 
-	claims, err := i.server.Operations.GetCredentialLD(credID)
+	claims, err := i.operations.GetCredentialLD(credID)
 	if err != nil {
 		return err
 	}

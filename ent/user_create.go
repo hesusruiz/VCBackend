@@ -14,6 +14,7 @@ import (
 	"github.com/hesusruiz/vcbackend/ent/did"
 	"github.com/hesusruiz/vcbackend/ent/privatekey"
 	"github.com/hesusruiz/vcbackend/ent/user"
+	"github.com/hesusruiz/vcbackend/ent/webauthncredential"
 )
 
 // UserCreate is the builder for creating a User entity.
@@ -132,6 +133,21 @@ func (uc *UserCreate) AddCredentials(c ...*Credential) *UserCreate {
 		ids[i] = c[i].ID
 	}
 	return uc.AddCredentialIDs(ids...)
+}
+
+// AddAuthncredentialIDs adds the "authncredentials" edge to the WebauthnCredential entity by IDs.
+func (uc *UserCreate) AddAuthncredentialIDs(ids ...string) *UserCreate {
+	uc.mutation.AddAuthncredentialIDs(ids...)
+	return uc
+}
+
+// AddAuthncredentials adds the "authncredentials" edges to the WebauthnCredential entity.
+func (uc *UserCreate) AddAuthncredentials(w ...*WebauthnCredential) *UserCreate {
+	ids := make([]string, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return uc.AddAuthncredentialIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -391,6 +407,25 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeString,
 					Column: credential.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.AuthncredentialsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AuthncredentialsTable,
+			Columns: []string{user.AuthncredentialsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeString,
+					Column: webauthncredential.FieldID,
 				},
 			},
 		}

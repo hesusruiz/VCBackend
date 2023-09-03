@@ -41,5 +41,6 @@ func (User) Edges() []ent.Edge {
 		edge.To("keys", PrivateKey.Type),
 		edge.To("dids", DID.Type),
 		edge.To("credentials", Credential.Type),
+		edge.To("authncredentials", WebauthnCredential.Type),
 	}
 }

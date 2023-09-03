@@ -4,7 +4,7 @@ import {
 } from "./chunks/chunk-65N62L2T.js";
 import {
   log
-} from "./chunks/chunk-FVTRWWP3.js";
+} from "./chunks/chunk-BFXLU5VG.js";
 import "./chunks/chunk-KRYK5JSZ.js";
 
 // front/src/i18n/translations.js

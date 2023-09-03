@@ -4,7 +4,7 @@ let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
 const PRE_AUTHORIZED_CODE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:pre-authorized_code';
 
-window.MHR.register("LoadAndVerifyQRVC", class LoadAndSaveQRVC extends window.MHR.AbstractPage {
+window.MHR.register("LoadAndVerifyQRVC", class LoadAndVerifyQRVC extends window.MHR.AbstractPage {
 
     constructor(id) {
         super(id)

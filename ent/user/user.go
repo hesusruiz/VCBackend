@@ -29,6 +29,8 @@ const (
 	EdgeDids = "dids"
 	// EdgeCredentials holds the string denoting the credentials edge name in mutations.
 	EdgeCredentials = "credentials"
+	// EdgeAuthncredentials holds the string denoting the authncredentials edge name in mutations.
+	EdgeAuthncredentials = "authncredentials"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// KeysTable is the table that holds the keys relation/edge.
@@ -52,6 +54,13 @@ const (
 	CredentialsInverseTable = "credentials"
 	// CredentialsColumn is the table column denoting the credentials relation/edge.
 	CredentialsColumn = "user_credentials"
+	// AuthncredentialsTable is the table that holds the authncredentials relation/edge.
+	AuthncredentialsTable = "webauthn_credentials"
+	// AuthncredentialsInverseTable is the table name for the WebauthnCredential entity.
+	// It exists in this package in order to avoid circular dependency with the "webauthncredential" package.
+	AuthncredentialsInverseTable = "webauthn_credentials"
+	// AuthncredentialsColumn is the table column denoting the authncredentials relation/edge.
+	AuthncredentialsColumn = "user_authncredentials"
 )
 
 // Columns holds all SQL columns for user fields.

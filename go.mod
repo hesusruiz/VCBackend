@@ -66,7 +66,7 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/multiformats/go-multibase v0.1.1
-	github.com/multiformats/go-multicodec v0.9.0
+	github.com/multiformats/go-multicodec v0.9.0 // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/tidwall/gjson v1.14.4
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
