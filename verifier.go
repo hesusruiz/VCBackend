@@ -73,6 +73,9 @@ func SetupVerifier(s *handlers.Server, cfg *yaml.YAML) {
 	// Error page when login session has expired without the user sending the credential
 	verifierRoutes.Get("/loginexpired", verifier.PageLoginExpired)
 
+	// // Error page when login session has expired without the user sending the credential
+	// verifierRoutes.Get("/logindenied", verifier.PageLoginDenied)
+
 	// For same-device logins (e.g., with the enterprise wallet)
 	verifierRoutes.Get("/startsiopsamedevice", verifier.PageStartSIOPSameDevice)
 
@@ -558,7 +561,22 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 	// Get the email of the user
 	email := theCredential.String("credentialSubject.email")
 	name := theCredential.String("credentialSubject.name")
+	positionSection := theCredential.String("credentialSubject.position.section")
 	zlog.Info().Str("email", email).Msg("data in vp_token")
+
+	zlog.Info().Str("section", positionSection).Msg("Performing access control")
+	if positionSection != "Section of other good things" {
+
+		// Set the credential in storage, and wait for the polling from client
+		newState := handlers.NewState()
+		newState.SetStatus(handlers.StateDenied)
+
+		v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpiration)
+
+		zlog.Info().Msg("Authentication denied")
+		return fiber.NewError(fiber.StatusUnauthorized, email)
+
+	}
 
 	// Get user from Database
 	usr, _ := v.operations.User().GetByName(email)
@@ -572,7 +590,7 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 		zlog.Info().Str("email", email).Msg("new user created")
 	}
 
-	// Check if the user has a registered WebAuthn credetial
+	// Check if the user has a registered WebAuthn credential
 	var userNotRegistered bool
 	if len(usr.WebAuthnCredentials()) == 0 {
 		userNotRegistered = true

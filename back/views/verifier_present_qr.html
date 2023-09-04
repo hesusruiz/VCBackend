@@ -40,6 +40,11 @@
                 setTimeout(pollServer, 1000)
                 return
             }
+            if (data === "denied") {
+                // Stop polling if the session expired in the server and present a message
+                location = "{{.verifierPrefix}}/logindenied"
+                return
+            }
 
             // At this point we know the server has received valid data from the wallet
             // Stop polling and present the logged in screen
