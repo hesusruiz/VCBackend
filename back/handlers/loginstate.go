@@ -9,6 +9,7 @@ const (
 	StateRegistering    = 1
 	StateAuthenticating = 2
 	StateCompleted      = 3
+	StateDenied         = 4
 
 	StateExpiration = 200 * time.Second
 )
@@ -51,6 +52,8 @@ func (s *State) String() string {
 		return "authenticating"
 	case StateCompleted:
 		return "completed"
+	case StateDenied:
+		return "denied"
 	default:
 		panic("invalid state")
 	}
@@ -66,6 +69,8 @@ func StatusToString(status byte) string {
 		return "authenticating"
 	case StateCompleted:
 		return "completed"
+	case StateDenied:
+		return "denied"
 	default:
 		panic("invalid state")
 	}

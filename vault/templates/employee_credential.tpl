@@ -1,4 +1,4 @@
-{{define "EmployeeCredential" -}}
+{{define "dsba.credentials.presentation.Employee" -}}
 {{ $now := now | unixEpoch -}}
 {
     "@context": [

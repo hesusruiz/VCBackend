@@ -51,6 +51,6 @@ webauthn:
   RPDisplayName: "EvidenceLedger"
   RPID: "mycredential.eu"
   RPOrigin: "https://verifier.mycredential.eu"
-  AuthenticatorAttachment: "platform"
+  AuthenticatorAttachment: "cross-platform"
   UserVerification: "required"
 

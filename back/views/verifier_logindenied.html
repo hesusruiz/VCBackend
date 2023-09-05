@@ -1,0 +1,26 @@
+{{define "verifier_logindenied"}} {{template "partials/header" .}}
+
+<main class="w3-container">
+
+    <div class="w3-half w3-container w3-margin-bottom w3-center">
+
+        <div class="w3-card-4">
+            <div class=" w3-container w3-margin-bottom color-error">
+                <h4>Welcome {{.claims.credentialSubject.name}}</h4>
+            </div>
+
+            <div class="w3-container w3-padding-16">
+                <p>Unfortunately, you do not access to the protected resources.</p>
+            </div>
+
+            <div class="w3-container w3-padding-16">
+                <a href="{{.verifierprefix}}" class="btn-primary color-error">Go Home</a>
+            </div>
+
+        </div>
+    </div>
+
+
+</main>
+
+{{template "partials/footer" .}} {{end}}
