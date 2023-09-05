@@ -85,7 +85,7 @@ func (v *Server) HandleWalletProviderHome(c *fiber.Ctx) error {
 
 	// This is the endpoint inside the QR that the wallet will use to send the VC/VP
 	// wallet_url := c.Protocol() + "://" + c.Hostname() + "/static/wallet"
-	wallet_url := "https://hesusruiz.github.io/"
+	wallet_url := "https://verifier.mycredential.eu/static/wallet"
 
 	// Create the QR code for cross-device SIOP
 	png, err := qrcode.Encode(wallet_url, qrcode.Medium, 256)

@@ -46,6 +46,12 @@
                 return
             }
 
+            if (data === "denied") {
+                // Stop polling if the session expired in the server and present a message
+                location = "{{.verifierPrefix}}/logindenied/{{.state}}"
+                return
+            }
+
             // At this point we know the server has received valid data from the wallet
             // Stop polling and present the logged in screen
             console.log("Received:", data)

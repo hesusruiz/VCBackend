@@ -85,6 +85,9 @@ func SetupVerifier(s *handlers.Server, cfg *yaml.YAML) {
 	// Page displaying the received credential, after successful login
 	verifierRoutes.Get("/logincompleted/:state", verifier.PageLoginCompleted)
 
+	// Page displaying the received credential, after denied login
+	verifierRoutes.Get("/logindenied/:state", verifier.PageLoginDenied)
+
 	// Allow simulation of accessing protected resources, after successful login
 	verifierRoutes.Get("/accessprotectedservice", verifier.PageAccessProtectedService)
 
@@ -341,6 +344,64 @@ func (v *Verifier) PageLoginCompleted(c *fiber.Ctx) error {
 	return c.Render("verifier_logincompleted", m)
 }
 
+// PageLoginDenied is invoked by the page presenting the QR for authentication,
+// when this page detects that the Wallet has sent a Verifiable Credential and WebAuthn is also completed.
+func (v *Verifier) PageLoginDenied(c *fiber.Ctx) error {
+
+	// Get the stateKey as a path parameter
+	stateKey := c.Params("state")
+	if len(stateKey) == 0 {
+		zlog.Err(handlers.ErrNoStateReceived).Send()
+		return fiber.NewError(fiber.StatusBadRequest, handlers.ErrNoStateReceived.Error())
+	}
+
+	stateContent, _ := v.stateSession.Get(stateKey)
+	if len(stateContent) < 2 {
+		// Render an error
+		err := handlers.ErrNoCredentialFoundInState
+		zlog.Err(err).Send()
+		m := fiber.Map{
+			"error": err.Error(),
+		}
+		return c.Render("displayerror", m)
+	}
+
+	stateStatus := stateContent[0]
+	if stateStatus != handlers.StateDenied {
+		zlog.Err(handlers.ErrInvalidStateReceived).Str("expected", "denied").Str("received", handlers.StatusToString(stateStatus)).Send()
+		// Render an error
+		m := fiber.Map{
+			"error": "incorrect status",
+		}
+		return c.Render("displayerror", m)
+	}
+
+	zlog.Info().Str("stateKey", stateKey).Str("status", handlers.StatusToString(stateStatus)).Msg("PageLoginCompleted with state")
+
+	// get the credential from the storage
+	rawCred := stateContent[1:]
+
+	// Delete the session key, as it is not needed anymore
+	v.stateSession.Delete(stateKey)
+
+	// Decode the credential to enable access to individual fields
+	var decoded map[string]any
+	err := json.Unmarshal(rawCred, &decoded)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "credential received not in JSON format")
+	}
+
+	// Render
+	m := fiber.Map{
+		"verifierPrefix": verifierPrefix,
+		"walletPrefix":   walletPrefix,
+		"claims":         decoded,
+		"prefix":         verifierPrefix,
+		"state":          stateKey,
+	}
+	return c.Render("verifier_logindenied", m)
+}
+
 // PageAccessProtectedService performs access control to a protected resource based on the access token.
 // For the moment is just a simulation
 func (v *Verifier) PageAccessProtectedService(c *fiber.Ctx) error {
@@ -564,12 +625,19 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 	positionSection := theCredential.String("credentialSubject.position.section")
 	zlog.Info().Str("email", email).Msg("data in vp_token")
 
+	serialCredential, err := json.Marshal(theCredential.Data())
+	if err != nil {
+		return err
+	}
+	zlog.Info().Str("credential", string(serialCredential))
+
 	zlog.Info().Str("section", positionSection).Msg("Performing access control")
 	if positionSection != "Section of other good things" {
 
 		// Set the credential in storage, and wait for the polling from client
 		newState := handlers.NewState()
 		newState.SetStatus(handlers.StateDenied)
+		newState.SetContent(serialCredential)
 
 		v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpiration)
 
@@ -596,12 +664,6 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 		userNotRegistered = true
 	}
 	zlog.Info().Msg("user does not have a registered WebAuthn credential")
-
-	serialCredential, err := json.Marshal(theCredential.Data())
-	if err != nil {
-		return err
-	}
-	zlog.Info().Str("credential", string(serialCredential))
 
 	if isEnterpriseWallet {
 
