@@ -37,10 +37,10 @@ func NewWebAuthnHandler(back *Server, sess *memory.Storage, ops *operations.Mana
 	rpDisplayName := cfg.String("webauthn.RPDisplayName")
 	rpID := cfg.String("webauthn.RPID")
 	rpOrigin := cfg.String("webauthn.RPOrigin")
-	// authenticatorAttachment := protocol.AuthenticatorAttachment(cfg.String("webauthn.AuthenticatorAttachment"))
+	authenticatorAttachment := protocol.AuthenticatorAttachment(cfg.String("webauthn.AuthenticatorAttachment"))
 	userVerification := protocol.UserVerificationRequirement(cfg.String("webauthn.UserVerification"))
 
-	// Create the s object
+	// Create the WebAuthn backend server object
 	s := new(WebAuthnHandler)
 
 	s.rootServer = back
@@ -56,8 +56,8 @@ func NewWebAuthnHandler(back *Server, sess *memory.Storage, ops *operations.Mana
 		RPID:          rpID,          // generally the domain name for your site
 		RPOrigin:      rpOrigin,
 		AuthenticatorSelection: protocol.AuthenticatorSelection{
-			// AuthenticatorAttachment: authenticatorAttachment, // Can also be "cross-platform" for USB keys or sw implementations
-			UserVerification: userVerification,
+			AuthenticatorAttachment: authenticatorAttachment, // Can also be "cross-platform" for USB keys or sw implementations
+			UserVerification:        userVerification,
 		},
 	})
 
