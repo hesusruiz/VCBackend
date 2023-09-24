@@ -137,7 +137,7 @@ func (v *Verifier) PageDisplayQRSIOP(c *fiber.Ctx) error {
 	redirect_uri := c.Protocol() + "://" + c.Hostname() + verifierPrefix + "/authenticationresponse"
 
 	// Create the Authentication Request
-	authRequest := createAuthenticationRequest(v.rootServer.VerifierDID, redirect_uri, stateKey)
+	authRequest, authRequest2 := createAuthenticationRequest(v.rootServer.VerifierDID, redirect_uri, stateKey)
 	//v.rootServer.Logger.Info("AuthRequest", authRequest)
 	zlog.Info().Str("AuthRequest", authRequest).Send()
 
@@ -158,6 +158,7 @@ func (v *Verifier) PageDisplayQRSIOP(c *fiber.Ctx) error {
 		"qrcode":         base64Img,
 		"prefix":         verifierPrefix,
 		"state":          stateKey,
+		"authRequest2":   authRequest2,
 	}
 	return c.Render("verifier_present_qr", m)
 }
@@ -769,7 +770,7 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 
 // }
 
-func createAuthenticationRequest(verifierDID string, redirect_uri string, state string) string {
+func createAuthenticationRequest(verifierDID string, redirect_uri string, state string) (string, string) {
 
 	// This specifies the type of credential that the Verifier will accept
 	// TODO: In this use case it is hardcoded, which is enough if the Verifier is simple and uses
@@ -802,6 +803,26 @@ func createAuthenticationRequest(verifierDID string, redirect_uri string, state 
 		"nonce":         generateNonce(),
 	})
 
-	return authRequest
+	// We use a template to generate the final string
+	template2 := "/static/wallet?openid&scope={{scope}}" +
+		"&response_type={{response_type}}" +
+		"&response_mode={{response_mode}}" +
+		"&client_id={{client_id}}" +
+		"&redirect_uri={{redirect_uri}}" +
+		"&state={{state}}" +
+		"&nonce={{nonce}}"
+
+	t2 := fasttemplate.New(template2, "{{", "}}")
+	authRequest2 := t2.ExecuteString(map[string]interface{}{
+		"scope":         scope,
+		"response_type": response_type,
+		"response_mode": response_mode,
+		"client_id":     verifierDID,
+		"redirect_uri":  redirect_uri,
+		"state":         state,
+		"nonce":         generateNonce(),
+	})
+
+	return authRequest, authRequest2
 
 }

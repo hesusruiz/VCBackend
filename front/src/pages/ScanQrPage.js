@@ -13,6 +13,7 @@ var testQR = {
 // Set the QR raw data above and enable debugging setting this flag to true
 var debugging = false
 
+// Types of QR codes that we can scan
 const QR_UNKNOWN = 0
 const QR_URL = 1
 const QR_MULTI = 2
@@ -271,7 +272,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
             return true;
         }
 
-        // Handle a normal QR code with a OIDC4VCI connection string
+        // We scanned a QR for VC Issuance (OIDC4VCI)
         if (qrType === QR_OIDC4VCI) {
             console.log("Going to ", "LoadAndSaveQRVC")
             // Create a valid URL
@@ -279,7 +280,6 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
             window.MHR.gotoPage("LoadAndSaveQRVC", qrData)
             return true;
         }
-
 
     }
 
@@ -310,6 +310,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
         }
 
         if (qrData.startsWith("HC1:")) {
+            // An EU COVID Certificate
             return QR_HC1;
         } else if (qrData.startsWith("multi|w3cvc|")) {
             // A multi-piece JWT
@@ -318,7 +319,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
             // A SIOP Authentication Request, URL-encoded
             return QR_SIOP_URL;
         } else if (qrData.startsWith("openid-credential-offer://")) {
-            // A SIOP Authentication Request, URL-encoded
+            // A SIOP OpenID for VC Issuance, URL-encoded
             return QR_OIDC4VCI;
         } else if (qrData.startsWith("VC1:")) {
             // A Verifiable Credential in raw format

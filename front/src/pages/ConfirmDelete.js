@@ -1,5 +1,7 @@
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
+let storage = window.MHR.storage
+
 
 window.MHR.register("ConfirmDelete", class ConfirmDelete extends window.MHR.AbstractPage {
 
@@ -20,9 +22,8 @@ window.MHR.register("ConfirmDelete", class ConfirmDelete extends window.MHR.Abst
         // Provide a default message if the user did not specify it
         let msg = "Are you sure you want to delete this credential?"
 
-        let currentId = pageData
-
         // The id of the credential to delete
+        let currentId = pageData
 
         // Display the title and message, with a button that goes to the home page
         let theHtml = html`
@@ -47,16 +48,11 @@ window.MHR.register("ConfirmDelete", class ConfirmDelete extends window.MHR.Abst
         this.render(theHtml)
     }
 
-
     async deleteVC(currentId) {
-        // Remove the credential from local storage
-        window.localStorage.removeItem(currentId)
-
-        await goHome()
+        await storage.credentialsDelete(currentId)
+        goHome()
         return
     }
-
-
 
 })
 

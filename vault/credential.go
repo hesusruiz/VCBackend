@@ -230,7 +230,7 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 	}
 
 	fmt.Printf("%v\n", string(prettyJSONCred))
-	fmt.Println("**** End Serialized Credential ****")
+	fmt.Println("**** End Credential ****")
 
 	// Store credential
 	_, err = v.Client.Credential.Create().

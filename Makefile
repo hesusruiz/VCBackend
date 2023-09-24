@@ -16,6 +16,6 @@ cleandb:
 	rm -f wallet.sqlite
 
 serve:
-	faster
+	go run cmd/faster/faster.go
 	go run .
 

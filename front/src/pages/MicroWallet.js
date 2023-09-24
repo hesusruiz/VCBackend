@@ -1,7 +1,10 @@
-import { log } from '../log'
+// The logo in the header
+import photo_man from '../img/photo_man.png'
+import photo_woman from '../img/photo_woman.png'
 
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
+let storage = window.MHR.storage
 
 window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.AbstractPage {
 
@@ -29,33 +32,11 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
 
         // QR code found in URL. Process and display it
         if (scope !== null) {
-            // Get all parameters
-            var response_type = params.get("response_type")
-            var response_mode = params.get("response_mode")
-            var client_id = params.get("client_id")
-            var redirect_uri = params.get("redirect_uri")
-            var state = params.get("state")
-            var nonce = params.get("nonce")
-
-            let theHtml = html`
-            <div class="w3-container">
-                <p>Welcome to the application</p>
-                <p>location: ${window.location.origin}</p>
-
-                <p>scope: ${scope}</p>
-                <p>response_type: ${response_type}</p>
-                <p>response_mode: ${response_mode}</p>
-                <p>client_id: ${client_id}</p>
-                <p>redirect_uri: ${redirect_uri}</p>
-                <p>state: ${state}</p>
-                <p>nonce: ${nonce}</p>
-            </div>
-            `
-            this.render(theHtml)
-            return
-
+            gotoPage("SIOPSelectCredential", document.URL)
+            return;
         }
 
+        // The URL specifies a command
         if (command !== null) {
             switch (command) {
                 case "getvc":
@@ -63,7 +44,7 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
 
                     // get the base path of the application in runtime
                     var vc_path = window.location.origin + "/issuer/api/v1/credential/" + vc_id
-                    await window.MHR.gotoPage("LoadAndSaveQRVC", vc_path)
+                    await gotoPage("LoadAndSaveQRVC", vc_path)
                     return;
             
                 default:
@@ -71,55 +52,58 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
             }
         }
 
-        let total = 0
-        if(!!window.localStorage.getItem("W3C_VC_LD_TOTAL")) {
-          total = parseInt(window.localStorage.getItem("W3C_VC_LD_TOTAL"))
+        // Retrieve all recent credentials from storage
+        var credentials = await storage.credentialsGetAllRecent()
+        if (!credentials) {
+            gotoPage("ErrorPage", {"title": "Error", "msg": "Error getting recent credentials"})
+            return
         }
 
-        
         // Display the certificate
-        console.log("Certificates found in storage")
         const theDivs = []
+        
+        for (const vcraw of credentials) {
 
-        for (let i = 0; i < total; i++) { 
-            const currentId = "W3C_VC_LD_"+i
-            // it might already have been deleted
-            if(!!window.localStorage.getItem(currentId)) { 
-                const vcraw =  window.localStorage.getItem(currentId)
-                const vc = JSON.parse(vcraw)
-                const vcs = vc.credentialSubject
-                const pos = vcs.position
-                const div = html`<div class="w3-half w3-container w3-margin-bottom">
-                        <div class="w3-card-4">
-                            <div class="w3-padding-left w3-margin-bottom color-primary">
-                                <h4>Employee</h4>
-                            </div>
-
-                            <div class="w3-container">
-                                <img src="https://www.w3schools.com/w3css/img_avatar3.png" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
-                                <p class="w3-large">${vcs.name}</p>
-                                <hr>
-                            <div class="w3-row-padding">
-
-
-                            <div class=" w3-container">
-                            <p class="w3-margin-bottom5">${pos.department}</p>
-                            <p class="w3-margin-bottom5">${pos.secretariat}</p>
-                            <p class="w3-margin-bottom5">${pos.directorate}</p>
-                            <p class="w3-margin-bottom5">${pos.subdirectorate}</p>
-                            <p class="w3-margin-bottom5">${pos.service}</p>
-                            <p class="w3-margin-bottom5">${pos.section}</p>
-                            </div>
-                
-                            <div class="w3-padding-16">
-                                <btn-primary @click=${()=> gotoPage("DisplayVC",currentId)}>${T("Details")}</btn-primary>
-                                <btn-danger @click=${()=> gotoPage("ConfirmDelete", currentId)}>${T("Delete")}</btn-danger>
-                            </div>
-                
-                        </div>
-                    </div>`
-                theDivs.push(div)
+            const currentId = vcraw.hash
+            const vc = JSON.parse(vcraw.encoded)
+            const vcs = vc.credentialSubject
+            const pos = vcs.position
+            var avatar = photo_man
+            if (vcs.gender == "f") {
+                avatar = photo_woman
             }
+
+            const div = html`<div class="w3-half w3-container w3-margin-bottom">
+                <div class="w3-card-4">
+                    <div class="w3-padding-left w3-margin-bottom color-primary">
+                        <h4>Employee</h4>
+                    </div>
+
+                    <div class="w3-container">
+                        <img src=${avatar} alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
+                        <p class="w3-large">${vcs.name}</p>
+                        <hr>
+                    <div class="w3-row-padding">
+
+                    <div class=" w3-container">
+                        <p class="w3-margin-bottom5">${pos.department}</p>
+                        <p class="w3-margin-bottom5">${pos.secretariat}</p>
+                        <p class="w3-margin-bottom5">${pos.directorate}</p>
+                        <p class="w3-margin-bottom5">${pos.subdirectorate}</p>
+                        <p class="w3-margin-bottom5">${pos.service}</p>
+                        <p class="w3-margin-bottom5">${pos.section}</p>
+                    </div>
+        
+                    <div class="w3-padding-16">
+                        <btn-primary @click=${()=> gotoPage("DisplayVC",currentId)}>${T("Details")}</btn-primary>
+                        <btn-danger @click=${()=> gotoPage("ConfirmDelete", currentId)}>${T("Delete")}</btn-danger>
+                    </div>
+        
+                </div>
+            </div>`
+    
+            theDivs.push(div)
+
         }
 
         if (theDivs.length > 0) {
@@ -128,13 +112,12 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
                 <p></p>
                 <div class="w3-row">
                     
-                    <div class="w3-half w3-container w3-margin-bottom">
+                    <div class="w3-container w3-margin-bottom">
                         <div class="w3-card-4">
                             <div class=" w3-center w3-margin-bottom color-primary">
                                 <h4>Authentication</h4>
                             </div>
 
-                
                             <div class="w3-container w3-padding-16 w3-center">
                                 <btn-primary @click=${()=> gotoPage("ScanQrPage")}>${T("Scan QR")}</btn-primary>
                             </div>
@@ -162,15 +145,6 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
 
         }
 
-    }
-
-    async deleteVC(currentId) {
-        // Remove the credential from local storage
-        window.localStorage.removeItem(currentId)
-
-        // Reload the application
-        await goHome()
-        return
     }
 
 })

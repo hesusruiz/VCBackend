@@ -8,7 +8,6 @@ const LOG_ALL = true
 // Logging support
 import { log } from "../log";
 
-
 // We use a library on top of IndexedDB
 // There are two application stores and one logging store:
 //    "credentials" for storing the credentials
@@ -40,6 +39,8 @@ async function credentialsSave(_credential) {
     var hash = await crypto.subtle.digest('SHA-256', data)
     var hashArray = Array.from(new Uint8Array(hash));   // convert buffer to byte array
     var hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    console.log("hashHex", hashHex)
 
     // Create the object to store
     var credential_to_store = {
@@ -54,20 +55,20 @@ async function credentialsSave(_credential) {
     var oldCred = await credentialsGet(hashHex)
     if (oldCred != undefined) {
         log.error("Credential already exists", oldCred, hashHex)
-        showError("Can not save credential: already exists")
-
+        window.MHR.gotoPage("ErrorPage", {"title": "Credential already exists", "msg": "Can not save credential: already exists"})
         // Return an error
-        return undefined;
+        return;
     }
 
-    // Store the object, catching the exception if duplicated
+    // Store the object, catching the exception if duplicated, but not displayng any error to the user
     try {
         await db.credentials.add(credential_to_store)
     } catch (error) {
         log.error("Error saving credential", error)
-        return undefined;
+        return;
     }
 
+    // Successful save, return the credential stored
     return credential_to_store;
 
 }
@@ -95,7 +96,7 @@ async function credentialsDeleteCred(_credential) {
         await db.credentials.delete(hashHex)
     } catch (error) {
         log.error(error);
-        alert("Error deleting credential")
+        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error deleting credential"})
     }
 }
 
@@ -105,7 +106,7 @@ async function credentialsDelete(key) {
         await db.credentials.delete(key)
     } catch (error) {
         log.error(error);
-        alert("Error deleting credential")
+        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error deleting credential"})
     }
 }
 
@@ -114,7 +115,7 @@ async function credentialsDeleteAll() {
         await db.credentials.clear()
     } catch (error) {
         log.error(error);
-        alert("Error deleting all credentials")
+        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error deleting all credential"})
     }
 }
 
@@ -134,16 +135,16 @@ async function credentialsGet(key) {
 // Retrieve all credentials since some period
 async function credentialsGetAllRecent(days) {
     if (days == undefined) {
-        days = 7
+        days = 365
     }
-    const oneWeekAgo = new Date(Date.now() - 60 * 60 * 1000 * 24 * days);
+    const dateInThePast = Date.now() - 60 * 60 *  24 * 1000 * days;
 
     try {
         var credentials = await db.credentials
-            .where('timestamp').aboveOrEqual(oneWeekAgo).toArray();
+            .where('timestamp').aboveOrEqual(dateInThePast).toArray();
     } catch (error) {
         log.error(error);
-        alert("Error getting recent credentials")
+        return
     }
 
     return credentials;
@@ -155,7 +156,7 @@ async function credentialsGetAllKeys() {
         var keys = await db.credentials.orderBy("timestamp").primaryKeys();
     } catch (error) {
         log.error(error);
-        alert("Error getting all credentials")
+        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error getting all credentials"})
     }
 
     return keys;
@@ -288,18 +289,9 @@ async function settingsDeleteAll() {
 
 async function showError(_text) {
     myerror(_text)
-    document.querySelector("#errorDisplayText").innerHTML = `${_text}`
-    $('#errorDisplayModal').modal("show")
+    window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": _text})
     return;
 }
-
-
-async function dismissError() {
-    $('#errorDisplayModal').modal("hide")
-
-    gotoPage(homePage)
-}
-
 
 
 // **************************************************

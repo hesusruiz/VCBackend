@@ -6,7 +6,7 @@
         "https://www.evidenceledger.eu/2022/credentials/employee/v1"
     ],
     "id": "{{.jti}}",
-    "type": ["VerifiableCredential", "EmployeeCredential"],
+    "type": ["VerifiableCredential", "dsba.credentials.presentation.Employee"],
     "issuer": {
         "id": "{{.issuerDID}}"
     },

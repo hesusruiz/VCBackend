@@ -17,7 +17,11 @@
                 {{with mustFromJson .PrettyCred}}
 
                 <div class="w3-container">
+                    {{if eq .credentialSubject.gender "f" }}
+                    <img src="https://www.w3schools.com/w3css/img_avatar4.png" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
+                    {{else}}
                     <img src="https://www.w3schools.com/w3css/img_avatar3.png" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
+                    {{end}}
                     <p class="w3-large">{{.credentialSubject.name}}</p>
                     <hr>
                 <div class="w3-row-padding">

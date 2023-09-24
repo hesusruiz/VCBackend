@@ -1,7 +1,7 @@
-import { log } from '../log'
-
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
+let storage = window.MHR.storage
+let log = window.MHR.log
 
 window.MHR.register("DisplayVC", class DisplayVC extends window.MHR.AbstractPage {
 
@@ -9,11 +9,12 @@ window.MHR.register("DisplayVC", class DisplayVC extends window.MHR.AbstractPage
         super(id)
     }
 
-    async enter(qrData) {
+    async enter(credentialID) {
         let html = this.html
-        log.log("get " + qrData)
+        log.log("get " + credentialID)
 
-        let theData = window.localStorage.getItem(qrData)
+        const vcraw = await storage.credentialsGet(credentialID)
+        var theData = vcraw.encoded
 
         console.log("The data " + JSON.stringify(theData))    
         // We should have received a URL that was scanned as a QR code.
@@ -74,12 +75,12 @@ async function getCompliancyCredential(theCredential, serviceAddress) {
           } else {
             if (response.status == 403) {
               alert.apply("error 403");
-              window.MHR.goHome();
+              goHome();
               return "Error 403";
             }
             var error = await response.text();
             log.error(error);
-            window.MHR.goHome();
+            goHome();
             alert(error);
             return null;
           }
