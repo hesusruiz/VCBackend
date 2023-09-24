@@ -40,17 +40,12 @@ wallet:
     driverName: "sqlite3"
     dataSourceName: "file:wallet.sqlite?mode=rwc&cache=shared&_fk=1"
 
-ssikit:
-  coreURL: localhost:7000
-  signatoryURL: http://localhost:7001
-  auditorURL: localhost:7002
-  custodianURL: localhost:7003
-  essifURL: localhost:7010
-
 webauthn:
   RPDisplayName: "EvidenceLedger"
   RPID: "mycredential.eu"
   RPOrigin: "https://verifier.mycredential.eu"
   AuthenticatorAttachment: "platform"
   UserVerification: "required"
+  RequireResidentKey: false
+  AttestationConveyancePreference: "indirect"
 

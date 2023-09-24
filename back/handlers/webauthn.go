@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -39,6 +40,8 @@ func NewWebAuthnHandler(back *Server, sess *memory.Storage, ops *operations.Mana
 	rpOrigin := cfg.String("webauthn.RPOrigin")
 	authenticatorAttachment := protocol.AuthenticatorAttachment(cfg.String("webauthn.AuthenticatorAttachment"))
 	userVerification := protocol.UserVerificationRequirement(cfg.String("webauthn.UserVerification"))
+	requireResidentKey := cfg.Bool("webauthn.RequireResidentKey")
+	attestationConveyancePreference := protocol.ConveyancePreference(cfg.String("webauthn.AttestationConveyancePreference"))
 
 	// Create the WebAuthn backend server object
 	s := new(WebAuthnHandler)
@@ -51,6 +54,9 @@ func NewWebAuthnHandler(back *Server, sess *memory.Storage, ops *operations.Mana
 	s.webAuthnSession = session.New(session.Config{Expiration: 24 * time.Hour})
 	s.webAuthnSession.RegisterType(webauthn.SessionData{})
 
+	// Pre-create the options object that will be sent to the authenticator in the client.
+	// We are not interested in authenticator attestation, so we do not set the AttestatioPreference field,
+	// which means it will default to (attestation: "none") in the WebAuthn API.
 	s.WebAuthn, err = webauthn.New(&webauthn.Config{
 		RPDisplayName: rpDisplayName, // display name for your site
 		RPID:          rpID,          // generally the domain name for your site
@@ -58,7 +64,9 @@ func NewWebAuthnHandler(back *Server, sess *memory.Storage, ops *operations.Mana
 		AuthenticatorSelection: protocol.AuthenticatorSelection{
 			AuthenticatorAttachment: authenticatorAttachment, // Can also be "cross-platform" for USB keys or sw implementations
 			UserVerification:        userVerification,
+			RequireResidentKey:      &requireResidentKey,
 		},
+		AttestationPreference: attestationConveyancePreference,
 	})
 
 	if err != nil {
@@ -83,9 +91,12 @@ func (s *WebAuthnHandler) AddRoutes(f *Server) {
 	waRouteGroup.Get("/logoff", s.Logoff)
 }
 
+// BeginRegistration is called from the wallet to start registering a new authenticator device in the server
 func (s *WebAuthnHandler) BeginRegistration(c *fiber.Ctx) error {
 
-	// Get username from the path of the HTTP request
+	// The new WebAuthn credential will be associated to a user via its email
+
+	// Get username (we use email as username) from the path of the HTTP request
 	usernameParam := c.Params("username")
 	if usernameParam == "" {
 		errText := "must supply a valid username i.e. foo@bar.com"
@@ -94,15 +105,15 @@ func (s *WebAuthnHandler) BeginRegistration(c *fiber.Ctx) error {
 		return fiber.NewError(http.StatusBadRequest, errText)
 	}
 
+	// Make a copy so Fiber can overwrite the request without affecting us
 	username := utils.CopyString(usernameParam)
-	displayName := strings.Split(username, "@")[0]
 
-	// Get the state from the URL parameters
-	//	state := c.Query("state")
+	// The displayname will be the first part of the email address
+	displayName := strings.Split(username, "@")[0]
 
 	zlog.Info().Str("username", username).Msg("BeginRegistration started")
 
-	// get user from the Storage
+	// Get user from the Storage. The user is automatically created if it does not exist
 	user, err := s.operations.User().CreateOrGet(username, displayName)
 	if err != nil {
 		return err
@@ -110,11 +121,12 @@ func (s *WebAuthnHandler) BeginRegistration(c *fiber.Ctx) error {
 	zlog.Info().Str("username", user.WebAuthnName()).Msg("User retrieved or created")
 
 	// We should exclude all the credentials already registered
+	// They will be sent to the authenticator so it does not have to create a new credential if there is already one
 	registerOptions := func(credCreationOpts *protocol.PublicKeyCredentialCreationOptions) {
 		credCreationOpts.CredentialExcludeList = user.CredentialExcludeList()
 	}
 
-	// generate PublicKeyCredentialCreationOptions, session data
+	// Generate PublicKeyCredentialCreationOptions, session data
 	options, waSessionData, err := s.WebAuthn.BeginRegistration(
 		user,
 		registerOptions,
@@ -127,7 +139,7 @@ func (s *WebAuthnHandler) BeginRegistration(c *fiber.Ctx) error {
 		zlog.Info().Msg("Successful BeginRegistration")
 	}
 
-	// Use a session to track the request/reply
+	// Use an HTTP session to track the request/reply
 	waSession, err := s.webAuthnSession.Get(c)
 	if err != nil {
 		return err
@@ -235,8 +247,14 @@ func (s *WebAuthnHandler) FinishRegistration(c *fiber.Ctx) error {
 	return nil
 }
 
+// BeginLogin returns to the client app the structure needed by the client to request the Authenticator to
+// create an assertion, using a previously created private key.
+// The Authenticator will sign our challenge (and other items) with its private key, and the client will invoke
+// the FinishLoging API, where we will be able to check the signature with the public key that we stored in
+// a previous registration phase.
 func (s *WebAuthnHandler) BeginLogin(c *fiber.Ctx) error {
 
+	// We need from the client a unique user name (an email address in our case).
 	// Get username from the path of the HTTP request
 	username := c.Params("username")
 	if username == "" {
@@ -247,7 +265,7 @@ func (s *WebAuthnHandler) BeginLogin(c *fiber.Ctx) error {
 
 	zlog.Info().Str("username", username).Msg("BeginLogin started")
 
-	// Get user from Database
+	// The user must have been registered previously, so we check in our user database
 	user, err := s.operations.User().GetByName(username)
 
 	// It is an error if the user doesn't exist
@@ -256,12 +274,18 @@ func (s *WebAuthnHandler) BeginLogin(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "user not found")
 	}
 
+	// Now we create the assertion request.
 	// Generate PublicKeyCredentialRequestOptions, session data
 	options, sessionData, err := s.WebAuthn.BeginLogin(user)
 	if err != nil {
 		zlog.Error().Err(err).Msg("Error in webAuthn.BeginLogin")
 		return err
 	}
+
+	// Patch the options ans sessionData so we control the challenge sent to the client
+	challenge := []byte("hola que tal")
+	options.Response.Challenge = challenge
+	sessionData.Challenge = base64.RawURLEncoding.EncodeToString(challenge)
 
 	// Use a httpSession to track the request/reply
 	httpSession, err := s.webAuthnSession.Get(c)
@@ -496,4 +520,25 @@ func printJSON(val any) {
 		return
 	}
 	fmt.Println(string(out))
+}
+
+// ChallengeLength - Length of bytes to generate for a challenge
+const ChallengeLength = 32
+
+// Challenge that should be signed and returned by the authenticator
+type Challenge protocol.URLEncodedBase64
+
+// Create a new challenge to be sent to the authenticator. The spec recommends using
+// at least 16 bytes with 100 bits of entropy. We use 32 bytes.
+func CreateChallenge() (Challenge, error) {
+	challenge := make([]byte, ChallengeLength)
+	_, err := rand.Read(challenge)
+	if err != nil {
+		return nil, err
+	}
+	return challenge, nil
+}
+
+func (c Challenge) String() string {
+	return base64.RawURLEncoding.EncodeToString(c)
 }

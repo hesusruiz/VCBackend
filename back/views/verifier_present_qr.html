@@ -9,7 +9,7 @@
     <h3>Or click this button to authenticate with the browser</h3>
 
     <div class="w3-container w3-padding-16">
-        <a href="{{.verifierPrefix}}/startsiopsamedevice?state={{.state}}" target="_blank" class="btn-primary">Login with browser</a>
+        <a href="{{.authRequest2}}" target="_blank" class="btn-primary">Login with browser</a>
     </div>
 
 </main>
@@ -38,11 +38,6 @@
                 // Poll again in 1 second
                 console.log("pending")
                 setTimeout(pollServer, 1000)
-                return
-            }
-            if (data === "denied") {
-                // Stop polling if the session expired in the server and present a message
-                location = "{{.verifierPrefix}}/logindenied"
                 return
             }
 

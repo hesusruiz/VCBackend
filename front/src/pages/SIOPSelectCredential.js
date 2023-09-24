@@ -1,13 +1,19 @@
-import { log } from '../log'
 import { Base64 } from 'js-base64';
+import photo_man from '../img/photo_man.png'
+import photo_woman from '../img/photo_woman.png'
 
-// import * as db from "../components/db"
-// import * as jwt from "../components/jwt"
 
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
+let storage = window.MHR.storage
+let log = window.MHR.log
+let html = window.MHR.html
 
+
+// We will perform SIOP/OpenID4VP Authentication flow
 window.MHR.register("SIOPSelectCredential", class SIOPSelectCredential extends window.MHR.AbstractPage {
+    WebAuthnSupported = false
+    PlatformAuthenticatorSupported = false
 
     constructor(id) {
         super(id)
@@ -27,6 +33,17 @@ window.MHR.register("SIOPSelectCredential", class SIOPSelectCredential extends w
             return
         }
 
+        // check whether current browser supports WebAuthn
+        if (window.PublicKeyCredential) {
+            this.WebAuthnSupported = true
+
+            // Check for PlatformAuthenticator
+            let available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+            if (available) {
+                this.PlatformAuthenticatorSupported = true
+            } 
+        }
+
         // Create a simple URL ready for parsing
         qrData = qrData.replace("openid://?", "")
 
@@ -35,75 +52,98 @@ window.MHR.register("SIOPSelectCredential", class SIOPSelectCredential extends w
         var redirect_uri = params.get("redirect_uri")
         var state = params.get("state")
         var scope = params.get("scope")
-        log.log("state", state, "redirect_uri", redirect_uri)
+        log.log("state", state)
         log.log("redirect_uri", redirect_uri)
         log.log("scope", scope)
         var credentialType = "Employee"
 
-        if (scope != "dsba.credentials.presentation.Employee") {
-            log.error("invalid scope:", scope)
-            gotoPage("ErrorPage", {
-                title: "Error",
-                msg: "Invalid credential requested"
-            });
+        // redirect_uri is the endpoint where we have to send the authentication response
+        // We are going to extract the RP identity from that URL
+        var rpURL = new URL(redirect_uri)
+        var rpDomain = rpURL.hostname 
+
+        // Retrieve all credentials from storage
+        var credStructs = await storage.credentialsGetAllRecent()
+        if (!credStructs) {
+            let theHtml = html`
+                <div class="w3-panel w3-margin w3-card w3-center w3-round color-error">
+                <p>You do not have a Verifiable Credential.</p>
+                <p>Please go to an Issuer to obtain one.</p>
+                </div>
+            `;
+            this.render(theHtml)
             return
         }
 
-        // Check if we have a certificate in local storage
-        let total = 0
-        if(!!window.localStorage.getItem("W3C_VC_LD_TOTAL")) {
-          total = parseInt(window.localStorage.getItem("W3C_VC_LD_TOTAL"))
-        }
-
-        if (total < 1) {
-            let theHtml = html`
-            <div class="w3-panel w3-margin w3-card w3-center w3-round color-error">
-            <p>You do not have a Verifiable Credential.</p>
-            <p>Please go to an Issuer to obtain one.</p>
-            </div>
-            `;
-            this.render(theHtml)
-            return             
-        }
-
-        // Retrieve all credentials from storage
-        let qrContent = []
-        for (let i = 0; i < total; i++) { 
-            const currentId = "W3C_VC_LD_"+i
-            if(!!window.localStorage.getItem(currentId)) { 
-                qrContent.push(window.localStorage.getItem(currentId))
+        // Select credentials of the requested type, specified in "scope"
+        var credentials = []
+        for (const cc of credStructs) {
+            const vc = JSON.parse(cc.encoded)
+            const vctype = vc.type
+            if (vctype.includes(scope)) {
+                console.log("found", cc.encoded)
+                credentials.push(vc)
+                break
             }
         }
-        log.log("credential", qrContent)
 
+        // Error message if no credentials satisfy the condition 
+        if (credentials.length == 0) {
+            var msg = html`
+                <p><b>${rpDomain}</b> has requested a Verifiable Credential of type ${credentialType} to perform authentication,
+                but you do not have any credential of that type.</p>
+                <p>Please go to an Issuer to obtain one.</p>
+            `
+            const errPanel = window.MHR.ErrorPanel(T("Error"), msg)
+            this.render(errPanel)
+            return
+        }
 
         let theHtml = html`
         <p></p>
         <div class="w3-row">
+            <div class=" w3-container">
+                <p>
+                    <b>${rpDomain}</b> has requested a Verifiable Credential of type ${credentialType} to perform authentication.
+                </p>
+                <p>
+                    If you want to send the credential, click the button "Send Credential".
+                </p>
+            </div>
+            
+            ${vcToHtml(credentials[0], redirect_uri, state, this.WebAuthnSupported)}
 
-            <div class="w3-half w3-container w3-margin-bottom">
-                <div class="w3-card-4">
-                    <div class=" w3-container w3-margin-bottom color-primary">
-                        <h4>Authorization Request received</h4>
-                    </div>
-
-                    <div class=" w3-container">
-                    <p>
-                        The Verifier has requested a Verifiable Credential of type ${credentialType} to perform authentication.
-                    </p>
-                    <p>
-                        If you want to send the credential, click the button "Send Credential".
-                    </p>
-                    </div>
-        
-                    <div class="w3-container w3-padding-16">
-                        <btn-primary @click=${()=> sendCredential(redirect_uri, qrContent, state)}>${T("Send Credential")}</btn-primary>
-                    </div>
-        
-                </div>
-            </div>            
         </div>
         `
+
+
+        // let theHtml = html`
+        // <p></p>
+        // <div class="w3-row">
+
+        //     <div class="w3-half w3-container w3-margin-bottom">
+        //         <div class="w3-card-4">
+        //             <div class=" w3-container w3-margin-bottom color-primary">
+        //                 <h4>Authorization Request received</h4>
+        //             </div>
+
+        //             <div class=" w3-container">
+        //             <p>
+        //                 The Verifier has requested a Verifiable Credential of type ${credentialType} to perform authentication.
+        //             </p>
+        //             <p>
+        //                 If you want to send the credential, click the button "Send Credential".
+        //             </p>
+        //             </div>
+        
+        //             <div class="w3-container w3-padding-16">
+        //                 <btn-primary @click=${()=> sendCredential(redirect_uri, credentials, state, this.WebAuthnSupported)}>${T("Send Credential")}</btn-primary>
+        //             </div>
+        
+        //         </div>
+        //     </div>            
+        // </div>
+        // `
 
         this.render(theHtml)
 
@@ -112,20 +152,20 @@ window.MHR.register("SIOPSelectCredential", class SIOPSelectCredential extends w
 })
 
 // sendCredential prepares an Authentication Response and sends it to the server as specified in the endpoint
-async function sendCredential(backEndpoint, credential, state) {
+async function sendCredential(backEndpoint, credentials, state, authSupported) {
 
     log.log("sending POST to:", backEndpoint + "?state=" + state)
     var ps = {
         id: "Placeholder - not yet evaluated.",
         definition_id: "Example definition." 
     }
-    log.log("The credential: " + credential)
+    log.log("The credentials: " + credentials)
 
     // Create the vp_token structure
     var vpToken = {
         context: ["https://www.w3.org/ns/credentials/v2"],
         type: ["VerifiablePresentation"],
-        verifiableCredential: JSON.parse("[" + credential + "]"),
+        verifiableCredential: credentials,
         // currently unverified
         holder: "did:my:wallet"
     }
@@ -160,6 +200,14 @@ async function sendCredential(backEndpoint, credential, state) {
             },
             body: formBody,
         })
+
+        if (!authSupported) {
+            gotoPage("ErrorPage", {
+                title: "Error",
+                msg: "Authenticator not supported in this device"
+            });
+            return
+        }
 
         // If we receive an HTTP status NotFound (404), it means the user does not have
         // an authenticator device registered with the server.
@@ -250,12 +298,15 @@ async function sendCredential(backEndpoint, credential, state) {
 
 var apiPrefix = "/webauthn"
 
-
+// registerUser asks the authenticator device where the wallet is running for a new WebAuthn credential
+// and sends the new credential to the server, which will store it associated to the user+device 
 async function registerUser(username, state) {
 
     try {
 
         // Get from the server the CredentialCreationOptions
+        // It will be associated to the username that corresponds to the current state, which is the
+        // username inside the credential that was sent to the Verifier
         var response = await fetch(apiPrefix + '/register/begin/' + username + "?state=" + state, {credentials:'include'})
         if (!response.ok) {
             var errorText = await response.text()
@@ -264,17 +315,22 @@ async function registerUser(username, state) {
         }
         var responseJSON = await response.json()
         var credentialCreationOptions = responseJSON.options
+
+        // This request is associated to a session in the server. We will send the response associated to that session
+        // so the server can match the reply with the request
         var session = responseJSON.session
         
         log.log("Received CredentialCreationOptions", credentialCreationOptions)
         log.log("Session:", session)
 
 
-        // Decode the fields that are B64Url encoded for transmission
+        // Decode the fields that are b64Url encoded for transmission
         credentialCreationOptions.publicKey.challenge = bufferDecode(credentialCreationOptions.publicKey.challenge);
         credentialCreationOptions.publicKey.user.id = bufferDecode(credentialCreationOptions.publicKey.user.id);
 
         // Decode each of the excluded credentials
+        // This is a list of existing credentials in the server, to avoid the authenticator creating a new one
+        // if the server already has a credential for this authenticator
         if (credentialCreationOptions.publicKey.excludeCredentials) {
             for (var i = 0; i < credentialCreationOptions.publicKey.excludeCredentials.length; i++) {
                 credentialCreationOptions.publicKey.excludeCredentials[i].id = bufferDecode(credentialCreationOptions.publicKey.excludeCredentials[i].id);
@@ -460,4 +516,46 @@ function bufferEncode(value) {
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
         .replace(/=/g, "");;
+}
+
+function vcToHtml(vc, redirect_uri, state, webAuthnSupported) {
+    var credentials = [vc]
+    const vcs = vc.credentialSubject
+    const pos = vcs.position
+    var avatar = photo_man
+    if (vcs.gender == "f") {
+        avatar = photo_woman
+    }
+
+    const div = html`<div class="w3-half w3-container w3-margin-bottom">
+        <div class="w3-card-4">
+            <div class="w3-padding-left w3-margin-bottom color-primary">
+                <h4>Employee</h4>
+            </div>
+
+            <div class="w3-container">
+                <img src=${avatar} alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
+                <p class="w3-large">${vcs.name}</p>
+                <hr>
+            <div class="w3-row-padding">
+
+            <div class=" w3-container">
+                <p class="w3-margin-bottom5">${pos.department}</p>
+                <p class="w3-margin-bottom5">${pos.secretariat}</p>
+                <p class="w3-margin-bottom5">${pos.directorate}</p>
+                <p class="w3-margin-bottom5">${pos.subdirectorate}</p>
+                <p class="w3-margin-bottom5">${pos.service}</p>
+                <p class="w3-margin-bottom5">${pos.section}</p>
+            </div>
+
+            <div class="w3-padding-16">
+              <btn-primary @click=${() => window.MHR.cleanReload()}>${T("Cancel")}</btn-primary>
+              <btn-primary @click=${()=> sendCredential(redirect_uri, credentials, state, webAuthnSupported)}>${T("Send Credential")}</btn-primary>
+            </div>
+
+        </div>
+    </div>`
+
+    return div
+
 }

@@ -5,6 +5,7 @@
     family_name:        "Doe"
     preferred_username: "John"
     email:              "john.doe@gmaily.com"
+    gender:             "m"
     position:
       department:       "Department One"
       secretariat:      "Secretaria Two"
@@ -21,6 +22,7 @@
     family_name:        "Smith"
     preferred_username: "Anna"
     email:              "anna.smith@gmaily.com"
+    gender:             "f"
     position:
       department:       "Department One"
       secretariat:      "Secretaria Two"

@@ -4,11 +4,11 @@
 // This module starts executing as soon as parsing of the HTML has finished
 // We will bootstrap the app and start the loading process for all components
 
-// The CSS module
-import './css/w3.css'
-
 // Logging support
 import { log } from "./log";
+
+// The CSS module
+import './css/w3.css'
 
 // For rendering the HTML in the pages
 import { render, html } from 'uhtml';
@@ -19,6 +19,9 @@ import './i18n/tr.js'
 // The logo in the header
 // @ts-ignore
 import logo_img from './img/logo.png'
+
+// The database operations
+import { storage } from "./components/db"
 
 // Prepare for lazy-loading the pages
 // @ts-ignore
@@ -80,7 +83,7 @@ function setHomePage(page) {
 async function goHome() {
 
     if (homePage != undefined) {
-        await gotoPage(homePage);
+        await gotoPage(homePage, null);
     }
 
 }
@@ -343,10 +346,7 @@ function T(e) {
  */
 function resetAndGoHome(e) {
     HeaderBar(false)
-    // @ts-ignore
-    if (window.MHR.goHome) {
-        goHome()
-    }
+    goHome()
 }
 
 function HeaderBar(menu = false) {
@@ -395,17 +395,16 @@ function ErrorPanel(title, message) {
     <div class="w3-container w3-padding-64">
         <div class="w3-card-4 w3-center">
     
-            <header class="w3-container w3-center color-primary">
+            <header class="w3-container w3-center color-error">
                 <h3>${title}</h3>
             </header>
     
             <div class="w3-container">
-                <p>${message}</p>
-                <p>${T("Please click Accept to refresh the page.")}</p>
+                ${message}
             </div>
             
             <div class="w3-container w3-center w3-padding">
-                <btn-primary onclick=${()=>window.location.reload()}>${T("Accept")}</btn-primary>        
+                <btn-danger onclick=${()=>cleanReload()}>${T("Home")}</btn-danger>        
             </div>
 
         </div>
@@ -487,17 +486,30 @@ function register(pageName, classDefinition) {
     let instance = new classDefinition(pageName)
 }
 
+function cleanReload() {
+    // Reload the application with a clean URL
+    //@ts-ignore
+    window.location = window.location.origin + window.location.pathname
+    return    
+}
 
-// This module exports the `mhr` object into the global namespace, where we wil add
+
+
+// This module exports the `MHR` object into the global namespace, where we will add
 // the relevant functions that we want globally available to other modules.
 // This way they do not have to import us (and avoid circular references in some cases) and
 // we do not pollute the global namespace with our functions and variables
 // @ts-ignore
 window.MHR = {
+    log: log,
+    storage: storage,
     route: route,
     goHome: goHome,
     gotoPage: gotoPage,
     AbstractPage: AbstractPage,
     register: register,
-    ErrorPanel: ErrorPanel
+    ErrorPanel: ErrorPanel,
+    cleanReload: cleanReload,
+    html: html,
+    render: render
 }

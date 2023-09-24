@@ -1,7 +1,9 @@
 /* The color system, using variables */
 :root {
     --fore-color-primary:  white!important;
+    --bg-color-primary-t:  #0066FF!important;
     --bg-color-primary:  #20295b!important;
+
 
     --fore-color-medium:  white!important;
     --bg-color-medium:  #3f51b5!important;

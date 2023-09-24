@@ -41,7 +41,7 @@ window.MHR.register("ErrorPage", class ErrorPage extends window.MHR.AbstractPage
                 </div>
                 
                 <div class="w3-container w3-center w3-padding">
-                    <btn-primary onclick=${()=>window.location.reload()}>${T("Accept")}</btn-primary>        
+                    <btn-danger onclick=${()=>window.MHR.cleanReload()}>${T("Accept")}</btn-danger>        
                 </div>
 
             </div>
@@ -50,3 +50,8 @@ window.MHR.register("ErrorPage", class ErrorPage extends window.MHR.AbstractPage
         this.render(theHtml)
     }
 })
+
+function cleanReload() {
+    // Reload the application with a clean URL
+    location = window.location.origin + window.location.pathname
+}
