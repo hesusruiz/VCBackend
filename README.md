@@ -1,6 +1,6 @@
 # VCBackend
 
-VCBackend includes in a single binary demo versions of Issuer, Verifier and Wallet (same-device only, for a cross-device wallet please see [VCWallet](https://github.com/hesusruiz/VCWallet)).
+VCBackend includes in a single binary demo versions of Issuer, Verifier and Wallet (both same-device and cross-device flows).
 
 This facilitates installation and allows to see how all components fit together and the protocol flows between them.
 
@@ -12,25 +12,48 @@ Clone the repository:
 git clone git@github.com:hesusruiz/VCBackend.git
 ```
 
+## Post-installation
+
+When in the `front` subdirectory of the proyect root, install the `npm` required packages:
+
+```
+cd front
+npm install
+```
+
 ## Running
 
-The first time that you start the VCBackend you have to make sure the database artifacts are consistent. You can use the provided Makefile for that or run the command directly:
+### First time and when the data model changes
+
+The first time that you start the VCBackend you have to make sure the database artifacts are consistent:
 
 ```
 make datamodel
 ```
 
-The above command has to be executed every time that you modify the database model in the application.
+The above command has to be executed every time that you modify the database model in the application. No harm is done if you run the command more than needed.
+
+### Creating example credentials
+
+To generate some credentials for testing and demo, run:
+
+```
+make credentials
+```
+
+### Starting the system
 
 To start VCBackend in development mode, type:
 
 ```
-go run .
+make serve
 ```
+
+The above command builds the frontend using [esbuild](https://esbuild.github.io/) and starts the server.
 
 # Configuration
 
-The configuration file in `config\server.yaml` provides for some configuration of VCBackend. An example config file is:
+The configuration file in `configs\server.yaml` provides for some configuration of VCBackend. An example config file is:
 
 ```yaml
 server:
@@ -59,6 +82,8 @@ verifier:
   store:
     driverName: "sqlite3"
     dataSourceName: "file:verifier.sqlite?mode=rwc&cache=shared&_fk=1"
+  uri_prefix: /verifier
+  jwks_uri: /.well-known/jwks_uri
   protectedResource:
     url: "https://www.google.com"
 
@@ -73,10 +98,12 @@ wallet:
     driverName: "sqlite3"
     dataSourceName: "file:wallet.sqlite?mode=rwc&cache=shared&_fk=1"
 
-ssikit:
-  coreURL: localhost:7000
-  signatoryURL: http://localhost:7001
-  auditorURL: localhost:7002
-  custodianURL: localhost:7003
-  essifURL: localhost:7010
+webauthn:
+  RPDisplayName: "EvidenceLedger"
+  RPID: "mycredential.eu"
+  RPOrigin: "https://verifier.mycredential.eu"
+  AuthenticatorAttachment: "platform"
+  UserVerification: "required"
+  RequireResidentKey: false
+  AttestationConveyancePreference: "indirect"
 ```

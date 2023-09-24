@@ -4,6 +4,8 @@
 *.dll
 *.so
 *.dylib
+*.db-shm
+*.db-wal
 
 # Test binary, built with `go test -c`
 *.test
