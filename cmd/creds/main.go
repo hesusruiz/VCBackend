@@ -15,7 +15,7 @@ type CredentialClaims struct {
 	Other map[string]any
 }
 
-const defaultConfigFile = "configs/server.yaml"
+const defaultConfigFile = "./server.yaml"
 const defaultCredentialDataFile = "cmd/creds/sampledata/employee_data.yaml"
 
 var (

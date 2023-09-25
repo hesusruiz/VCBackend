@@ -147,7 +147,6 @@ window.addEventListener("DOMContentLoaded", async (event) => {
   getAndUpdateVersion();
   await goHome();
   for (const path in pageModulesMap) {
-    console.log("Dyn loading", pageModulesMap[path]);
     import(pageModulesMap[path]);
   }
 });
@@ -235,8 +234,8 @@ function ErrorPanel(title, message) {
     <div class="w3-container w3-padding-64">
         <div class="w3-card-4 w3-center">
     
-            <header class="w3-container w3-center color-error">
-                <h3>${title}</h3>
+            <header class="w3-padding-left w3-margin-bottom w3-center color-error">
+                <h4>${title}</h4>
             </header>
     
             <div class="w3-container">
@@ -276,7 +275,6 @@ var AbstractPage = class {
     if (mainElem) {
       mainElem.appendChild(this.domElem);
     }
-    console.log("Page constructor:", id);
   }
   /**
    * @param {(() => import("uhtml").Renderable) | import("uhtml").Renderable} theHtml
@@ -289,6 +287,13 @@ var AbstractPage = class {
     this.domElem.style.display = "block";
     HeaderBar();
     render(this.domElem, theHtml);
+  }
+  /**
+   * @param {string} title
+   * @param {string} message
+   */
+  showError(title, message) {
+    this.render(ErrorPanel(title, message));
   }
 };
 function register(pageName, classDefinition) {

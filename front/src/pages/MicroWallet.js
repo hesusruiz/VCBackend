@@ -128,6 +128,23 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
                     ${theDivs}
 
                 </div>
+
+                <ion-card>
+                    <ion-card-header>
+                        <ion-card-title>Card Title</ion-card-title>
+                        <ion-card-subtitle>Card Subtitle</ion-card-subtitle>
+                    </ion-card-header>
+
+                    <ion-card-content>
+                        Here's a small text description for the card content. Nothing more, nothing less.
+                    </ion-card-content>
+
+                    <ion-button><span slot="start">Details</span></ion-button>
+                    <ion-button color="danger"><span slot="start">Delete</span></ion-button>
+                   
+
+                </ion-card>
+
             `)
             return
 

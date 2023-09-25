@@ -53,7 +53,7 @@ The above command builds the frontend using [esbuild](https://esbuild.github.io/
 
 # Configuration
 
-The configuration file in `configs\server.yaml` provides for some configuration of VCBackend. An example config file is:
+The configuration file in `server.yaml` provides for some configuration of VCBackend. An example config file is:
 
 ```yaml
 server:

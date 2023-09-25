@@ -27,7 +27,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const defaultConfigFile = "configs/server.yaml"
+const defaultConfigFile = "./server.yaml"
 const defaultTemplateDir = "back/views"
 const defaultStaticDir = "back/www"
 const defaultStoreDriverName = "sqlite3"

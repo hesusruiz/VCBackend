@@ -16,7 +16,7 @@ type CredentialClaims struct {
 	Other map[string]any
 }
 
-const defaultConfigFile = "configs/server.yaml"
+const defaultConfigFile = "./server.yaml"
 
 var (
 	configFile = flag.String("config", defaultConfigFile, "path to configuration file")

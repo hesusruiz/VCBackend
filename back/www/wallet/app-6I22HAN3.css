@@ -1321,6 +1321,7 @@ a {
 }
 btn-primary,
 .btn-primary {
+  inherits: false;
   color: var(--fore-color-primary);
   background-color: var(--bg-color-primary);
   border-radius: 8px;

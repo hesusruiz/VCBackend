@@ -167,7 +167,7 @@ var goHome = window.MHR.goHome;
 var storage = window.MHR.storage;
 var log = window.MHR.log;
 var html = window.MHR.html;
-window.MHR.register("SIOPSelectCredential", class SIOPSelectCredential extends window.MHR.AbstractPage {
+window.MHR.register("SIOPSelectCredential", class extends window.MHR.AbstractPage {
   WebAuthnSupported = false;
   PlatformAuthenticatorSupported = false;
   constructor(id) {
@@ -199,7 +199,13 @@ window.MHR.register("SIOPSelectCredential", class SIOPSelectCredential extends w
     log.log("state", state);
     log.log("redirect_uri", redirect_uri);
     log.log("scope", scope);
-    var credentialType = "Employee";
+    const scopeParts = scope.split(".");
+    if (scopeParts.length == 0) {
+      this.showError("Error", "Invalid scope specified");
+      return;
+    }
+    const ll = scopeParts.length;
+    var credentialType = scopeParts[ll - 1];
     var rpURL = new URL(redirect_uri);
     var rpDomain = rpURL.hostname;
     var credStructs = await storage.credentialsGetAllRecent();
@@ -252,6 +258,44 @@ window.MHR.register("SIOPSelectCredential", class SIOPSelectCredential extends w
     this.render(theHtml);
   }
 });
+function vcToHtml(vc, redirect_uri, state, webAuthnSupported) {
+  var credentials = [vc];
+  const vcs = vc.credentialSubject;
+  const pos = vcs.position;
+  var avatar = photo_man_default;
+  if (vcs.gender == "f") {
+    avatar = photo_woman_default;
+  }
+  const div = html`<div class="w3-half w3-container w3-margin-bottom">
+        <div class="w3-card-4">
+            <div class="w3-padding-left w3-margin-bottom color-primary">
+                <h4>Employee</h4>
+            </div>
+
+            <div class="w3-container">
+                <img src=${avatar} alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
+                <p class="w3-large">${vcs.name}</p>
+                <hr>
+            <div class="w3-row-padding">
+
+            <div class=" w3-container">
+                <p class="w3-margin-bottom5">${pos.department}</p>
+                <p class="w3-margin-bottom5">${pos.secretariat}</p>
+                <p class="w3-margin-bottom5">${pos.directorate}</p>
+                <p class="w3-margin-bottom5">${pos.subdirectorate}</p>
+                <p class="w3-margin-bottom5">${pos.service}</p>
+                <p class="w3-margin-bottom5">${pos.section}</p>
+            </div>
+
+            <div class="w3-padding-16">
+              <btn-primary @click=${() => window.MHR.cleanReload()}>${T("Cancel")}</btn-primary>
+              <btn-primary @click=${() => sendCredential(redirect_uri, credentials, state, webAuthnSupported)}>${T("Send Credential")}</btn-primary>
+            </div>
+
+        </div>
+    </div>`;
+  return div;
+}
 async function sendCredential(backEndpoint, credentials, state, authSupported) {
   log.log("sending POST to:", backEndpoint + "?state=" + state);
   var ps = {
@@ -494,42 +538,4 @@ function bufferDecode(value) {
 function bufferEncode(value) {
   return btoa(String.fromCharCode.apply(null, new Uint8Array(value))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
   ;
-}
-function vcToHtml(vc, redirect_uri, state, webAuthnSupported) {
-  var credentials = [vc];
-  const vcs = vc.credentialSubject;
-  const pos = vcs.position;
-  var avatar = photo_man_default;
-  if (vcs.gender == "f") {
-    avatar = photo_woman_default;
-  }
-  const div = html`<div class="w3-half w3-container w3-margin-bottom">
-        <div class="w3-card-4">
-            <div class="w3-padding-left w3-margin-bottom color-primary">
-                <h4>Employee</h4>
-            </div>
-
-            <div class="w3-container">
-                <img src=${avatar} alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
-                <p class="w3-large">${vcs.name}</p>
-                <hr>
-            <div class="w3-row-padding">
-
-            <div class=" w3-container">
-                <p class="w3-margin-bottom5">${pos.department}</p>
-                <p class="w3-margin-bottom5">${pos.secretariat}</p>
-                <p class="w3-margin-bottom5">${pos.directorate}</p>
-                <p class="w3-margin-bottom5">${pos.subdirectorate}</p>
-                <p class="w3-margin-bottom5">${pos.service}</p>
-                <p class="w3-margin-bottom5">${pos.section}</p>
-            </div>
-
-            <div class="w3-padding-16">
-              <btn-primary @click=${() => window.MHR.cleanReload()}>${T("Cancel")}</btn-primary>
-              <btn-primary @click=${() => sendCredential(redirect_uri, credentials, state, webAuthnSupported)}>${T("Send Credential")}</btn-primary>
-            </div>
-
-        </div>
-    </div>`;
-  return div;
 }

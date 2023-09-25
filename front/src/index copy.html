@@ -15,12 +15,6 @@
         ]
         // The page mapping
         window.pageModules = PUT_PAGEMAP_HERE
-
-        window.Ionic = {
-            config: {
-                mode: 'md',
-            },
-        };
     </script>
 
     <!-- Load the application -->
@@ -71,23 +65,14 @@
         0% {transform: rotate(0deg);}
         100% {transform: rotate(360deg);}
     }
-    ion-button {
-        text-transform: none;
-        text-overflow: unset;
-    }
-    ion-button::part(native) {
-        display: block;
-    }
     </style>
 
 </head>
 
 <body class="w3-content">
 
-<ion-app>
-<ion-content>
-
-
+<header>
+</header>
 
 <splash-screen id="SplashScreen" style="padding: 25px 15px 50px 15px;text-align: center;">
     <div style="padding: 16px 0px;">
@@ -95,58 +80,11 @@
     </div>
 </splash-screen>
 
-<header>
-</header>            
-
 <main>
 </main>
 
-
-<ion-grid>
-    <ion-row class="ion-justify-content-around">
-
-    <ion-col>
-        <ion-button class="ion-margin-horizontal" onclick="alert('Hola')">
-            <ion-icon slot="icon-only" name="person-circle"></ion-icon>
-            Details
-          </ion-button>
-      
-    </ion-col>
-    <ion-col>
-        <ion-button class="ion-margin-horizontal">
-              <ion-icon slot="icon-only" name="search"></ion-icon>
-        </ion-button>
-    </ion-col>
-
-    <ion-col>
-        <ion-button class="ion-margin-horizontal">
-            <ion-icon slot="icon-only" ios="ellipsis-horizontal" md="ellipsis-vertical"></ion-icon>
-          </ion-button>
-      
-    </ion-col>
-</ion-row>
-</ion-grid>
-
-
-</ion-content>
-
-
-
-<ion-tab-bar slot="bottom">
-    <ion-tab-button tab="home" onclick="alert('Hola')">
-        <ion-icon name="home" size="large"></ion-icon>
-    </ion-tab-button>
-    <ion-tab-button tab="credentials">
-        <ion-icon name="list" size="large"></ion-icon>
-    </ion-tab-button>
-    <ion-tab-button tab="settings">
-        <ion-icon name="settings" size="large"></ion-icon>
-    </ion-tab-button>
-</ion-tab-bar>
-
-
-
-</ion-app>
+<footer>
+</footer>
 
 <script src="{{subdomainprefix}}/prism.js"></script>
 </body>

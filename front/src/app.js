@@ -131,6 +131,7 @@ async function processPageEntered(pageName, pageData, historyData) {
 
     // Hide all pages of the application. Later we unhide the one we are entering
     // We also tell all other pages to exit, so they can perform any cleanup
+    // We call all pages instead of just the active one, because it is more robust and performance does not suffer much
     try {
         // @ts-ignore
         for (let [name, classInstance] of pages) {
@@ -227,9 +228,8 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     // Go to the home page
     await goHome()
 
-    // Load the pages of the application in parallel
+    // Preload the pages of the application in parallel
     for (const path in pageModulesMap) {
-        console.log("Dyn loading", pageModulesMap[path])
         import(pageModulesMap[path])
     }
 
@@ -395,8 +395,8 @@ function ErrorPanel(title, message) {
     <div class="w3-container w3-padding-64">
         <div class="w3-card-4 w3-center">
     
-            <header class="w3-container w3-center color-error">
-                <h3>${title}</h3>
+            <header class="w3-padding-left w3-margin-bottom w3-center color-error">
+                <h4>${title}</h4>
             </header>
     
             <div class="w3-container">
@@ -451,8 +451,6 @@ class AbstractPage {
             mainElem.appendChild(this.domElem)
         }
 
-        console.log("Page constructor:", id)
-
     }
 
     /**
@@ -476,6 +474,14 @@ class AbstractPage {
         // Render the html of the page into the DOM element of this page
         render(this.domElem, theHtml)
     }
+
+    /**
+     * @param {string} title
+     * @param {string} message
+     */
+    showError(title, message) {
+        this.render(ErrorPanel(title, message))
+    }
 }
 
 /**
@@ -492,8 +498,6 @@ function cleanReload() {
     window.location = window.location.origin + window.location.pathname
     return    
 }
-
-
 
 // This module exports the `MHR` object into the global namespace, where we will add
 // the relevant functions that we want globally available to other modules.

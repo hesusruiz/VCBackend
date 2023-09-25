@@ -29,21 +29,26 @@
   "LoadAndVerifyQRVC": "/pages/LoadAndVerifyQRVC-3SG52E5I.js",
   "LogsPage": "/pages/LogsPage-GSUXX3OL.js",
   "MessagePage": "/pages/MessagePage-B7HHSYYU.js",
-  "MicroWallet": "/pages/MicroWallet-SCSP5D5E.js",
+  "MicroWallet": "/pages/MicroWallet-7AYCOJLT.js",
   "Page404": "/pages/Page404-FWZHLB2Z.js",
   "PrivacyPolicy": "/pages/PrivacyPolicy-IQESONSP.js",
-  "SIOPSelectCredential": "/pages/SIOPSelectCredential-2QWP4R67.js",
+  "SIOPSelectCredential": "/pages/SIOPSelectCredential-D7JR4KBJ.js",
   "SWNotify": "/pages/SWNotify-U2CXXXKX.js",
   "ScanQrPage": "/pages/ScanQrPage-WXUIQPWU.js",
   "SelectCamera": "/pages/SelectCamera-SKVCVNLO.js",
   "TermsOfUse": "/pages/TermsOfUse-VVMDZCXE.js"
 }
+
+        window.Ionic = {
+            config: {
+                mode: 'md',
+            },
+        };
     </script>
+
     <!-- Load the application -->
-    <!-- <link rel="stylesheet" href="./app.css" />
-    <script type="module" src="./app.js"></script> -->
-    <link rel="stylesheet" href="/static/wallet/app-Z7GV7MOZ.css" />
-    <script type="module" src="/static/wallet/app-BDRARX6K.js"></script>
+    <link rel="stylesheet" href="/static/wallet/app-6I22HAN3.css" />
+    <script type="module" src="/static/wallet/app-JMUIJSMW.js"></script>
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -57,10 +62,10 @@
     <meta property="og:title" content="Private Verifiable Credentials">
     <meta property="og:description"
         content="Privacy-focused Wallet for Verifiable Credentials">
-    <link rel="manifest" href="./manifest.webmanifest">
+    <!-- <link rel="manifest" href="./manifest.webmanifest"> -->
     
-    <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />
 
     <link rel="icon" type="image/png" href="./favicon.ico" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -89,14 +94,23 @@
         0% {transform: rotate(0deg);}
         100% {transform: rotate(360deg);}
     }
+    ion-button {
+        text-transform: none;
+        text-overflow: unset;
+    }
+    ion-button::part(native) {
+        display: block;
+    }
     </style>
 
 </head>
 
 <body class="w3-content">
 
-<header>
-</header>
+<ion-app>
+<ion-content>
+
+
 
 <splash-screen id="SplashScreen" style="padding: 25px 15px 50px 15px;text-align: center;">
     <div style="padding: 16px 0px;">
@@ -104,11 +118,58 @@
     </div>
 </splash-screen>
 
+<header>
+</header>            
+
 <main>
 </main>
 
-<footer>
-</footer>
+
+<ion-grid>
+    <ion-row class="ion-justify-content-around">
+
+    <ion-col>
+        <ion-button class="ion-margin-horizontal" onclick="alert('Hola')">
+            <ion-icon slot="icon-only" name="person-circle"></ion-icon>
+            Details
+          </ion-button>
+      
+    </ion-col>
+    <ion-col>
+        <ion-button class="ion-margin-horizontal">
+              <ion-icon slot="icon-only" name="search"></ion-icon>
+        </ion-button>
+    </ion-col>
+
+    <ion-col>
+        <ion-button class="ion-margin-horizontal">
+            <ion-icon slot="icon-only" ios="ellipsis-horizontal" md="ellipsis-vertical"></ion-icon>
+          </ion-button>
+      
+    </ion-col>
+</ion-row>
+</ion-grid>
+
+
+</ion-content>
+
+
+
+<ion-tab-bar slot="bottom">
+    <ion-tab-button tab="home" onclick="alert('Hola')">
+        <ion-icon name="home" size="large"></ion-icon>
+    </ion-tab-button>
+    <ion-tab-button tab="credentials">
+        <ion-icon name="list" size="large"></ion-icon>
+    </ion-tab-button>
+    <ion-tab-button tab="settings">
+        <ion-icon name="settings" size="large"></ion-icon>
+    </ion-tab-button>
+</ion-tab-bar>
+
+
+
+</ion-app>
 
 <script src="/static/wallet/prism.js"></script>
 </body>
