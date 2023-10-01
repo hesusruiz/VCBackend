@@ -1,7 +1,7 @@
 package operations
 
 import (
-	"github.com/hesusruiz/vcbackend/vault"
+	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/hesusruiz/vcutils/yaml"
 )
 

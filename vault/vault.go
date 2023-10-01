@@ -9,12 +9,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hesusruiz/vcbackend/ent"
-	"github.com/hesusruiz/vcbackend/ent/did"
-	"github.com/hesusruiz/vcbackend/ent/user"
-	"github.com/hesusruiz/vcbackend/internal/didkey"
-	"github.com/hesusruiz/vcbackend/internal/jwk"
-	"github.com/hesusruiz/vcbackend/internal/jwt"
+	"github.com/evidenceledger/vcdemo/ent"
+	"github.com/evidenceledger/vcdemo/ent/did"
+	"github.com/evidenceledger/vcdemo/ent/user"
+	"github.com/evidenceledger/vcdemo/internal/didkey"
+	"github.com/evidenceledger/vcdemo/internal/jwk"
+	"github.com/evidenceledger/vcdemo/internal/jwt"
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 
 	"github.com/hesusruiz/vcutils/yaml"

@@ -5,14 +5,14 @@ package ent
 import (
 	"time"
 
-	"github.com/hesusruiz/vcbackend/ent/credential"
-	"github.com/hesusruiz/vcbackend/ent/did"
-	"github.com/hesusruiz/vcbackend/ent/naturalperson"
-	"github.com/hesusruiz/vcbackend/ent/privatekey"
-	"github.com/hesusruiz/vcbackend/ent/publickey"
-	"github.com/hesusruiz/vcbackend/ent/schema"
-	"github.com/hesusruiz/vcbackend/ent/user"
-	"github.com/hesusruiz/vcbackend/ent/webauthncredential"
+	"github.com/evidenceledger/vcdemo/ent/credential"
+	"github.com/evidenceledger/vcdemo/ent/did"
+	"github.com/evidenceledger/vcdemo/ent/naturalperson"
+	"github.com/evidenceledger/vcdemo/ent/privatekey"
+	"github.com/evidenceledger/vcdemo/ent/publickey"
+	"github.com/evidenceledger/vcdemo/ent/schema"
+	"github.com/evidenceledger/vcdemo/ent/user"
+	"github.com/evidenceledger/vcdemo/ent/webauthncredential"
 )
 
 // The init function reads all schema descriptors with runtime code

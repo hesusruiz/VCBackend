@@ -10,8 +10,8 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/duo-labs/webauthn/webauthn"
-	"github.com/hesusruiz/vcbackend/ent/user"
-	"github.com/hesusruiz/vcbackend/ent/webauthncredential"
+	"github.com/evidenceledger/vcdemo/ent/user"
+	"github.com/evidenceledger/vcdemo/ent/webauthncredential"
 )
 
 // WebauthnCredential is the model entity for the WebauthnCredential schema.

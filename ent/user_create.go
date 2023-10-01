@@ -10,11 +10,11 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/hesusruiz/vcbackend/ent/credential"
-	"github.com/hesusruiz/vcbackend/ent/did"
-	"github.com/hesusruiz/vcbackend/ent/privatekey"
-	"github.com/hesusruiz/vcbackend/ent/user"
-	"github.com/hesusruiz/vcbackend/ent/webauthncredential"
+	"github.com/evidenceledger/vcdemo/ent/credential"
+	"github.com/evidenceledger/vcdemo/ent/did"
+	"github.com/evidenceledger/vcdemo/ent/privatekey"
+	"github.com/evidenceledger/vcdemo/ent/user"
+	"github.com/evidenceledger/vcdemo/ent/webauthncredential"
 )
 
 // UserCreate is the builder for creating a User entity.

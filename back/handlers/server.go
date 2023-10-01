@@ -5,8 +5,8 @@ import (
 	"errors"
 	"os"
 
-	"github.com/hesusruiz/vcbackend/internal/jwk"
-	"github.com/hesusruiz/vcbackend/vault"
+	"github.com/evidenceledger/vcdemo/internal/jwk"
+	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/hesusruiz/vcutils/yaml"
 	"github.com/skip2/go-qrcode"
 

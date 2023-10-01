@@ -11,9 +11,9 @@ import (
 
 	"github.com/duo-labs/webauthn/protocol"
 	"github.com/duo-labs/webauthn/webauthn"
-	"github.com/hesusruiz/vcbackend/internal/cache"
+	"github.com/evidenceledger/vcdemo/internal/cache"
 
-	"github.com/hesusruiz/vcbackend/back/operations"
+	"github.com/evidenceledger/vcdemo/back/operations"
 	"github.com/hesusruiz/vcutils/yaml"
 
 	"github.com/gofiber/fiber/v2"

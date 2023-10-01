@@ -10,8 +10,8 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/hesusruiz/vcbackend/ent/credential"
-	"github.com/hesusruiz/vcbackend/ent/user"
+	"github.com/evidenceledger/vcdemo/ent/credential"
+	"github.com/evidenceledger/vcdemo/ent/user"
 )
 
 // CredentialCreate is the builder for creating a Credential entity.

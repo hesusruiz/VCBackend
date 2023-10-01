@@ -11,8 +11,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/duo-labs/webauthn/webauthn"
-	"github.com/hesusruiz/vcbackend/ent/user"
-	"github.com/hesusruiz/vcbackend/ent/webauthncredential"
+	"github.com/evidenceledger/vcdemo/ent/user"
+	"github.com/evidenceledger/vcdemo/ent/webauthncredential"
 )
 
 // WebauthnCredentialCreate is the builder for creating a WebauthnCredential entity.

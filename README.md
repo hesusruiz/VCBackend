@@ -1,20 +1,24 @@
-# VCBackend
+# VCDemo
 
-VCBackend includes in a single binary demo versions of Issuer, Verifier and Wallet (both same-device and cross-device flows).
+VCDemo includes in a single binary demo versions of Issuer, Verifier and Wallet (both same-device and cross-device flows).
 
 This facilitates installation and allows to see how all components fit together and the protocol flows between them.
+
+## Requirements
+
+The backend is developed in `Go` (>=1.19) and the frontend requires `npm` (>=9.8).
 
 ## Installation
 
 Clone the repository:
 
 ```
-git clone git@github.com:hesusruiz/VCBackend.git
+git clone git@github.com:evidenceledger/VCDemo.git
 ```
 
 ## Post-installation
 
-When in the `front` subdirectory of the proyect root, install the `npm` required packages:
+When in the `front` subdirectory of the project root, install the `npm` required packages:
 
 ```
 cd front
@@ -25,7 +29,7 @@ npm install
 
 ### First time and when the data model changes
 
-The first time that you start the VCBackend you have to make sure the database artifacts are consistent:
+The first time that you start the VCBackend you have to make sure the code for database access is consistent:
 
 ```
 make datamodel
@@ -51,9 +55,23 @@ make serve
 
 The above command builds the frontend using [esbuild](https://esbuild.github.io/) and starts the server.
 
+### Resetting the system
+
+The database system used in the demo is SQLite. There is one separate database for each component: Issuer, Verifier and Wallet.
+
+To reset the system it is enough to delete the corresponding files.
+
+The command:
+
+```
+make reset
+```
+
+deletes the database files and also creates sample credentials to have the demo ready to use.
+
 # Configuration
 
-The configuration file in `server.yaml` provides for some configuration of VCBackend. An example config file is:
+The configuration file in `server.yaml` provides for some configuration of VCDemo. An example config file is:
 
 ```yaml
 server:
@@ -101,9 +119,9 @@ wallet:
 webauthn:
   RPDisplayName: "EvidenceLedger"
   RPID: "mycredential.eu"
-  RPOrigin: "https://verifier.mycredential.eu"
+  RPOrigin: "https://wallet.mycredential.eu"
   AuthenticatorAttachment: "platform"
   UserVerification: "required"
-  RequireResidentKey: false
+  RequireResidentKey: true
   AttestationConveyancePreference: "indirect"
 ```

@@ -5,11 +5,11 @@ import (
 	"os"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/hesusruiz/vcbackend/back/handlers"
-	"github.com/hesusruiz/vcbackend/issuer"
-	"github.com/hesusruiz/vcbackend/vault"
-	"github.com/hesusruiz/vcbackend/verifier"
-	"github.com/hesusruiz/vcbackend/wallet"
+	"github.com/evidenceledger/vcdemo/back/handlers"
+	"github.com/evidenceledger/vcdemo/issuer"
+	"github.com/evidenceledger/vcdemo/vault"
+	"github.com/evidenceledger/vcdemo/verifier"
+	"github.com/evidenceledger/vcdemo/wallet"
 	"github.com/hesusruiz/vcutils/yaml"
 
 	"flag"

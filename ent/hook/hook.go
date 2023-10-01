@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hesusruiz/vcbackend/ent"
+	"github.com/evidenceledger/vcdemo/ent"
 )
 
 // The CredentialFunc type is an adapter to allow the use of ordinary

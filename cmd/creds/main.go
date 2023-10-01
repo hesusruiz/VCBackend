@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/hesusruiz/vcbackend/internal/jwt"
-	"github.com/hesusruiz/vcbackend/vault"
+	"github.com/evidenceledger/vcdemo/internal/jwt"
+	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/hesusruiz/vcutils/yaml"
 	zlog "github.com/rs/zerolog/log"
 )

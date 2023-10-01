@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/hesusruiz/vcbackend/ent/predicate"
+	"github.com/evidenceledger/vcdemo/ent/predicate"
 )
 
 // ID filters vertices based on their ID field.

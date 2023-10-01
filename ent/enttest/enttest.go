@@ -5,12 +5,12 @@ package enttest
 import (
 	"context"
 
-	"github.com/hesusruiz/vcbackend/ent"
+	"github.com/evidenceledger/vcdemo/ent"
 	// required by schema hooks.
-	_ "github.com/hesusruiz/vcbackend/ent/runtime"
+	_ "github.com/evidenceledger/vcdemo/ent/runtime"
 
 	"entgo.io/ent/dialect/sql/schema"
-	"github.com/hesusruiz/vcbackend/ent/migrate"
+	"github.com/evidenceledger/vcdemo/ent/migrate"
 )
 
 type (

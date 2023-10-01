@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/evidenceledger/vcdemo/back/handlers"
+	"github.com/evidenceledger/vcdemo/back/operations"
+	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/gofiber/fiber/v2"
-	"github.com/hesusruiz/vcbackend/back/handlers"
-	"github.com/hesusruiz/vcbackend/back/operations"
-	"github.com/hesusruiz/vcbackend/vault"
 	"github.com/hesusruiz/vcutils/yaml"
 	zlog "github.com/rs/zerolog/log"
 	"go.uber.org/zap"

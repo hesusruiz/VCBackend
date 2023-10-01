@@ -10,9 +10,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/hesusruiz/vcbackend/ent/did"
-	"github.com/hesusruiz/vcbackend/ent/predicate"
-	"github.com/hesusruiz/vcbackend/ent/user"
+	"github.com/evidenceledger/vcdemo/ent/did"
+	"github.com/evidenceledger/vcdemo/ent/predicate"
+	"github.com/evidenceledger/vcdemo/ent/user"
 )
 
 // DIDQuery is the builder for querying DID entities.

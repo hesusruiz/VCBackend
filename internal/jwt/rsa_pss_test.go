@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hesusruiz/vcbackend/internal/jwt"
-	"github.com/hesusruiz/vcbackend/internal/jwt/test"
+	"github.com/evidenceledger/vcdemo/internal/jwt"
+	"github.com/evidenceledger/vcdemo/internal/jwt/test"
 )
 
 var rsaPSSTestData = []struct {

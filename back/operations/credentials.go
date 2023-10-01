@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/evidenceledger/vcdemo/internal/util"
 	"github.com/gofiber/fiber/v2"
-	"github.com/hesusruiz/vcbackend/internal/util"
 )
 
 type EmployeeCredentialData struct {

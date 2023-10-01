@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 
-	"github.com/hesusruiz/vcbackend/ent"
-	"github.com/hesusruiz/vcbackend/ent/user"
-	"github.com/hesusruiz/vcbackend/vault"
+	"github.com/evidenceledger/vcdemo/ent"
+	"github.com/evidenceledger/vcdemo/ent/user"
+	"github.com/evidenceledger/vcdemo/vault"
 
 	"github.com/duo-labs/webauthn/protocol"
 	"github.com/duo-labs/webauthn/webauthn"

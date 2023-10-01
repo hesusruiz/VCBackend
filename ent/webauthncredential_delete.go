@@ -9,8 +9,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/hesusruiz/vcbackend/ent/predicate"
-	"github.com/hesusruiz/vcbackend/ent/webauthncredential"
+	"github.com/evidenceledger/vcdemo/ent/predicate"
+	"github.com/evidenceledger/vcdemo/ent/webauthncredential"
 )
 
 // WebauthnCredentialDelete is the builder for deleting a WebauthnCredential entity.
