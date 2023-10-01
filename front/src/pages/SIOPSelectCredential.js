@@ -1,16 +1,24 @@
+
 import { Base64 } from 'js-base64';
+// @ts-ignore
 import photo_man from '../img/photo_man.png'
+// @ts-ignore
 import photo_woman from '../img/photo_woman.png'
 
+import { decodeJWT } from '../components/jwt'
 
-let gotoPage = window.MHR.gotoPage
-let goHome = window.MHR.goHome
-let storage = window.MHR.storage
-let log = window.MHR.log
-let html = window.MHR.html
+// @ts-ignore
+const MHR = window.MHR
+
+// Copy some globals to make code less verbose
+let gotoPage = MHR.gotoPage
+let goHome = MHR.goHome
+let storage = MHR.storage
+let log = MHR.log
+let html = MHR.html
 
 // We will perform SIOP/OpenID4VP Authentication flow
-window.MHR.register("SIOPSelectCredential", class extends window.MHR.AbstractPage {
+MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
     WebAuthnSupported = false
     PlatformAuthenticatorSupported = false
 
@@ -18,17 +26,17 @@ window.MHR.register("SIOPSelectCredential", class extends window.MHR.AbstractPag
         super(id)
     }
 
-    async enter(qrData) {
-        // qrData is the url for a SIOP/OpenID4VP Authentication Request
+    /**
+     * @param {string} openIdUrl
+     */
+    async enter(openIdUrl) {
+        // openIdUrl is the url for a SIOP/OpenID4VP Authentication Request
         let html = this.html
 
-        log.log("Inside SIOPSelectCredential:", qrData)
-        if (qrData == null) {
+        log.log("Inside SIOPSelectCredential:", openIdUrl)
+        if (openIdUrl == null) {
             log.error("No URL has been specified")
-            gotoPage("ErrorPage", {
-                title: "Error",
-                msg: "No URL has been specified"
-            });
+            this.showError("Error", "No URL has been specified")
             return
         }
 
@@ -43,30 +51,60 @@ window.MHR.register("SIOPSelectCredential", class extends window.MHR.AbstractPag
             } 
         }
 
-        // Create a simple URL ready for parsing
-        qrData = qrData.replace("openid://?", "")
+        // Derive from the received URL a simple one ready for parsing
+        openIdUrl = openIdUrl.replace("openid://?", "")
+
+        // Convert the input string to am URL object
+        const inputURL = new URL(openIdUrl)
+
+        // The URL can have two formats:
+        // 1. An OpenId url with an Authentication Request object specified in the query parameters
+        // 2. A url specifying a reference to an Authentication Request object
+        //
+        // We detect which one is it by looking at the query parameters:
+        // 1. If 'scope' is in the url, then the AR object is in the url
+        // 2. If 'jar' is in the url, then the AR is by reference, and the object can be retrieved
+        //    by fetching the object.
 
         // Get the relevant parameters from the query string
-        var params = new URLSearchParams(qrData)
-        var redirect_uri = params.get("redirect_uri")
+        const params = new URLSearchParams(inputURL.search)
+        var response_uri = params.get("response_uri")
         var state = params.get("state")
         var scope = params.get("scope")
-        log.log("state", state)
-        log.log("redirect_uri", redirect_uri)
-        log.log("scope", scope)
+        var jar = params.get("jar")
 
-        // Get the last part of the credential type in 'scope'
+        log.log("state", state)
+        log.log("response_uri", response_uri)
+        log.log("scope", scope)
+        log.log("jar", jar)
+
+        if (jar == "yes") {
+            const authRequestJWT = await getAuthRequest(openIdUrl)
+            console.log(authRequestJWT)
+            if (authRequestJWT == "error") {
+                this.showError("Error", "Error fetching Authorization Request")
+                return    
+            }
+            const authRequest = decodeJWT(authRequestJWT)
+            console.log(authRequest)
+
+            scope = authRequest.body.scope
+            response_uri = authRequest.body.response_uri
+            state = authRequest.body.state
+        }
+
+        // Get the last segment of the credential type in 'scope'
         const scopeParts = scope.split(".")
         if (scopeParts.length == 0) {
+            log.error("Invalid scope specified")
             this.showError("Error", "Invalid scope specified")
             return
         }
-        const ll = scopeParts.length
-        var credentialType = scopeParts[ll-1]       
+        const credentialType = scopeParts[scopeParts.length-1]       
 
-        // redirect_uri is the endpoint where we have to send the authentication response
+        // response_uri is the endpoint where we have to send the Authentication Response
         // We are going to extract the RP identity from that URL
-        var rpURL = new URL(redirect_uri)
+        var rpURL = new URL(response_uri)
         var rpDomain = rpURL.hostname 
 
         // Retrieve all credentials from storage
@@ -101,8 +139,7 @@ window.MHR.register("SIOPSelectCredential", class extends window.MHR.AbstractPag
                 but you do not have any credential of that type.</p>
                 <p>Please go to an Issuer to obtain one.</p>
             `
-            const errPanel = window.MHR.ErrorPanel(T("Error"), msg)
-            this.render(errPanel)
+            this.showError("Error", msg)
             return
         }
 
@@ -118,7 +155,7 @@ window.MHR.register("SIOPSelectCredential", class extends window.MHR.AbstractPag
                 </p>
             </div>
             
-            ${vcToHtml(credentials[0], redirect_uri, state, this.WebAuthnSupported)}
+            ${vcToHtml(credentials[0], response_uri, state, this.WebAuthnSupported)}
 
         </div>
         `
@@ -130,8 +167,14 @@ window.MHR.register("SIOPSelectCredential", class extends window.MHR.AbstractPag
 })
 
 // Render a credential in HTML
-function vcToHtml(vc, redirect_uri, state, webAuthnSupported) {
-    var credentials = [vc]
+function vcToHtml(vc, response_uri, state, webAuthnSupported) {
+
+    // TODO: retrieve the holder and its private key from DB
+    // Get the holder that will present the credential
+    // We get this from the credential subject
+    const holder = vc.credentialSubject.id
+
+        var credentials = [vc]
     const vcs = vc.credentialSubject
     const pos = vcs.position
     var avatar = photo_man
@@ -161,8 +204,8 @@ function vcToHtml(vc, redirect_uri, state, webAuthnSupported) {
             </div>
 
             <div class="w3-padding-16">
-              <btn-primary @click=${() => window.MHR.cleanReload()}>${T("Cancel")}</btn-primary>
-              <btn-primary @click=${()=> sendCredential(redirect_uri, credentials, state, webAuthnSupported)}>${T("Send Credential")}</btn-primary>
+              <btn-primary @click=${() => MHR.cleanReload()}>${T("Cancel")}</btn-primary>
+              <btn-primary @click=${(e)=> sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported)}>${T("Send Credential")}</btn-primary>
             </div>
 
         </div>
@@ -173,30 +216,32 @@ function vcToHtml(vc, redirect_uri, state, webAuthnSupported) {
 }
 
 
-// sendCredential prepares an Authentication Response and sends it to the server as specified in the endpoint
-async function sendCredential(backEndpoint, credentials, state, authSupported) {
+// sendAuthenticationResponse prepares an Authentication Response and sends it to the server as specified in the endpoint
+async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, state, authSupported) {
+    e.preventDefault();
 
-    log.log("sending POST to:", backEndpoint + "?state=" + state)
-    var ps = {
-        id: "Placeholder - not yet evaluated.",
-        definition_id: "Example definition." 
-    }
+    const endpointURL  = new URL(backEndpoint)
+    const origin = endpointURL.origin
+
+    log.log("sending AUthenticationResponse to:", backEndpoint + "?state=" + state)
     log.log("The credentials: " + credentials)
+
+    const uuid = self.crypto.randomUUID()
 
     // Create the vp_token structure
     var vpToken = {
         context: ["https://www.w3.org/ns/credentials/v2"],
         type: ["VerifiablePresentation"],
+        id: uuid,
         verifiableCredential: credentials,
-        // currently unverified
-        holder: "did:my:wallet"
+        holder: holder
     }
     log.log("The encoded credential ", Base64.encodeURI(JSON.stringify(vpToken)))
 
     // Create the top-level structure for the Authentication Response
     var formAttributes = {
         'vp_token': Base64.encodeURI(JSON.stringify(vpToken)),
-        'presentation_submission': Base64.encodeURI(JSON.stringify(ps))
+        'presentation_submission': Base64.encodeURI(JSON.stringify(presentationSubmission()))
     }
     // var formBody = [];
     // for (var property in formAttributes) {
@@ -215,7 +260,7 @@ async function sendCredential(backEndpoint, credentials, state, authSupported) {
     try {
         let response = await fetch(backEndpoint + "?state=" + state, {
             method: "POST",
-            mode: "no-cors",
+            mode: "cors",
             cache: "no-cache",
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -231,6 +276,22 @@ async function sendCredential(backEndpoint, credentials, state, authSupported) {
             return
         }
 
+        if (response.status == 200) {
+            const res = await response.json()
+            log.log(res)
+
+            if (res.authenticatorRequired == "yes") {
+
+                res["origin"] = origin
+                res["state"] = state
+
+                log.log("Authenticator required")
+                // The credential has been sent
+                gotoPage("AuthenticatorPage", res);
+                return
+            }
+        }
+
         // If we receive an HTTP status NotFound (404), it means the user does not have
         // an authenticator device registered with the server.
         if (response.status == 404) {
@@ -240,7 +301,7 @@ async function sendCredential(backEndpoint, credentials, state, authSupported) {
             log.log("credential sent, registering user", email)
 
             // Register new user with WebAuthn
-            let error = await registerUser(email, state)
+            let error = await registerUser(origin, email, state)
 
             if (error == null) {
 
@@ -273,7 +334,7 @@ async function sendCredential(backEndpoint, credentials, state, authSupported) {
             log.log("credential sent, authenticating user", email)
     
             // Authenticate user with WebAuthn
-            let error = await loginUser(email, state)
+            let error = await loginUser(origin, email, state)
 
             if (error) {
 
@@ -301,6 +362,9 @@ async function sendCredential(backEndpoint, credentials, state, authSupported) {
 
         // There was an error, present it
         log.error("error sending credential", response.status)
+        const res = await response.text()
+        log.log("response:", res)
+
         gotoPage("ErrorPage", {
             title: "Error",
             msg: "Error sending the credential"
@@ -322,14 +386,17 @@ var apiPrefix = "/webauthn"
 
 // registerUser asks the authenticator device where the wallet is running for a new WebAuthn credential
 // and sends the new credential to the server, which will store it associated to the user+device 
-async function registerUser(username, state) {
+async function registerUser(origin, username, state) {
 
     try {
 
         // Get from the server the CredentialCreationOptions
         // It will be associated to the username that corresponds to the current state, which is the
         // username inside the credential that was sent to the Verifier
-        var response = await fetch(apiPrefix + '/register/begin/' + username + "?state=" + state, {credentials:'include'})
+        var response = await fetch(origin + apiPrefix + '/register/begin/' + username + "?state=" + state,
+            {
+                mode: "cors"
+            })
         if (!response.ok) {
             var errorText = await response.text()
             log.log(errorText)
@@ -395,13 +462,12 @@ async function registerUser(username, state) {
 
         // Perform a POST to the server
         log.log("sending Authenticator credential to server")
-        var response = await fetch(apiPrefix + '/register/finish/' + username + "?state=" + state, {
+        var response = await fetch(origin + apiPrefix + '/register/finish/' + username + "?state=" + state, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'session_id': session
             },
-            credentials: 'include',
             mode: 'cors',
             body: JSON.stringify(wholeData) // body data type must match "Content-Type" header
         });
@@ -423,12 +489,15 @@ async function registerUser(username, state) {
 }
 
 
-async function loginUser(username, state) {
+async function loginUser(origin, username, state) {
 
     try {
 
         // Get from the server the CredentialRequestOptions
-        var response = await fetch(apiPrefix + '/login/begin/' + username + "?state=" + state, {credentials:'include'})
+        var response = await fetch(origin + apiPrefix + '/login/begin/' + username + "?state=" + state,
+            {
+                mode: "cors"
+            })
         if (!response.ok) {
             log.error("error requesting CredentialRequestOptions", response.status)
             return "error"
@@ -494,13 +563,12 @@ async function loginUser(username, state) {
         // Perform a POST to the server
         try {
             
-            var response = await fetch(apiPrefix + '/login/finish/' + username + "?state=" + state, {
+            var response = await fetch(origin + apiPrefix + '/login/finish/' + username + "?state=" + state, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'session_id': session
                 },
-                credentials: 'include',
                 mode: 'cors',
                 body: JSON.stringify(wholeData)
             });
@@ -527,6 +595,22 @@ async function loginUser(username, state) {
 
 }
 
+function presentationSubmission() {
+    return {
+        "definition_id": "SingleCredentialPresentation",
+        "id": "SingleCredentialSubmission",
+        "descriptor_map": [{
+            "id": "single_credential",
+            "path": "$",
+            "format": "ldp_vp",
+            "path_nested": {
+                "format": "ldp_vc",
+                "path": "$.verifiableCredential[0]"
+            }
+        }]
+    }
+}
+
 // Base64 to ArrayBuffer
 function bufferDecode(value) {
     return Uint8Array.from(atob(value), c => c.charCodeAt(0));
@@ -540,3 +624,16 @@ function bufferEncode(value) {
         .replace(/=/g, "");;
 }
 
+async function getAuthRequest(uri) {
+    var response = await fetch(uri,
+        {
+            mode: "cors"
+        })
+    if (!response.ok) {
+        var errorText = await response.text()
+        log.log(errorText)
+        return "error"
+    }
+    var responseText = await response.text()
+    return responseText
+}

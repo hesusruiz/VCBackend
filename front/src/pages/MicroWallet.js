@@ -1,3 +1,8 @@
+import PocketBase from '../components/pocketbase.es.mjs'
+
+console.log("connec to:", window.location.origin)
+const pb = new PocketBase(window.location.origin)
+
 // The logo in the header
 import photo_man from '../img/photo_man.png'
 import photo_woman from '../img/photo_woman.png'
@@ -15,6 +20,14 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
     async enter() {
         let html = this.html
 
+        // const record = await pb.collection('users').create(data);
+        // console.log(record)
+
+        // console.log("Requesting verification")
+        // const result =await pb.collection('users').requestVerification('jesus@alastria.io')
+        // console.log("After requesting verification:", result)
+
+
         // We can receive QRs via the URL or scanning with the camera
 
         // If URL specifies a QR then
@@ -29,10 +42,19 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
         let params = new URL(document.location).searchParams
         let scope = params.get("scope")
         let command = params.get("command")
+        let request_uri = params.get("request_uri")
 
         // QR code found in URL. Process and display it
         if (scope !== null) {
             gotoPage("SIOPSelectCredential", document.URL)
+            return;
+        }
+
+        if (request_uri !== null) {
+            // Unescape the query parameter
+            request_uri = decodeURIComponent(request_uri)
+            console.log(request_uri)
+            gotoPage("SIOPSelectCredential", request_uri)
             return;
         }
 
@@ -41,10 +63,7 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
             switch (command) {
                 case "getvc":
                     var vc_id = params.get("vcid")
-
-                    // get the base path of the application in runtime
-                    var vc_path = window.location.origin + "/issuer/api/v1/credential/" + vc_id
-                    await gotoPage("LoadAndSaveQRVC", vc_path)
+                    await gotoPage("LoadAndSaveQRVC", vc_id)
                     return;
             
                 default:
@@ -128,22 +147,6 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
                     ${theDivs}
 
                 </div>
-
-                <ion-card>
-                    <ion-card-header>
-                        <ion-card-title>Card Title</ion-card-title>
-                        <ion-card-subtitle>Card Subtitle</ion-card-subtitle>
-                    </ion-card-header>
-
-                    <ion-card-content>
-                        Here's a small text description for the card content. Nothing more, nothing less.
-                    </ion-card-content>
-
-                    <ion-button><span slot="start">Details</span></ion-button>
-                    <ion-button color="danger"><span slot="start">Delete</span></ion-button>
-                   
-
-                </ion-card>
 
             `)
             return

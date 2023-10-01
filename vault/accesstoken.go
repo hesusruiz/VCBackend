@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -20,8 +22,6 @@ func (v *Vault) CreateAccessToken(credData []byte, issuerDID string) (json.RawMe
 	if iss == nil {
 		return nil, fmt.Errorf("user does not exist")
 	}
-
-	// entdid := v.Client.DID.GetX(context.Background(), issuerDID)
 
 	// Get the first private key of the issuer to make the signature
 	jwks, err := v.PrivateKeysForUser(issuerDID)
@@ -54,5 +54,58 @@ func (v *Vault) CreateAccessToken(credData []byte, issuerDID string) (json.RawMe
 	}
 
 	return []byte(signedString), nil
+
+}
+
+// CreateToken creates a JWT token from the given claims,
+// signed with the first private key associated to the issuer DID
+func (v *Vault) CreateToken(credData any, issuerID string) ([]byte, error) {
+	var token bytes.Buffer
+
+	// Get the private key corresponding to the first (main) DID of the issuer of the token
+	_, privkey, err := v.GetDIDAndKeyForUser(issuerID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the header of the JWT
+	headerMap := map[string]string{
+		"typ": "JWT",
+		"alg": "EdDSA",
+		"kid": "key1",
+	}
+
+	// Get the serialized and encoded header
+	var jsonValue []byte
+	if jsonValue, err = json.Marshal(headerMap); err != nil {
+		return nil, err
+	}
+	header := base64.RawURLEncoding.EncodeToString(jsonValue)
+
+	// The header is the first segment of the JWT
+	token.WriteString(header)
+
+	// Get the serialized and encoded payload
+	if jsonValue, err = json.Marshal(credData); err != nil {
+		return nil, err
+	}
+	payload := base64.RawURLEncoding.EncodeToString(jsonValue)
+
+	// The payload is the second segment, separated by a '.'
+	token.WriteByte('.')
+	token.WriteString(payload)
+
+	// Perform the signature of the header and payload
+	sig, err := privkey.Sign(token.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	signature := base64.RawURLEncoding.EncodeToString(sig)
+
+	// The signature is the third segment of the JWT, separated with a '.'
+	token.WriteByte('.')
+	token.WriteString(signature)
+
+	return token.Bytes(), nil
 
 }

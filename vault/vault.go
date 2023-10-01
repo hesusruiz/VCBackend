@@ -294,18 +294,22 @@ func (v *Vault) SetDIDForUser(userid string, did string) error {
 }
 
 func (v *Vault) GetDIDForUser(userid string) (string, error) {
-	// q := v.Client.DID.Query().Where(did.HasUserWith(user.ID(userid)))
-	// dids, err := q.All(context.Background())
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// if len(dids) == 0 {
-	// 	return "", fmt.Errorf("no DIDs found")
-	// }
-	// return dids[0].ID, nil
-
 	return v.Client.DID.Query().Where(did.HasUserWith(user.ID(userid))).FirstID(context.Background())
+}
+
+func (v *Vault) GetDIDAndKeyForUser(userid string) (string, p2pcrypto.PrivKey, error) {
+	d, err := v.Client.DID.Query().Where(did.HasUserWith(user.ID(userid))).First(context.Background())
+	if err != nil {
+		return "", nil, err
+	}
+
+	did := d.ID
+	privkey, err := p2pcrypto.UnmarshalEd25519PrivateKey(d.Privatekey)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return did, privkey, nil
 }
 
 func (v *Vault) NewKeyForUser(userid string) (*ent.PrivateKey, error) {
@@ -570,8 +574,6 @@ func (v *Vault) SignWithJWK(k *jwk.JWK, claims any) (signedString string, err er
 	if jsonValue, err = json.Marshal(claims); err != nil {
 		return "", err
 	}
-	fmt.Println("**** Build Claim String ****")
-	fmt.Println(string(jsonValue))
 
 	claim := base64.RawURLEncoding.EncodeToString(jsonValue)
 
@@ -584,18 +586,18 @@ func (v *Vault) SignWithJWK(k *jwk.JWK, claims any) (signedString string, err er
 
 }
 
-// Sign signs the JWT using the algorithm and key ID in its header
+// Sign signs the object
 func (v *Vault) Sign(object Signable) (signedString string, err error) {
 
 	var toBeSigned string
 
-	// Convert token to a serialized string to be signed
+	// Convert object to a serialized string to be signed
 	toBeSigned, err = object.SigningString()
 	if err != nil {
 		return "", err
 	}
 
-	// Perform the signature
+	// Perform the signature with the private key specified by the Key Identifier
 	signedString, err = v.SignString(toBeSigned, object.Kid())
 
 	return signedString, err

@@ -24,6 +24,16 @@ func NewState() *State {
 	return s
 }
 
+func NewStateFromBytes(input []byte) *State {
+	if len(input) < 1 {
+		panic("invalid state provided")
+	}
+	s := NewState()
+	s.SetStatus(input[0])
+	s.SetContent(input[1:])
+	return s
+}
+
 func (s *State) SetStatus(status byte) {
 	s.status = status
 }
@@ -43,20 +53,7 @@ func (s *State) Bytes() []byte {
 }
 
 func (s *State) String() string {
-	switch s.status {
-	case StatePending:
-		return "pending"
-	case StateRegistering:
-		return "registering"
-	case StateAuthenticating:
-		return "authenticating"
-	case StateCompleted:
-		return "completed"
-	case StateDenied:
-		return "denied"
-	default:
-		panic("invalid state")
-	}
+	return StatusToString(s.status)
 }
 
 func StatusToString(status byte) string {

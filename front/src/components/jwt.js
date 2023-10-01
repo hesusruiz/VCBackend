@@ -1,4 +1,4 @@
-
+let log = window.MHR.log
 
 export function decodeJWT(jwt) {
     // We will decode the JWT without checking the signature
@@ -24,7 +24,7 @@ export function decodeJWT(jwt) {
     }    
 
     if (components.length != 3) {
-        decoded.error = "Malformed certificate"
+        decoded.error = "Malformed certificate, not enough components"
         log.error(decoded.error);
         return decoded;
     }
@@ -44,26 +44,6 @@ export function decodeJWT(jwt) {
         decoded.error = "Field does not exist in JWT (header)"
         log.error(decoded.error)
         return decoded;
-    }
-    try {
-        let schema = decoded['body']['vc']['credentialSchema']['id']        
-    } catch (error) {
-        decoded.error = "Field does not exist in JWT (body->vc->credentialSchema->id)"
-        log.error(decoded.error)
-        return decoded;
-    }
-
-    // Check expiration (in seconds since January 1, 1970 00:00:00 UTC.)
-    let expiration = decoded.body.exp
-    if (expiration) {
-        let now = Date.now() / 1000     // In seconds
-        let leeway = 60 * 60            // We allow a leeway of 1 hour in the comparison
-        // If it has expired more than one hour before now, give an error
-        if (expiration + leeway < now) {
-            decoded.error = "Expired certificate"
-            console.warn(decoded.error)
-//            log.error(decoded.error)
-        }
     }
 
     return decoded;

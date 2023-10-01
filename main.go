@@ -1,20 +1,16 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/hesusruiz/vcbackend/back/handlers"
+	"github.com/hesusruiz/vcbackend/issuer"
 	"github.com/hesusruiz/vcbackend/vault"
+	"github.com/hesusruiz/vcbackend/verifier"
+	"github.com/hesusruiz/vcbackend/wallet"
 	"github.com/hesusruiz/vcutils/yaml"
-	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/apis"
-	"github.com/pocketbase/pocketbase/core"
 
 	"flag"
 	"log"
@@ -30,13 +26,7 @@ import (
 const defaultConfigFile = "./server.yaml"
 const defaultTemplateDir = "back/views"
 const defaultStaticDir = "back/www"
-const defaultStoreDriverName = "sqlite3"
-const defaultStoreDataSourceName = "file:issuer.sqlite?mode=rwc&cache=shared&_fk=1"
 const defaultPassword = "ThePassword"
-
-const issuerPrefix = "/issuer/api/v1"
-const verifierPrefix = "/verifier/api/v1"
-const walletPrefix = "/wallet/api/v1"
 
 var (
 	sameDevice = false
@@ -133,15 +123,15 @@ func main() {
 	}
 
 	// Setup the Issuer, Wallet and Verifier routes
-	setupIssuer(s, cfg)
+	issuer.Setup(s, cfg)
 	setupEnterpriseWallet(s, cfg)
-	SetupVerifier(s, cfg)
+	verifier.Setup(s, cfg)
 
 	// Setup static files
 	s.Static("/static", cfg.String("server.staticDir", defaultStaticDir))
 
 	// Start the PB server
-	startPb()
+	wallet.Start(cfg)
 
 	// Start the server
 	log.Fatal(s.Listen(cfg.String("server.listenAddress")))
@@ -159,39 +149,4 @@ func readConfiguration(configFile string) *yaml.YAML {
 		panic(err)
 	}
 	return cfg
-}
-
-func generateNonce() string {
-	b := make([]byte, 16)
-	io.ReadFull(rand.Reader, b)
-	nonce := base64.RawURLEncoding.EncodeToString(b)
-	return nonce
-}
-
-func startPb() {
-
-	go func() {
-		app := pocketbase.New()
-
-		// serves static files from the provided public dir (if exists)
-		app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
-			e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
-			return nil
-		})
-
-		if err := app.Bootstrap(); err != nil {
-			log.Fatal(err)
-		}
-
-		_, err := apis.Serve(app, apis.ServeConfig{
-			HttpAddr:        "0.0.0.0:8090",
-			ShowStartBanner: true,
-		})
-
-		if err != http.ErrServerClosed {
-			log.Fatalln(err)
-		}
-
-	}()
-
 }

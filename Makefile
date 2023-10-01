@@ -7,15 +7,23 @@ credentials:
 datamodel:
 	go generate ./ent
 
-genissuer:
-	go run cmd/issuers/main.go
-
 cleandb:
 	rm -f issuer.sqlite
 	rm -f verifier.sqlite
 	rm -f wallet.sqlite
 
+reset:
+	rm -f issuer.sqlite
+	rm -f verifier.sqlite
+	rm -f wallet.sqlite
+	go run cmd/creds/main.go
+
 serve:
-	go run cmd/faster/faster.go
 	go run .
 
+build:
+	go run cmd/faster/faster.go
+
+buildandserve:
+	go run cmd/faster/faster.go
+	go run .

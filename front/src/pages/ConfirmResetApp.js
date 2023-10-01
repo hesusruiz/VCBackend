@@ -1,7 +1,7 @@
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
 
-window.MHR.register("ConfirmDeleteAll", class ConfirmDeleteAll extends window.MHR.AbstractPage {
+window.MHR.register("ConfirmResetApp", class extends window.MHR.AbstractPage {
 
     constructor(id) {
         super(id)
@@ -15,10 +15,10 @@ window.MHR.register("ConfirmDeleteAll", class ConfirmDeleteAll extends window.MH
         // - msg: the string with the details
 
         // Provide a default title if the user did not set the title
-        let title = T("Confirm Delete")
+        let title = T("Confirm Reset")
 
         // Provide a default message if the user did not specify it
-        let msg = "Are you sure you want to delete ALL credentials?"
+        let msg = "Are you sure you want to RESET the app and delete everything?"
 
         // Display the title and message, with a button that goes to the home page
         let theHtml = html`
@@ -43,10 +43,10 @@ window.MHR.register("ConfirmDeleteAll", class ConfirmDeleteAll extends window.MH
         this.render(theHtml)
     }
 
-    async deleteALLVCs() {
-        await window.MHR.storage.credentialsDeleteAll()
+    async resetApplication() {
+        await window.MHR.storage.resetDatabase()
         // Reload the application
-        goHome()
+        window.MHR.cleanReload()
         return
     }
 

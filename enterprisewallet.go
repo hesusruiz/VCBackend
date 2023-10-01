@@ -14,6 +14,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const issuerPrefix = "/issuer/api/v1"
+const verifierPrefix = "/verifier/api/v1"
+const walletPrefix = "/wallet/api/v1"
+
 type EnterpriseWallet struct {
 	rootServer *handlers.Server
 	vault      *vault.Vault
@@ -22,7 +26,7 @@ type EnterpriseWallet struct {
 	did        string
 }
 
-// setupEnterpriseWallet sreates and setups the Enterprise Wallet routes
+// setupEnterpriseWallet creates and setups the Enterprise Wallet routes
 func setupEnterpriseWallet(s *handlers.Server, cfg *yaml.YAML) {
 
 	wallet := &EnterpriseWallet{}

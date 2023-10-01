@@ -312,22 +312,35 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
         if (qrData.startsWith("HC1:")) {
             // An EU COVID Certificate
             return QR_HC1;
+
         } else if (qrData.startsWith("multi|w3cvc|")) {
             // A multi-piece JWT
             return QR_MULTI;
+
         } else if (qrData.startsWith("openid:")) {
             // A SIOP Authentication Request, URL-encoded
             return QR_SIOP_URL;
+
         } else if (qrData.startsWith("openid-credential-offer://")) {
             // A SIOP OpenID for VC Issuance, URL-encoded
             return QR_OIDC4VCI;
+
         } else if (qrData.startsWith("VC1:")) {
             // A Verifiable Credential in raw format
             return QR_W3C_VC;
+
         } else if (qrData.startsWith("https")) {
+
+            let params = new URL(qrData).searchParams
+            let jar = params.get("jar")
+            if (jar == "yes") {
+                return QR_SIOP_URL
+            }
+    
             // Normal QR with a URL where the real data is located
             // We require secure connections with https, and do not accept http schemas
             return QR_URL;
+            
         } else {
             return QR_UNKNOWN
         }

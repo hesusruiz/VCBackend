@@ -43,9 +43,9 @@ wallet:
 webauthn:
   RPDisplayName: "EvidenceLedger"
   RPID: "mycredential.eu"
-  RPOrigin: "https://verifier.mycredential.eu"
+  RPOrigin: "https://wallet.mycredential.eu"
   AuthenticatorAttachment: "platform"
   UserVerification: "required"
-  RequireResidentKey: false
+  RequireResidentKey: true
   AttestationConveyancePreference: "indirect"
 

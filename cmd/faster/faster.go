@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"text/template"
+	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/hesusruiz/vcutils/yaml"
 	"github.com/valyala/fasttemplate"
 
@@ -111,6 +115,12 @@ func main() {
 	// Perform a standard build
 	if args["build"] {
 		result = build(cfg)
+	}
+
+	// Watch and build
+	if args["watch"] {
+		watchAndBuild(cfg)
+		os.Exit(0)
 	}
 
 	// Display information about the bundling results
@@ -637,5 +647,104 @@ func proxyHandler(targetHost string) fiber.Handler {
 			return err
 		}
 		return nil
+	}
+}
+
+// Depending on the system, a single "write" can generate many Write events; for
+// example compiling a large Go program can generate hundreds of Write events on
+// the binary.
+//
+// The general strategy to deal with this is to wait a short time for more write
+// events, resetting the wait period for every new event.
+func watchAndBuild(cfg *yaml.YAML) {
+
+	build(cfg)
+
+	// Create a new watcher.
+	w, err := fsnotify.NewWatcher()
+	if err != nil {
+		fmt.Printf("creating a new watcher: %s", err)
+		os.Exit(1)
+	}
+	defer w.Close()
+
+	// Start listening for events.
+	go dedupLoop(w, cfg)
+
+	pageSources := path.Join(cfg.String("sourcedir"), cfg.String("pagedir"))
+
+	err = w.Add(pageSources)
+	if err != nil {
+		fmt.Printf("%q: %s", pageSources, err)
+		os.Exit(1)
+	}
+
+	printTime("ready; press ^C to exit")
+	<-make(chan struct{}) // Block forever
+}
+
+func printTime(s string, args ...interface{}) {
+	fmt.Printf(time.Now().Format("15:04:05.0000")+" "+s+"\n", args...)
+}
+
+func dedupLoop(w *fsnotify.Watcher, cfg *yaml.YAML) {
+	var (
+		// Wait 100ms for new events; each new event resets the timer.
+		waitFor = 100 * time.Millisecond
+
+		// Keep track of the timers, as path → timer.
+		mu     sync.Mutex
+		timers = make(map[string]*time.Timer)
+
+		// Callback we run.
+		printEvent = func(e fsnotify.Event) {
+			printTime(e.String())
+			build(cfg)
+
+			// Don't need to remove the timer if you don't have a lot of files.
+			mu.Lock()
+			delete(timers, e.Name)
+			mu.Unlock()
+		}
+	)
+
+	for {
+		select {
+		// Read from Errors.
+		case err, ok := <-w.Errors:
+			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
+				return
+			}
+			printTime("ERROR: %s", err)
+		// Read from Events.
+		case e, ok := <-w.Events:
+			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
+				return
+			}
+
+			// We just want to watch for file creation, so ignore everything
+			// outside of Create and Write.
+			if !e.Has(fsnotify.Create) && !e.Has(fsnotify.Write) {
+				continue
+			}
+
+			// Get timer.
+			mu.Lock()
+			t, ok := timers[e.Name]
+			mu.Unlock()
+
+			// No timer yet, so create one.
+			if !ok {
+				t = time.AfterFunc(math.MaxInt64, func() { printEvent(e) })
+				t.Stop()
+
+				mu.Lock()
+				timers[e.Name] = t
+				mu.Unlock()
+			}
+
+			// Reset the timer for this path, so it will start from 100ms again.
+			t.Reset(waitFor)
+		}
 	}
 }

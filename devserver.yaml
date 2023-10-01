@@ -2,7 +2,7 @@
 sourcedir: front/src
 
 # The distribution files after building the app, relative to current directory
-targetdir: back/www/wallet
+targetdir: wallet/www
 
 # If cleantarget is true, erase the 'targetdir' before building
 cleantarget: true
@@ -26,13 +26,13 @@ pagedir: /pages
 # This means that static assets can be located anywhere in the project directory
 staticAssets:
   source: front/src/public
-  target: back/www/wallet
+  target: wallet/www
 
 # Set to true if you want entrypoint names to include a hash
 # This includes the pages names
 hashEntrypointNames: true
 
-subdomainprefix: /static/wallet
+subdomainprefix: ""
 
 # Configuration specific to the development server process
 # In addition to serving local content, the server can forward some requests from the frontend to other

@@ -166,13 +166,11 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 
 	credData := yaml.New(credmap)
 
-	// Create or get the DID of the subject.
-	// We will use his email as the unique ID
+	// Create or get the DID of the issuer.
 	_, issuerDID, err := v.CreateOrGetUserWithDIDKey(v.ID, v.Name, "naturalperson", v.Password)
 	if err != nil {
 		return "", nil, err
 	}
-
 	credmap["issuerDID"] = issuerDID
 
 	// Create or get the DID of the subject.
@@ -181,7 +179,10 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 	if err != nil {
 		return "", nil, err
 	}
-	credmap["subjectDID"] = subjectDID
+
+	claims := credData.Map("claims")
+	claims["id"] = subjectDID
+	credmap["claims"] = claims
 
 	// Generate a credential ID (jti) if it was not specified in the input data
 	if len(credData.String("jti")) == 0 {
@@ -327,12 +328,6 @@ func (v *Vault) CredentialFromJWT(credSerialized string) (rawJsonCred json.RawMe
 		zlog.Logger.Error().Err(err).Send()
 		return nil, err
 	}
-
-	// // Enable for Debugging
-	// zlog.Debug().Msg("Parsed Token")
-	// if out, err := json.MarshalIndent(token, "", "   "); err == nil {
-	// 	zlog.Debug().Msg(string(out))
-	// }
 
 	// Verify the signature
 	err = v.VerifySignature(token.ToBeSignedString, token.Signature, token.Alg(), token.Kid())

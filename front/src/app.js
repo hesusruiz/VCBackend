@@ -499,6 +499,30 @@ function cleanReload() {
     return    
 }
 
+
+function btoaUrl(input) {
+
+    // Encode using the standard Javascript function
+    let astr = btoa(input)
+
+    // Replace non-url compatible chars with base64 standard chars
+    astr = astr.replace(/\+/g, '-').replace(/\//g, '_');
+
+    return astr;
+}
+
+function atobUrl(input) {
+
+    // Replace non-url compatible chars with base64 standard chars
+    input = input.replace(/-/g, '+').replace(/_/g, '/');
+
+    // Decode using the standard Javascript function
+    let bstr = decodeURIComponent(escape(atob(input)));
+
+    return bstr;
+}
+
+
 // This module exports the `MHR` object into the global namespace, where we will add
 // the relevant functions that we want globally available to other modules.
 // This way they do not have to import us (and avoid circular references in some cases) and
@@ -515,5 +539,7 @@ window.MHR = {
     ErrorPanel: ErrorPanel,
     cleanReload: cleanReload,
     html: html,
-    render: render
+    render: render,
+    btoaUrl: btoaUrl,
+    atobUrl: atobUrl
 }
