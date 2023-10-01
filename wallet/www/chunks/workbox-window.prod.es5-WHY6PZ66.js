@@ -2,7 +2,7 @@ import "./chunk-66PNVI35.js";
 
 // front/node_modules/workbox-window/build/workbox-window.prod.es5.mjs
 try {
-  self["workbox:window:6.5.3"] && _();
+  self["workbox:window:6.5.4"] && _();
 } catch (n2) {
 }
 function n(n2, t2) {
@@ -47,7 +47,7 @@ function e(n2, t2) {
   return (e2 = n2[Symbol.iterator]()).next.bind(e2);
 }
 try {
-  self["workbox:core:6.5.3"] && _();
+  self["workbox:core:6.5.4"] && _();
 } catch (n2) {
 }
 var i = function() {

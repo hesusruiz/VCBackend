@@ -1175,7 +1175,7 @@ function tempTransaction(db2, mode, storeNames, fn) {
     });
   }
 }
-var DEXIE_VERSION = "3.2.2";
+var DEXIE_VERSION = "3.2.4";
 var maxString = String.fromCharCode(65535);
 var minKey = -Infinity;
 var INVALID_KEY_ARGUMENT = "Invalid key provided. Keys must be of type string, number, Date or Array<string | number | Date>.";
@@ -4470,7 +4470,9 @@ function extendObservabilitySet(target, newSet) {
   return target;
 }
 function liveQuery(querier) {
-  return new Observable((observer) => {
+  let hasValue = false;
+  let currentValue = void 0;
+  const observable = new Observable((observer) => {
     const scopeFuncIsAsync = isAsyncFunction(querier);
     function execute(subscr) {
       if (scopeFuncIsAsync) {
@@ -4518,6 +4520,8 @@ function liveQuery(querier) {
       }
       querying = true;
       Promise.resolve(ret).then((result) => {
+        hasValue = true;
+        currentValue = result;
         querying = false;
         if (closed)
           return;
@@ -4530,6 +4534,7 @@ function liveQuery(querier) {
         }
       }, (err) => {
         querying = false;
+        hasValue = false;
         observer.error && observer.error(err);
         subscription.unsubscribe();
       });
@@ -4537,6 +4542,9 @@ function liveQuery(querier) {
     doQuery();
     return subscription;
   });
+  observable.hasValue = () => hasValue;
+  observable.getValue = () => currentValue;
+  return observable;
 }
 var domDeps;
 try {
@@ -4673,6 +4681,9 @@ function propagateLocally(updateParts) {
 var propagatingLocally = false;
 if (typeof BroadcastChannel !== "undefined") {
   const bc = new BroadcastChannel(STORAGE_MUTATED_DOM_EVENT_NAME);
+  if (typeof bc.unref === "function") {
+    bc.unref();
+  }
   globalEvents(DEXIE_STORAGE_MUTATED_EVENT_NAME, (changedParts) => {
     if (!propagatingLocally) {
       bc.postMessage(changedParts);

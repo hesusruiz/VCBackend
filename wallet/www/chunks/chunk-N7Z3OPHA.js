@@ -85,37 +85,32 @@ var aria = (node) => (values) => {
       node.setAttribute(name, value);
   }
 };
+var getValue = (value) => value == null ? value : value.valueOf();
 var attribute = (node, name) => {
   let oldValue, orphan = true;
   const attributeNode = document.createAttributeNS(null, name);
   return (newValue) => {
-    if (oldValue !== newValue) {
-      oldValue = newValue;
-      if (oldValue == null) {
+    const value = useForeign && newValue instanceof Foreign ? newValue._(node, name) : getValue(newValue);
+    if (oldValue !== value) {
+      if ((oldValue = value) == null) {
         if (!orphan) {
           node.removeAttributeNode(attributeNode);
           orphan = true;
         }
       } else {
-        const value = useForeign && newValue instanceof Foreign ? newValue._(node, name) : newValue;
-        if (value == null) {
-          if (!orphan)
-            node.removeAttributeNode(attributeNode);
-          orphan = true;
-        } else {
-          attributeNode.value = value;
-          if (orphan) {
-            node.setAttributeNodeNS(attributeNode);
-            orphan = false;
-          }
+        attributeNode.value = value;
+        if (orphan) {
+          node.setAttributeNodeNS(attributeNode);
+          orphan = false;
         }
       }
     }
   };
 };
 var boolean = (node, key, oldValue) => (newValue) => {
-  if (oldValue !== !!newValue) {
-    if (oldValue = !!newValue)
+  const value = !!getValue(newValue);
+  if (oldValue !== value) {
+    if (oldValue = value)
       node.setAttribute(key, "");
     else
       node.removeAttribute(key);
@@ -162,9 +157,10 @@ var setter = (node, key) => key === "dataset" ? data(node) : (value) => {
 var text = (node) => {
   let oldValue;
   return (newValue) => {
-    if (oldValue != newValue) {
-      oldValue = newValue;
-      node.textContent = newValue == null ? "" : newValue;
+    const value = getValue(newValue);
+    if (oldValue != value) {
+      oldValue = value;
+      node.textContent = value == null ? "" : value;
     }
   };
 };
@@ -245,8 +241,8 @@ var {
   createTextNode,
   createTreeWalker,
   importNode
-} = new Proxy(document, {
-  get: (target, method) => target[method].bind(target)
+} = new Proxy({}, {
+  get: (_, method) => document[method].bind(document)
 });
 var createHTML = (html2) => {
   const template = createElement("template");
@@ -322,13 +318,19 @@ var handleAnything = (comment) => {
             anyContent(String(newValue));
           break;
         }
-        if (oldValue !== newValue && "ELEMENT_NODE" in newValue) {
-          oldValue = newValue;
-          nodes = diff(
-            comment,
-            nodes,
-            newValue.nodeType === 11 ? [...newValue.childNodes] : [newValue]
-          );
+        if (oldValue !== newValue) {
+          if ("ELEMENT_NODE" in newValue) {
+            oldValue = newValue;
+            nodes = diff(
+              comment,
+              nodes,
+              newValue.nodeType === 11 ? [...newValue.childNodes] : [newValue]
+            );
+          } else {
+            const value = newValue.valueOf();
+            if (value !== newValue)
+              anyContent(value);
+          }
         }
         break;
       case "function":

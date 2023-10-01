@@ -708,7 +708,7 @@ var require_easy_qrcode_min = __commonJS({
                 var p2, q2;
                 n2 ? (p2 = d3[n2.type] || d3[n2.type.substring(0, 2)] || d3.colorDark, q2 = d3.colorLight) : d3.backgroundImage ? (q2 = "rgba(0,0,0,0)", 6 == i3 ? d3.autoColor ? (p2 = d3.timing_H || d3.timing || d3.autoColorDark, q2 = d3.autoColorLight) : p2 = d3.timing_H || d3.timing || d3.colorDark : 6 == j3 ? d3.autoColor ? (p2 = d3.timing_V || d3.timing || d3.autoColorDark, q2 = d3.autoColorLight) : p2 = d3.timing_V || d3.timing || d3.colorDark : d3.autoColor ? (p2 = d3.autoColorDark, q2 = d3.autoColorLight) : p2 = d3.colorDark) : (p2 = 6 == i3 ? d3.timing_H || d3.timing || d3.colorDark : 6 == j3 ? d3.timing_V || d3.timing || d3.colorDark : d3.colorDark, q2 = d3.colorLight), h2.strokeStyle = m2 ? p2 : q2, h2.fillStyle = m2 ? p2 : q2, n2 ? (o2 = "AO" == n2.type ? d3.dotScaleAO : "AI" == n2.type ? d3.dotScaleAI : 1, d3.backgroundImage && d3.autoColor ? (p2 = ("AO" == n2.type ? d3.AI : d3.AO) || d3.autoColorDark, q2 = d3.autoColorLight) : p2 = ("AO" == n2.type ? d3.AI : d3.AO) || p2, m2 = n2.isDark, h2.fillRect(k2 + f2 * (1 - o2) / 2, d3.titleHeight + l2 + g2 * (1 - o2) / 2, f2 * o2, g2 * o2)) : 6 == i3 ? (o2 = d3.dotScaleTiming_H, h2.fillRect(k2 + f2 * (1 - o2) / 2, d3.titleHeight + l2 + g2 * (1 - o2) / 2, f2 * o2, g2 * o2)) : 6 == j3 ? (o2 = d3.dotScaleTiming_V, h2.fillRect(k2 + f2 * (1 - o2) / 2, d3.titleHeight + l2 + g2 * (1 - o2) / 2, f2 * o2, g2 * o2)) : (d3.backgroundImage, h2.fillRect(k2 + f2 * (1 - o2) / 2, d3.titleHeight + l2 + g2 * (1 - o2) / 2, f2 * o2, g2 * o2)), 1 == d3.dotScale || n2 || (h2.strokeStyle = d3.colorLight);
               }
-            if (d3.title && (h2.fillStyle = d3.titleBackgroundColor, h2.fillRect(0, 0, this._elCanvas.width, d3.titleHeight + d3.quietZone), h2.font = d3.titleFont, h2.fillStyle = d3.titleColor, h2.textAlign = "center", h2.fillText(d3.title, this._elCanvas.width / 2, +d3.quietZone + d3.titleTop)), d3.subTitle && (h2.font = d3.subTitleFont, h2.fillStyle = d3.subTitleColor, h2.fillText(d3.subTitle, this._elCanvas.width / 2, +d3.quietZone + d3.subTitleTop)), d3.logo) {
+            if (d3.title && (h2.fillStyle = d3.titleBackgroundColor, h2.fillRect(d3.quietZone, d3.quietZone, d3.width, d3.titleHeight), h2.font = d3.titleFont, h2.fillStyle = d3.titleColor, h2.textAlign = "center", h2.fillText(d3.title, this._elCanvas.width / 2, +d3.quietZone + d3.titleTop)), d3.subTitle && (h2.font = d3.subTitleFont, h2.fillStyle = d3.subTitleColor, h2.fillText(d3.subTitle, this._elCanvas.width / 2, +d3.quietZone + d3.subTitleTop)), d3.logo) {
               var r2 = new Image(), s2 = this;
               r2.onload = function() {
                 c4(r2);
@@ -721,7 +721,7 @@ var require_easy_qrcode_min = __commonJS({
           var d3 = this._htOption, e3 = a3.getModuleCount(), f2 = Math.round(d3.width / e3), g2 = Math.round((d3.height - d3.titleHeight) / e3);
           f2 <= 1 && (f2 = 1), g2 <= 1 && (g2 = 1), d3.width = f2 * e3, d3.height = g2 * e3 + d3.titleHeight, d3.quietZone = Math.round(d3.quietZone), this._elCanvas.width = d3.width + 2 * d3.quietZone, this._elCanvas.height = d3.height + 2 * d3.quietZone, "canvas" != this._htOption.drawer && (this._oContext = new C2S(this._elCanvas.width, this._elCanvas.height)), this.clear();
           var h2 = this._oContext;
-          h2.lineWidth = 0, h2.fillStyle = d3.colorLight, h2.fillRect(0, 0, this._elCanvas.width, this._elCanvas.height);
+          h2.lineWidth = 0, h2.fillStyle = d3.colorLight, h2.fillRect(0, 0, this._elCanvas.width, this._elCanvas.height), h2.clearRect(d3.quietZone, d3.quietZone, d3.width, d3.titleHeight);
           var i2 = this;
           if (d3.backgroundImage) {
             var j2 = new Image();
@@ -810,6 +810,30 @@ var require_easy_qrcode_min = __commonJS({
         this._oDrawing.remove();
       }, j.prototype.resize = function(a2, b2) {
         this._oDrawing._htOption.width = a2, this._oDrawing._htOption.height = b2, this._oDrawing.draw(this._oQRCode);
+      }, j.prototype.download = function(a2) {
+        var b2 = this._oDrawing.dataURL, c2 = document.createElement("a");
+        if ("svg" == this._htOption.drawer) {
+          a2 += ".svg";
+          var d2 = new Blob([b2], { type: "text/plain" });
+          if (navigator.msSaveBlob)
+            navigator.msSaveBlob(d2, a2);
+          else {
+            c2.download = a2;
+            var e2 = new FileReader();
+            e2.onload = function() {
+              c2.href = e2.result, c2.click();
+            }, e2.readAsDataURL(d2);
+          }
+        } else if (a2 += ".png", navigator.msSaveBlob) {
+          var f2 = function(a3) {
+            var b3 = atob(a3.split(",")[1]), c3 = a3.split(",")[0].split(":")[1].split(";")[0], d3 = new ArrayBuffer(b3.length), e3 = new Uint8Array(d3);
+            for (v = 0; v < b3.length; v++)
+              e3[v] = b3.charCodeAt(v);
+            return new Blob([d3], { type: c3 });
+          }(b2);
+          navigator.msSaveBlob(f2, a2);
+        } else
+          c2.download = a2, c2.href = b2, c2.click();
       }, j.prototype.noConflict = function() {
         return m.QRCode === this && (m.QRCode = p), j;
       }, j.CorrectLevel = r, "function" == typeof define && (define.amd || define.cmd) ? define([], function() {

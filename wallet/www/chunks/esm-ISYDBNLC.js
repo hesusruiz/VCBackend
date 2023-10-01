@@ -13,22 +13,23 @@ function fixStack(target, fn) {
   captureStackTrace && captureStackTrace(target, fn);
 }
 var __extends = function() {
-  var extendStatics = function(d, b) {
-    extendStatics = Object.setPrototypeOf || {
+  var _extendStatics = function extendStatics(d, b) {
+    _extendStatics = Object.setPrototypeOf || {
       __proto__: []
     } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
       for (var p in b2) {
-        if (b2.hasOwnProperty(p)) {
+        if (Object.prototype.hasOwnProperty.call(b2, p))
           d2[p] = b2[p];
-        }
       }
     };
-    return extendStatics(d, b);
+    return _extendStatics(d, b);
   };
   return function(d, b) {
-    extendStatics(d, b);
+    if (typeof b !== "function" && b !== null)
+      throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+    _extendStatics(d, b);
     function __() {
       this.constructor = d;
     }
@@ -37,9 +38,9 @@ var __extends = function() {
 }();
 var CustomError = function(_super) {
   __extends(CustomError2, _super);
-  function CustomError2(message) {
+  function CustomError2(message, options) {
     var _newTarget = this.constructor;
-    var _this = _super.call(this, message) || this;
+    var _this = _super.call(this, message, options) || this;
     Object.defineProperty(_this, "name", {
       value: _newTarget.name,
       enumerable: false,

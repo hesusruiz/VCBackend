@@ -1,6 +1,6 @@
 import {
   html
-} from "../chunks/chunk-UG74N5CO.js";
+} from "../chunks/chunk-N7Z3OPHA.js";
 import "../chunks/chunk-66PNVI35.js";
 
 // front/src/pages/DisplayNormalQR.js

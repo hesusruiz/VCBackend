@@ -70,7 +70,7 @@ func main() {
 	var result api.BuildResult
 
 	flag.Usage = func() {
-		fmt.Printf("Usage of faster (v0.4)\n")
+		fmt.Printf("Usage of faster (v0.5)\n")
 		fmt.Println("  faster build\tBuild the application")
 		fmt.Println("  faster serve\tStart a development server that builds automatically when reloading")
 		fmt.Println()
@@ -312,7 +312,6 @@ func postprocess(r api.BuildResult, cfg *yaml.YAML) error {
 
 			// Add an entry in the page mapping
 			pageNamesMapping[pageName] = targetPageFilePath
-			fmt.Println("page:", pageName, "module:", targetPageFilePath)
 
 		}
 	}
@@ -336,7 +335,6 @@ func postprocess(r api.BuildResult, cfg *yaml.YAML) error {
 		// Get the base name for the outfile of the entrypoint
 		outFileBaseName := path.Join(cfg.String("subdomainprefix"), filepath.Base(outFile))
 		fullCSS := path.Join(cfg.String("subdomainprefix"), cssBundleBasename)
-		fmt.Println("Replace loop", outFileBaseName)
 
 		// Replace the entrypoint name for JavaScript
 		bytesOut = bytes.Replace(bytesOut, []byte("PUT_APP_JS_NAME_HERE"), []byte(outFileBaseName), 1)
@@ -474,7 +472,6 @@ func copyStaticAssets(cfg *yaml.YAML) {
 	for _, page := range pages {
 		sourceFile := filepath.Join(sourceDir, page)
 		targetFile := filepath.Join(targetDir, page)
-		fmt.Printf("Copy from %v to %v\n", sourceFile, targetFile)
 		// copyFile(sourceFile, targetFile)
 		copy.Copy(sourceFile, targetFile)
 	}

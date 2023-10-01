@@ -1,10 +1,10 @@
 import {
   storage
-} from "./chunks/chunk-6CRV2U3L.js";
+} from "./chunks/chunk-K3A4WBEV.js";
 import {
   html,
   render
-} from "./chunks/chunk-UG74N5CO.js";
+} from "./chunks/chunk-N7Z3OPHA.js";
 import {
   log
 } from "./chunks/chunk-BFXLU5VG.js";
@@ -160,7 +160,7 @@ window.addEventListener("load", async (event) => {
     console.log("In production");
   }
   if (INSTALL_SERVICE_WORKER && "serviceWorker" in navigator) {
-    const { Workbox } = await import("./chunks/workbox-window.prod.es5-EHSZJLI5.js");
+    const { Workbox } = await import("./chunks/workbox-window.prod.es5-WHY6PZ66.js");
     const wb = new Workbox("./sw.js");
     wb.addEventListener("message", (event2) => {
       if (event2.data.type === "CACHE_UPDATED") {
