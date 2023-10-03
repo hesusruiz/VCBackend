@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/hesusruiz/vcutils/yaml"
 	zlog "github.com/rs/zerolog/log"
 	starjson "go.starlark.net/lib/json"
 	"go.starlark.net/lib/math"
@@ -35,7 +36,7 @@ func init() {
 
 }
 
-// PDP implements an JSON-RPC reverse proxy
+// PDP implements a Policy Decision Point in Starlark
 type PDP struct {
 
 	// The globals for the Starlark program
@@ -102,6 +103,56 @@ func (m *PDP) ParseAndCompileFile() error {
 
 }
 
+func (m PDP) TakeDecision(cred string) bool {
+	var err error
+	debug := true
+
+	zlog.Info().Msg("in TakeDecision")
+
+	// In development, parse and compile the script on every request
+	if debug {
+		err := m.ParseAndCompileFile()
+		if err != nil {
+			zlog.Err(err).Msg("")
+			return false
+		}
+	}
+
+	// Create the input argument
+	dd := starlark.String(cred)
+	if err != nil {
+		zlog.Err(err).Msg("")
+		return false
+	}
+
+	// Call the already compiled 'authenticate' funcion
+	var args starlark.Tuple
+	args = append(args, dd)
+	result, err := starlark.Call(m.thread, m.starFunction, args, nil)
+	if err != nil {
+		zlog.Err(err).Msg("")
+		return false
+	}
+
+	// Check that the value returned is of the correct type
+	resultType := result.Type()
+	if resultType != "string" {
+		err := fmt.Errorf("authenticate function returned wrong type: %v", resultType)
+		zlog.Err(err).Msg("")
+		return false
+	}
+
+	// Return the value
+	user := result.(starlark.String).GoString()
+
+	if len(user) > 0 {
+		return true
+	} else {
+		return false
+	}
+
+}
+
 type jsonrpcMessage struct {
 	Version string          `json:"jsonrpc"`
 	ID      int             `json:"id"`
@@ -109,7 +160,7 @@ type jsonrpcMessage struct {
 	Params  json.RawMessage `json:"params"`
 }
 
-func (m PDP) httpHandler(w http.ResponseWriter, r *http.Request) {
+func (m PDP) HttpHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	debug := true
 
@@ -244,4 +295,17 @@ func getSkylarkList(values []string) *starlark.List {
 		list.Append(starlark.String(v))
 	}
 	return list
+}
+
+func StarDictFromCredential(cred *yaml.YAML) (*starlark.Dict, error) {
+
+	dd := &starlark.Dict{}
+
+	email := cred.String("credentialSubject.email")
+	dd.SetKey(starlark.String("email"), starlark.String(email))
+
+	section := cred.String("credentialSubject.position.section")
+	dd.SetKey(starlark.String("section"), starlark.String(section))
+
+	return dd, nil
 }

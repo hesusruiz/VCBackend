@@ -363,10 +363,12 @@ func (v *Verifier) PageLoginDenied(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, handlers.ErrNoStateReceived.Error())
 	}
 
+	zlog.Info().Str("stateKey", stateKey).Msg("PageLoginDenied")
+
 	stateContent, _ := v.stateSession.Get(stateKey)
 	if len(stateContent) < 2 {
 		// Render an error
-		err := handlers.ErrNoCredentialFoundInState
+		err := handlers.ErrInvalidStateReceived
 		zlog.Err(err).Send()
 		m := fiber.Map{
 			"error": err.Error(),
@@ -590,13 +592,23 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 
 	}
 
-	accepted := TakeDecission(theCredential)
+	serialCredential, err := json.Marshal(theCredential.Data())
+	if err != nil {
+		return err
+	}
+	zlog.Info().Str("credential", string(serialCredential))
+
+	accepted := v.pdp.TakeDecision(string(serialCredential))
+	zlog.Info().Bool("After StarLark", accepted).Msg("")
+
+	// accepted := TakeDecission(theCredential)
 	if !accepted {
 
 		// Deny access
 		// Set the credential in storage, and wait for the polling from client
 		newState := handlers.NewState()
 		newState.SetStatus(handlers.StateDenied)
+		newState.SetContent(serialCredential)
 
 		v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpiration)
 
@@ -610,12 +622,6 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 	name := theCredential.String("credentialSubject.name")
 	positionSection := theCredential.String("credentialSubject.position.section")
 	zlog.Info().Str("email", email).Msg("data in vp_token")
-
-	serialCredential, err := json.Marshal(theCredential.Data())
-	if err != nil {
-		return err
-	}
-	zlog.Info().Str("credential", string(serialCredential))
 
 	zlog.Info().Str("section", positionSection).Msg("Performing access control")
 
