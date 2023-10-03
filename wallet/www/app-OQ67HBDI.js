@@ -1,6 +1,6 @@
 import {
   storage
-} from "./chunks/chunk-K3A4WBEV.js";
+} from "./chunks/chunk-TLQAWBTC.js";
 import {
   html,
   render
@@ -160,7 +160,7 @@ window.addEventListener("load", async (event) => {
     console.log("In production");
   }
   if (INSTALL_SERVICE_WORKER && "serviceWorker" in navigator) {
-    const { Workbox } = await import("./chunks/workbox-window.prod.es5-WHY6PZ66.js");
+    const { Workbox } = await import("./chunks/workbox-window.prod.es5-4GWLKTMN.js");
     const wb = new Workbox("./sw.js");
     wb.addEventListener("message", (event2) => {
       if (event2.data.type === "CACHE_UPDATED") {

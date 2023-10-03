@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hesusruiz/vcutils/yaml"
 	zlog "github.com/rs/zerolog/log"
@@ -107,5 +108,34 @@ func (v *Vault) CreateToken(credData any, issuerID string) ([]byte, error) {
 	token.WriteString(signature)
 
 	return token.Bytes(), nil
+
+}
+
+func (v *Vault) VerifyToken(token string, issuerID string) (*yaml.YAML, error) {
+
+	tokenParts := strings.Split(token, ".")
+	if len(tokenParts) != 3 {
+		return nil, fmt.Errorf("malformed token")
+	}
+
+	payloadRaw, err := base64.RawURLEncoding.DecodeString(tokenParts[1])
+	if err != nil {
+		return nil, err
+	}
+
+	var pj any
+	json.Unmarshal(payloadRaw, &pj)
+	prettypj, _ := json.MarshalIndent(pj, "", "  ")
+	fmt.Println(string(prettypj))
+
+	p := yaml.New(pj)
+
+	// claims, err := p.Get("credentialSubject")
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// fmt.Println(claims)
+
+	return p, nil
 
 }

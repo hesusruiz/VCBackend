@@ -16,7 +16,7 @@ type CredentialClaims struct {
 }
 
 const defaultConfigFile = "./server.yaml"
-const defaultCredentialDataFile = "cmd/creds/sampledata/employee_data.yaml"
+const defaultCredentialDataFile = "employee_data.yaml"
 
 var (
 	configFile = flag.String("config", defaultConfigFile, "path to configuration file")

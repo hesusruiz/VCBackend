@@ -4843,7 +4843,6 @@ async function clearLogs() {
 }
 async function resetDatabase() {
   await db.delete();
-  alert("Database erased");
   location.reload();
 }
 var MAX_LOG_ENTRIES = 1e3;

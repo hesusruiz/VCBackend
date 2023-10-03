@@ -84,13 +84,13 @@ func New(cfg *yaml.YAML) (v *Vault, err error) {
 	// Open the database
 	v.Client, err = ent.Open(storeDriverName, storeDataSourceName)
 	if err != nil {
-		zlog.Error().Err(err).Msg("failed opening database")
+		zlog.Err(err).Msg("failed opening database")
 		return nil, err
 	}
 
 	// Run the auto migration tool.
 	if err := v.Client.Schema.Create(context.Background()); err != nil {
-		zlog.Error().Err(err).Str("dataSourceName", storeDataSourceName).Msg("failed creating schema resources")
+		zlog.Err(err).Str("dataSourceName", storeDataSourceName).Msg("failed creating schema resources")
 		return nil, err
 	}
 

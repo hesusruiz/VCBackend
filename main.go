@@ -7,7 +7,6 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/evidenceledger/vcdemo/back/handlers"
 	"github.com/evidenceledger/vcdemo/issuer"
-	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/evidenceledger/vcdemo/verifier"
 	"github.com/evidenceledger/vcdemo/wallet"
 	"github.com/hesusruiz/vcutils/yaml"
@@ -20,7 +19,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/storage/memory"
 	"github.com/gofiber/template/html"
-	"go.uber.org/zap"
 )
 
 const defaultConfigFile = "./server.yaml"
@@ -29,8 +27,6 @@ const defaultStaticDir = "back/www"
 const defaultPassword = "ThePassword"
 
 var (
-	sameDevice = false
-
 	prod       = flag.Bool("prod", false, "Enable prefork in Production")
 	configFile = flag.String("config", LookupEnvOrString("CONFIG_FILE", defaultConfigFile), "path to configuration file")
 	password   = flag.String("pass", LookupEnvOrString("PASSWORD", defaultPassword), "admin password for the server")
@@ -50,15 +46,6 @@ func main() {
 
 	// Create the HTTP server
 	s := handlers.NewServer(cfg)
-
-	// Create the logger and store in Server so all handlers can use it
-	if cfg.String("server.environment") == "production" {
-		s.Logger = zap.Must(zap.NewProduction()).Sugar()
-	} else {
-		s.Logger = zap.Must(zap.NewDevelopment()).Sugar()
-	}
-	zap.WithCaller(true)
-	defer s.Logger.Sync()
 
 	// Parse command-line flags
 	flag.Parse()
@@ -83,19 +70,6 @@ func main() {
 	s.App = fiber.New(fiberCfg)
 	s.Cfg = cfg
 
-	// Connect to the different store engines
-	s.IssuerVault = vault.Must(vault.New(yaml.New(cfg.Map("issuer"))))
-	s.VerifierVault = vault.Must(vault.New(yaml.New(cfg.Map("verifier"))))
-	s.WalletVault = vault.Must(vault.New(yaml.New(cfg.Map("wallet"))))
-
-	// Create the issuer and verifier users
-	// TODO: the password is only for testing
-	// _, s.IssuerDID, _ = s.IssuerVault.CreateOrGetUserWithDIDKey(cfg.String("issuer.id"), cfg.String("issuer.name"), "legalperson", cfg.String("issuer.password"))
-	_, s.VerifierDID, _ = s.VerifierVault.CreateOrGetUserWithDIDKey(cfg.String("verifier.id"), cfg.String("verifier.name"), "legalperson", cfg.String("verifier.password"))
-
-	// // Backend Operations for the Verifier
-	// s.Operations = operations.NewManager(s.VerifierVault, cfg)
-
 	// Recover panics from the HTTP handlers so the server continues running
 	s.Use(recover.New(recover.Config{EnableStackTrace: true}))
 
@@ -106,16 +80,9 @@ func main() {
 	s.SessionStorage = memory.New()
 	defer s.SessionStorage.Close()
 
-	// // WebAuthn
-	// s.WebAuthn = handlers.NewWebAuthnHandler(s, cfg)
-
-	// ##########################
 	// Application Home pages
 	s.Get("/", s.HandleHome)
 	s.Get("/walletprovider", s.HandleWalletProviderHome)
-
-	// Info base path
-	// s.Get("/info", s.GetBackendInfo)
 
 	// WARNING! This is just for development. Disable this in production by using the config file setting
 	if cfg.String("server.environment") == "development" {
@@ -124,7 +91,6 @@ func main() {
 
 	// Setup the Issuer, Wallet and Verifier routes
 	issuer.Setup(s, cfg)
-	setupEnterpriseWallet(s, cfg)
 	verifier.Setup(s, cfg)
 
 	// Setup static files

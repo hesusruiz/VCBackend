@@ -5,10 +5,6 @@ server:
   environment: development
   loglevel: DEBUG
 
-store:
-  driverName: "sqlite3"
-  dataSourceName: "file:issuer.sqlite?mode=rwc&cache=shared&_fk=1"
-
 issuer:
   id: HappyPets
   name: HappyPets
@@ -24,21 +20,20 @@ verifier:
   store:
     driverName: "sqlite3"
     dataSourceName: "file:verifier.sqlite?mode=rwc&cache=shared&_fk=1"
-  uri_prefix: /verifier
   jwks_uri: /.well-known/jwks_uri
   protectedResource:
     url: "https://www.google.com"
+
+wallet:
+  store:
+    driverName: "sqlite3"
+    dataSourceName: "file:wallet.sqlite?mode=rwc&cache=shared&_fk=1"
 
 verifiableregistry:
   password: ThePassword
   store:
     driverName: "sqlite3"
     dataSourceName: "file:verifiableregistry.sqlite?mode=rwc&cache=shared&_fk=1"
-
-wallet:
-  store:
-    driverName: "sqlite3"
-    dataSourceName: "file:wallet.sqlite?mode=rwc&cache=shared&_fk=1"
 
 webauthn:
   RPDisplayName: "EvidenceLedger"

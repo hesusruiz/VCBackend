@@ -181,7 +181,6 @@ async function clearLogs() {
 async function resetDatabase() {
     // Delete database, erasing all tables and their contents
     await db.delete()
-    alert("Database erased")
 
     // Reload application in the same page
     location.reload()

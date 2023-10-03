@@ -22,7 +22,7 @@ window.MHR.register("ConfirmResetApp", class extends window.MHR.AbstractPage {
                 </div>
                 
                 <div class="w3-container w3-center w3-padding">
-                    <btn-danger @click=${() => this.deleteALLVCs()}>${T("Delete")}</btn-danger>
+                    <btn-danger @click=${() => this.resetApplication()}>${T("Delete")}</btn-danger>
                 </div>
 
             </div>

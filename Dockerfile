@@ -1,4 +1,4 @@
-FROM golang:1.18-alpine AS build
+FROM golang:1.20-alpine AS build
 
 WORKDIR /go/src/app
 COPY ./ ./
@@ -9,7 +9,7 @@ RUN go get -d -v ./...
 RUN go generate ./ent
 RUN go build -v .
 
-FROM golang:1.18-alpine
+FROM golang:1.20-alpine
 
 WORKDIR /go/src/app
 COPY --from=build /go/src/app/back/views /go/src/app/back/views

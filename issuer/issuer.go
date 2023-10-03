@@ -15,6 +15,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/utils"
 	"github.com/hesusruiz/vcutils/yaml"
+	zlog "github.com/rs/zerolog/log"
 	qrcode "github.com/skip2/go-qrcode"
 	"github.com/valyala/fasttemplate"
 )
@@ -212,17 +213,17 @@ type waltResponse struct {
 }
 
 func (i *Issuer) CreateNewCredential(c *fiber.Ctx) error {
-	i.rootServer.Logger.Info("Create a new credential")
+	zlog.Info().Msg("Create a new credential")
 	// The user submitted the form. Get all the data
 	newCred := &NewCredentialForm{}
 	if err := c.BodyParser(newCred); err != nil {
-		i.rootServer.Logger.Infof("Error parsing: %s", err)
+		zlog.Err(err).Msgf("error parsing")
 		return err
 	}
 
 	credentialString, err := i.createNewCredential(newCred)
 	if err != nil {
-		i.rootServer.Logger.Infof("Error: %s", err)
+		zlog.Err(err).Msg("error creating credential")
 		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
@@ -234,95 +235,6 @@ func (i *Issuer) CreateNewCredential(c *fiber.Ctx) error {
 func (i *Issuer) createNewCredential(newCred *NewCredentialForm) (credString []byte, err error) {
 	panic("Not implemented")
 }
-
-// func (i *Issuer) createNewCredentialOld(newCred *NewCredentialForm) (credString []byte, err error) {
-// 	if newCred.Email == "" || newCred.FirstName == "" || newCred.FamilyName == "" ||
-// 		newCred.Roles == "" || newCred.Target == "" {
-// 		return credString, errors.New("invalid_credential")
-// 	}
-// 	// Convert to the hierarchical map required for the template
-// 	claims := fiber.Map{}
-
-// 	claims["firstName"] = newCred.FirstName
-// 	claims["familyName"] = newCred.FamilyName
-// 	claims["email"] = newCred.Email
-
-// 	names := strings.Split(newCred.Roles, ",")
-// 	var roles []map[string]any
-// 	role := map[string]any{
-// 		"target": newCred.Target,
-// 		"names":  names,
-// 	}
-
-// 	roles = append(roles, role)
-// 	claims["roles"] = roles
-
-// 	credentialData := fiber.Map{}
-// 	credentialData["credentialSubject"] = claims
-
-// 	// Get the issuer DID
-// 	issuerDID, err := i.server.issuerVault.GetDIDForUser(i.server.cfg.String("issuer.id"))
-// 	if err != nil {
-// 		return credString, err
-// 	}
-
-// 	// Call the issuer of SSI Kit
-// 	agent := fiber.Post(i.server.ssiKit.signatoryUrl + "/v1/credentials/issue")
-
-// 	config := fiber.Map{
-// 		"issuerDid":  issuerDID,
-// 		"subjectDid": "did:key:z6Mkfdio1n9SKoZUtKdr9GTCZsRPbwHN8f7rbJghJRGdCt88",
-// 		// "verifierDid": "theVerifier",
-// 		// "issuerVerificationMethod": "string",
-// 		"proofType": "LD_PROOF",
-// 		// "domain":                   "string",
-// 		// "nonce":                    "string",
-// 		// "proofPurpose":             "string",
-// 		// "credentialId":             "string",
-// 		// "issueDate":                "2022-10-06T18:09:14.570Z",
-// 		// "validDate":                "2022-10-06T18:09:14.570Z",
-// 		// "expirationDate":           "2022-10-06T18:09:14.570Z",
-// 		// "dataProviderIdentifier":   "string",
-// 	}
-
-// 	bodyRequest := fiber.Map{
-// 		"templateId":     "PacketDeliveryService",
-// 		"config":         config,
-// 		"credentialData": credentialData,
-// 	}
-
-// 	agent.JSON(bodyRequest)
-// 	agent.ContentType("application/json")
-// 	agent.Set("accept", "application/json")
-// 	_, returnBody, errors := agent.Bytes()
-// 	if len(errors) > 0 {
-// 		i.server.logger.Errorw("error calling SSI Kit", zap.Errors("errors", errors))
-// 		return credString, fmt.Errorf("error calling SSI Kit: %v", errors[0])
-// 	}
-
-// 	parsed, err := yaml.ParseJson(string(returnBody))
-// 	if err != nil {
-// 		return credString, err
-// 	}
-
-// 	credentialID := parsed.String("id")
-// 	if len(credentialID) == 0 {
-// 		i.server.logger.Errorw("id field not found in credential")
-// 		return credString, fmt.Errorf("id field not found in credential")
-// 	}
-
-// 	// Store credential
-// 	_, err = i.server.issuerVault.Client.Credential.Create().
-// 		SetID(credentialID).
-// 		SetRaw([]uint8(returnBody)).
-// 		Save(context.Background())
-// 	if err != nil {
-// 		i.server.logger.Errorw("error storing the credential", zap.Error(err))
-// 		return credString, err
-// 	}
-
-// 	return returnBody, err
-// }
 
 func (i *Issuer) IssuerPageNewCredentialFormPost(c *fiber.Ctx) error {
 
