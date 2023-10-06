@@ -2,7 +2,10 @@ package vaultv2
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +20,7 @@ import (
 	"github.com/evidenceledger/vcdemo/internal/jwk"
 	"github.com/evidenceledger/vcdemo/internal/jwt"
 	jwk2 "github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/multiformats/go-multibase"
 	"github.com/multiformats/go-multicodec"
@@ -31,6 +35,7 @@ import (
 
 var (
 	ErrDIDMethodNotSupported = errors.New("DID method not supported")
+	ErrDIDKeyInvalid         = errors.New("invalid string for DID key")
 )
 
 func init() {
@@ -51,6 +56,102 @@ type Signable interface {
 	Kid() string
 }
 
+var pepe jwk2.Cache
+var testDIDKey = "did:key:z2dmzD81cgPx8Vki7JbuuMmFYrWPgYoytykUZ3eyqht1j9KbpB33KYjExVXDTYogTZn23fXdtEpErHvhvmuu3CkikhTh6CetfaEPtKv8i4nnV8D3wnrVT7xBT9Yve7RGtBkte9o2ssiiz27V65WRiRYnEHnMJuaRwwS83sDs7m4WzhuKTJ"
+
+var testJWK = `
+{
+	"crv": "P-256",
+	"kty": "EC",
+	"x": "G04fA-YOT6GsV8USfnRxi45hbhWGPscyXd8gWd1LXc4",
+	"y": "xifD3yZfjyVjJCSjTaXPpm6_BDgJa5qYOE9Kx2JpEWI"
+}`
+
+func GenDIDKey() (did string, privateKey jwk2.Key) {
+
+	var buf [10]byte
+	n := binary.PutUvarint(buf[0:], uint64(multicodec.Jwk_jcsPub))
+	Jwk_jcsPub_Buf := buf[0:n]
+
+	rawPrivKey, err := ecdsa.GenerateKey(crypto.ECDSACurve, rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	rawPubKey := rawPrivKey.PublicKey
+
+	privKeyJWK, err := jwk2.FromRaw(rawPrivKey)
+	if err != nil {
+		panic(err)
+	}
+	pubKeyJWK, err := jwk2.FromRaw(rawPubKey)
+	if err != nil {
+		panic(err)
+	}
+
+	serialized, err := json.Marshal(pubKeyJWK)
+	if err != nil {
+		panic(err)
+	}
+
+	keyEncoded := append(Jwk_jcsPub_Buf, serialized...)
+
+	mb, err := multibase.Encode(multibase.Base58BTC, keyEncoded)
+	if err != nil {
+		panic(err)
+	}
+
+	return "did:key" + mb, privKeyJWK
+
+}
+
+func PubKeyFromDIDKey(did string) (publicKey jwk2.Key, err error) {
+
+	if !strings.HasPrefix(did, "did:key:") {
+		return nil, ErrDIDKeyInvalid
+	}
+
+	identifier := strings.TrimPrefix(did, "did:key:")
+
+	_, _, err = multibase.Decode(identifier)
+	if err != nil {
+		panic(err)
+	}
+
+	var buf [10]byte
+	n := binary.PutUvarint(buf[0:], uint64(multicodec.Jwk_jcsPub))
+	Jwk_jcsPub_Buf := buf[0:n]
+
+	rawPrivKey, err := ecdsa.GenerateKey(crypto.ECDSACurve, rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	rawPubKey := rawPrivKey.PublicKey
+
+	privKeyJWK, err := jwk2.FromRaw(rawPrivKey)
+	if err != nil {
+		panic(err)
+	}
+	pubKeyJWK, err := jwk2.FromRaw(rawPubKey)
+	if err != nil {
+		panic(err)
+	}
+
+	serialized, err := json.Marshal(pubKeyJWK)
+	if err != nil {
+		panic(err)
+	}
+
+	keyEncoded := append(Jwk_jcsPub_Buf, serialized...)
+
+	mb, err := multibase.Encode(multibase.Base58BTC, keyEncoded)
+	if err != nil {
+		panic(err)
+	}
+
+	return "did:key" + mb, privKeyJWK
+
+}
+
 var mutexForNew sync.Mutex
 
 // Must is a helper that wraps a call to a function returning (*Vault, error)
@@ -66,17 +167,6 @@ func Must(v *Vault, err error) *Vault {
 
 	return v
 }
-
-var pepe jwk2.Cache
-var testDIDKey = "did:key:z2dmzD81cgPx8Vki7JbuuMmFYrWPgYoytykUZ3eyqht1j9KbpB33KYjExVXDTYogTZn23fXdtEpErHvhvmuu3CkikhTh6CetfaEPtKv8i4nnV8D3wnrVT7xBT9Yve7RGtBkte9o2ssiiz27V65WRiRYnEHnMJuaRwwS83sDs7m4WzhuKTJ"
-
-var testJWK = `
-{
-	"crv": "P-256",
-	"kty": "EC",
-	"x": "G04fA-YOT6GsV8USfnRxi45hbhWGPscyXd8gWd1LXc4",
-	"y": "xifD3yZfjyVjJCSjTaXPpm6_BDgJa5qYOE9Kx2JpEWI"
-}`
 
 // New opens or creates a repository storing users, keys and credentials
 func New(cfg *yaml.YAML) (v *Vault, err error) {
@@ -232,16 +322,6 @@ func (v *Vault) CreateOrGetUserWithDID(
 	if didMethod != "did:key" && didMethod != "did:elsi" {
 		return nil, "", ErrDIDMethodNotSupported
 	}
-
-	// multibase.base58btc(multicodec.jwk_jcs-pub([serialised public key]))
-	_ = multicodec.Sha2_256 // Code
-	_ = multicodec.Sha2_256.String()
-	// keyEncoding := multicodec.Jwk_jcsPub
-
-	var unmarshaled any
-	err := json.Unmarshal([]byte(testJWK), &unmarshaled)
-
-	multibase.Encode(multibase.Base58BTC, []byte("hello"))
 
 	// Return the user and DID if they already exist.
 	// It is an error if the DID does not exist for a user
@@ -710,4 +790,13 @@ func (v *Vault) VerifySignature(signedString string, signature string, alg strin
 	// Verification performed, reply with success
 	return nil
 
+}
+
+func JSONRemarshal(bytes []byte) ([]byte, error) {
+	var ifce interface{}
+	err := json.Unmarshal(bytes, &ifce)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(ifce)
 }
