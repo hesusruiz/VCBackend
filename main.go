@@ -7,7 +7,6 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/evidenceledger/vcdemo/back/handlers"
 	"github.com/evidenceledger/vcdemo/issuer"
-	"github.com/evidenceledger/vcdemo/vaultv2"
 	"github.com/evidenceledger/vcdemo/verifier"
 	"github.com/evidenceledger/vcdemo/wallet"
 	"github.com/hesusruiz/vcutils/yaml"
@@ -41,9 +40,7 @@ func LookupEnvOrString(key string, defaultVal string) string {
 }
 
 func main() {
-	vaultv2.GenDIDKey()
 
-	os.Exit(0)
 	// Read configuration file
 	cfg := readConfiguration(*configFile)
 

@@ -4,16 +4,10 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/evidenceledger/vcdemo/internal/jwt"
 	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/hesusruiz/vcutils/yaml"
 	zlog "github.com/rs/zerolog/log"
 )
-
-type CredentialClaims struct {
-	jwt.RegisteredClaims
-	Other map[string]any
-}
 
 const defaultConfigFile = "./server.yaml"
 const defaultCredentialDataFile = "employee_data.yaml"

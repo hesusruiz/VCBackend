@@ -14,7 +14,7 @@
                     <h5>Employee</h5>
                 </div>
 
-                {{with mustFromJson .PrettyCred}}
+                {{with mustFromJson .Encoded}}
 
                 <div class="w3-container">
                     {{if eq .credentialSubject.gender "f" }}
@@ -41,8 +41,8 @@
                 {{end}}
 
                 <div class="w3-container w3-padding-16">
-                    <a href="{{$.issuerPrefix}}/creddetails/{{.Id}}" class="btn-primary">Details</a>
-                    <a href="{{$.issuerPrefix}}/displayqrurl/{{.Id}}" class="btn-primary">QR</a>
+                    <a href="{{$.apiPrefix}}/creddetails/{{.Id}}" class="btn-primary">Details</a>
+                    <a href="{{$.apiPrefix}}/displayqrurl/{{.Id}}" class="btn-primary">QR</a>
                 </div>
 
             </div>
@@ -56,7 +56,7 @@
     {{end}}
 
     <div class="buttonfixed">
-        <a href="{{.issuerPrefix}}/newcredential" class="w3-btn w3-circle w3-xlarge color-primary">+</a>
+        <a href="{{.apiPrefix}}/newcredential" class="w3-btn w3-circle w3-xlarge color-primary">+</a>
     </div>
 
 </main>

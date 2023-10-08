@@ -1,6 +1,7 @@
 package verifier
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -12,12 +13,11 @@ import (
 	"time"
 
 	"github.com/evidenceledger/vcdemo/back/handlers"
-	"github.com/evidenceledger/vcdemo/back/operations"
-	"github.com/evidenceledger/vcdemo/internal/jwk"
 	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/storage/memory"
 	"github.com/hesusruiz/vcutils/yaml"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	zlog "github.com/rs/zerolog/log"
 	qrcode "github.com/skip2/go-qrcode"
 )
@@ -27,14 +27,14 @@ const walletPrefix = "/wallet/api/v1"
 
 type Verifier struct {
 	rootServer   *handlers.Server
-	pdp          *PDP
 	vault        *vault.Vault
 	cfg          *yaml.YAML
-	stateSession *memory.Storage
-	operations   *operations.Manager
-	webAuthn     *handlers.WebAuthnHandler
 	id           string
+	name         string
 	did          string
+	pdp          *PDP
+	stateSession *memory.Storage
+	webAuthn     *handlers.WebAuthnHandler
 }
 
 // Setup creates and setups the Verifier routes
@@ -52,23 +52,26 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 	verifier.pdp = pdp
 
 	verifier.id = cfg.String("verifier.id")
+	verifier.name = cfg.String("verifier.name")
 
 	// Connect to the Verifier store engine
 	verifier.vault = vault.Must(vault.New(yaml.New(cfg.Map("verifier"))))
 
-	// Create the Verifier users
+	// Create the Verifier user
 	// TODO: the password is only for testing
-	_, verifier.did, _ = verifier.vault.CreateOrGetUserWithDIDKey(cfg.String("verifier.id"), cfg.String("verifier.name"), "legalperson", cfg.String("verifier.password"))
+	user, err := verifier.vault.CreateOrGetUserWithDIDKey(verifier.id, verifier.name, "legalperson", cfg.String("verifier.password"))
+	if err != nil {
+		panic(err)
+	}
 	zlog.Info().Str("VerifierDID", verifier.did).Msg("")
 
-	// Backend Operations for the Verifier
-	verifier.operations = operations.NewManager(verifier.vault, cfg)
+	verifier.did = user.DID()
 
 	// Create a storage entry for OIDC4VP flow expiration
 	verifier.stateSession = memory.New()
 
 	// WebAuthn
-	verifier.webAuthn = handlers.NewWebAuthnHandler(s, verifier.stateSession, verifier.operations, cfg)
+	verifier.webAuthn = handlers.NewWebAuthnHandler(s, verifier.stateSession, verifier.vault, cfg)
 
 	s.Get("/verifier", verifier.HandleVerifierHome)
 
@@ -133,19 +136,21 @@ func (v *Verifier) HandleVerifierHome(c *fiber.Ctx) error {
 	return c.Render("verifier_home", m)
 }
 
-type jwkSet struct {
-	Keys []*jwk.JWK `json:"keys"`
-}
-
 func (v *Verifier) VerifierAPIJWKS(c *fiber.Ctx) error {
 
 	// Get public keys from Verifier
-	pubkeys, err := v.vault.PublicKeysForUser(v.cfg.String("verifier.id"))
+	did, err := v.vault.GetDIDForUser(v.id)
 	if err != nil {
 		return err
 	}
 
-	keySet := jwkSet{pubkeys}
+	pubKey, err := v.vault.DIDKeyToPublicKey(did)
+	if err != nil {
+		return err
+	}
+
+	keySet := jwk.NewSet()
+	keySet.AddKey(pubKey)
 
 	return c.JSON(keySet)
 
@@ -321,8 +326,11 @@ func (v *Verifier) PageLoginCompleted(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "credential received not in JSON format")
 	}
 
+	claims := map[string]any{
+		"credential": decoded,
+	}
 	// Create an access token from the credential
-	accessToken, err := v.vault.CreateToken(decoded, v.id)
+	accessToken, err := v.vault.CreateToken(claims, v.did)
 	if err != nil {
 		return err
 	}
@@ -420,9 +428,10 @@ func (v *Verifier) PageAccessProtectedService(c *fiber.Ctx) error {
 	var returnBody []byte
 	var errors []error
 
-	// Get the access token from the cookie
+	// Try to get the access token from the cookie (for interactive HTML pages)
 	accessToken := c.Cookies("dsbamvf")
 
+	// Otherwise, try to teh the token from the Authorization HTTP Request header
 	if len(accessToken) == 0 {
 		auth := strings.Split(c.Get("authorization"), " ")
 		if len(auth) > 1 {
@@ -431,39 +440,71 @@ func (v *Verifier) PageAccessProtectedService(c *fiber.Ctx) error {
 		}
 	}
 
+	// It is an error to receive a request withou Access Token
 	if len(accessToken) == 0 {
-		zlog.Warn().Str("token", accessToken).Msg("no Access Token received")
+		zlog.Error().Str("token", accessToken).Msg("no Access Token received")
 		return fiber.NewError(fiber.StatusUnauthorized, "no Access Token received")
 	}
-
 	zlog.Info().Str("token", accessToken).Msg("Access Token received")
 
-	payload, err := v.vault.VerifyToken(accessToken, v.id)
+	// Verify the format and the signature of the Access Token.
+	// No content verification is done here.
+	// The token should have been signed by ourselves.
+	token, err := v.vault.VerifyToken([]byte(accessToken), v.did)
 	if err != nil {
 		return err
 	}
 
-	claims := payload.Map("credentialSubject")
+	// Convert the token payload to a manageable format
+	payload, err := token.AsMap(context.Background())
+	if err != nil {
+		return err
+	}
 
-	fmt.Println("credentialSubject:", claims)
+	// Minimal verification that it contains the credential object
+	credential, ok := payload["credential"]
+	if !ok {
+		zlog.Error().Msg("credential not found in Access Token")
+		return fiber.NewError(fiber.StatusBadRequest, "credential not found in Access Token")
+	}
+	zlog.Info().Msgf("%s", credential)
 
 	// Check if the user has configured a protected service to access
 	protected := v.rootServer.Cfg.String("verifier.protectedResource.url")
-	if len(protected) > 0 {
+	if len(protected) == 0 {
+		zlog.Error().Msg("no protected resource was configured")
+		return fiber.NewError(fiber.StatusInternalServerError, "bad configuration: no protected resource")
+	}
 
-		// Prepare to GET to the url
-		agent := fiber.Get(protected)
+	// Perform access control
+	rawcred, err := json.Marshal(credential)
+	if err != nil {
+		return err
+	}
+	authorized := v.pdp.TakeAuthnDecision(Authorize, c, string(rawcred), protected)
+	if !authorized {
+		zlog.Error().Msg("no authorization")
 
-		// Set the Authentication header
-		agent.Set("Authorization", "Bearer "+accessToken)
-
-		agent.Set("accept", "application/json")
-		code, returnBody, errors = agent.Bytes()
-		if len(errors) > 0 {
-			zlog.Err(errors[0]).Msg("error calling the protected resource")
-			return errors[0]
+		// Render
+		m := fiber.Map{
+			"verifierPrefix": verifierPrefix,
+			"claims":         credential,
 		}
+		return c.Render("verifier_logindenied", m)
 
+	}
+
+	// Prepare to GET to the url
+	agent := fiber.Get(protected)
+
+	// Set the Authentication header
+	agent.Set("Authorization", "Bearer "+accessToken)
+
+	agent.Set("accept", "application/json")
+	code, returnBody, errors = agent.Bytes()
+	if len(errors) > 0 {
+		zlog.Err(errors[0]).Msg("error calling the protected resource")
+		return errors[0]
 	}
 
 	// Render
@@ -552,13 +593,14 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 		return err
 	}
 
+	// Get the vp_token field
 	vp_token := authResponse.String("vp_token")
 	if len(vp_token) == 0 {
 
 		// Try to see if the request is coming from the enterprise wallet
 		cred := authResponse.String("credential")
 		if len(cred) == 0 {
-			err := fmt.Errorf("no vp_token found")
+			err := fmt.Errorf("no credential found")
 			zlog.Err(err).Send()
 			return err
 		}
@@ -579,12 +621,20 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 			return err
 		}
 
+		// Parse the VP object into a map
 		vp, err := yaml.ParseJson(string(rawVP))
 		if err != nil {
 			zlog.Err(err).Msg("invalid vp received")
 			return err
 		}
+
+		// Get the list of credentials in the VP
 		credentials := vp.List("verifiableCredential")
+		if len(credentials) == 0 {
+			err := fmt.Errorf("no 'verifiableCredential' member found")
+			zlog.Err(err).Send()
+			return err
+		}
 
 		// TODO: for the moment, we accept only the first credential inside the VP
 		firstCredential := credentials[0]
@@ -592,16 +642,17 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 
 	}
 
+	// Serialize the credential into a JSON string
 	serialCredential, err := json.Marshal(theCredential.Data())
 	if err != nil {
 		return err
 	}
-	zlog.Info().Str("credential", string(serialCredential))
+	zlog.Info().Str("credential", string(serialCredential)).Send()
 
-	accepted := v.pdp.TakeDecision(string(serialCredential))
-	zlog.Info().Bool("After StarLark", accepted).Msg("")
+	// Invoke the PDP (Policy Decision Point) to authenticate/authorize this request
+	accepted := v.pdp.TakeAuthnDecision(Authenticate, c, string(serialCredential), "")
+	zlog.Info().Bool("Authenticated", accepted).Msg("")
 
-	// accepted := TakeDecission(theCredential)
 	if !accepted {
 
 		// Deny access
@@ -620,22 +671,13 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 	// Get the email of the user
 	email := theCredential.String("credentialSubject.email")
 	name := theCredential.String("credentialSubject.name")
-	positionSection := theCredential.String("credentialSubject.position.section")
 	zlog.Info().Str("email", email).Msg("data in vp_token")
 
-	zlog.Info().Str("section", positionSection).Msg("Performing access control")
-
 	// Get user from Database
-	usr, _ := v.operations.User().GetByName(email)
-	if usr == nil {
-
-		// User not found, we automatically create a new user with the data from the credential
-		usr, err = v.operations.User().CreateOrGet(email, name)
-		if err != nil {
-			zlog.Err(err).Msg("error creating user")
-			return err
-		}
-		zlog.Info().Str("email", email).Msg("new user created")
+	usr, err := v.vault.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
+	if err != nil {
+		zlog.Err(err).Msg("CreateOrGetUserWithDIDKey error")
+		return err
 	}
 
 	// Check if the user has a registered WebAuthn credential
@@ -734,7 +776,7 @@ func (v *Verifier) createJWTSecuredAuthenticationRequest(response_uri string, st
 		"nonce":            generateNonce(),
 	}
 
-	jar, err := v.vault.CreateToken(jarPlain, v.id)
+	jar, err := v.vault.CreateToken(jarPlain, v.did)
 	if err != nil {
 		return nil, err
 	}
@@ -752,23 +794,4 @@ func generateNonce() string {
 
 func httpLocation(c *fiber.Ctx) string {
 	return c.Protocol() + "://" + c.Hostname() + verifierPrefix
-}
-
-func TakeDecission(theCredential *yaml.YAML) bool {
-
-	// Get the email of the user
-	email := theCredential.String("credentialSubject.email")
-	positionSection := theCredential.String("credentialSubject.position.section")
-
-	zlog.Info().Msg("performing access control: making the decission")
-	zlog.Info().Str("email", email).Str("section", positionSection).Msg("")
-
-	// We only allow one specific position value in the section claim
-	if positionSection != "Section of other good things" {
-		zlog.Info().Msg("access DENIED")
-		return false
-	}
-
-	zlog.Info().Msg("access GRANTED")
-	return true
 }
