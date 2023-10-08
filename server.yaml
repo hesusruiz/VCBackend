@@ -4,6 +4,7 @@ server:
   templateDir: "back/views"
   environment: development
   loglevel: DEBUG
+  walletProvisioning: "wallet.mycredential.eu"
 
 issuer:
   id: HappyPets
@@ -12,6 +13,8 @@ issuer:
   store:
     driverName: "sqlite3"
     dataSourceName: "file:issuer.sqlite?mode=rwc&cache=shared&_fk=1"
+  samedeviceWallet: "https://wallet.mycredential.eu"
+  credentialTemplatesDir: "vault/templates"
 
 verifier:
   id: PacketDelivery
@@ -23,6 +26,7 @@ verifier:
   jwks_uri: /.well-known/jwks_uri
   protectedResource:
     url: "https://www.google.com"
+  samedeviceWallet: "https://wallet.mycredential.eu"
 
 wallet:
   store:

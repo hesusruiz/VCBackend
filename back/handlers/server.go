@@ -15,6 +15,7 @@ import (
 const issuerPrefix = "/issuer/api/v1"
 const verifierPrefix = "/verifier/api/v1"
 const walletPrefix = "/wallet/api/v1"
+const defaultWalletProvisioning = "wallet.mycredential.eu"
 
 var (
 	ErrNoStateReceived          = errors.New("no state received")
@@ -55,9 +56,9 @@ func (s *Server) HandleStop(c *fiber.Ctx) error {
 // HandleWalletProviderHome displays a QR code to be scanned and obtain the wallet
 func (v *Server) HandleWalletProviderHome(c *fiber.Ctx) error {
 
-	// This is the endpoint inside the QR that the wallet will use to send the VC/VP
-	// wallet_url := c.Protocol() + "://" + c.Hostname() + "/static/wallet"
-	wallet_url := "https://wallet.mycredential.eu/"
+	// This is the url for the demo wallet
+	walletDomain := v.Cfg.String("server.walletProvisioning", defaultWalletProvisioning)
+	wallet_url := c.Protocol() + "://" + walletDomain
 
 	// Create the QR code
 	png, err := qrcode.Encode(wallet_url, qrcode.Medium, 256)
@@ -75,7 +76,7 @@ func (v *Server) HandleWalletProviderHome(c *fiber.Ctx) error {
 		"verifierPrefix": verifierPrefix,
 		"walletPrefix":   walletPrefix,
 		"qrcode":         base64Img,
-		"prefix":         verifierPrefix,
+		"walletDomain":   walletDomain,
 	}
 	return c.Render("walletprovider_present_qr", m)
 }

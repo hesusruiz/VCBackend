@@ -5,19 +5,18 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/duo-labs/webauthn/protocol"
 	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/evidenceledger/vcdemo/internal/cache"
+	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/labstack/echo/v5"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/evidenceledger/vcdemo/back/operations"
 	"github.com/hesusruiz/vcutils/yaml"
 
 	"github.com/gofiber/fiber/v2"
@@ -32,7 +31,7 @@ type Map map[string]interface{}
 type WebAuthnHandlerPB struct {
 	app             *pocketbase.PocketBase
 	cache           *cache.Cache
-	operations      *operations.Manager
+	vault           *vault.Vault
 	webAuthn        *webauthn.WebAuthn
 	webAuthnSession *session.Store
 }
@@ -115,16 +114,14 @@ func (s *WebAuthnHandlerPB) BeginRegistrationPB(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, errText)
 	}
 
-	// The displayname will be the first part of the email address
-	displayName := strings.Split(username, "@")[0]
-
 	zlog.Info().Str("username", username).Msg("BeginRegistration started")
 
 	// Get user from the Storage. The user is automatically created if it does not exist
-	user, err := s.operations.User().CreateOrGet(username, displayName)
+	user, err := s.vault.CreateOrGetUserWithDIDKey(username, username, "naturalperson", "ThePassword")
 	if err != nil {
 		return err
 	}
+
 	zlog.Info().Str("username", user.WebAuthnName()).Msg("User retrieved or created")
 
 	// We should exclude all the credentials already registered
@@ -169,7 +166,7 @@ func (s *WebAuthnHandlerPB) FinishRegistrationPB(c echo.Context) error {
 	zlog.Info().Str("username", username).Msg("FinishRegistration started")
 
 	// Get user from Storage
-	user, err := s.operations.User().GetByName(username)
+	user, err := s.vault.GetUserById(username)
 
 	// It is an error if the user doesn't exist
 	if err != nil {
@@ -210,7 +207,7 @@ func (s *WebAuthnHandlerPB) FinishRegistrationPB(c echo.Context) error {
 	}
 
 	// Add the new credential to the user
-	user.AddCredential(*credential)
+	user.WebAuthnAddCredential(*credential)
 
 	creds := user.WebAuthnCredentials()
 	fmt.Println("======== LIST of CREDENTIALS")
@@ -243,7 +240,7 @@ func (s *WebAuthnHandlerPB) BeginLoginPB(c echo.Context) error {
 	zlog.Info().Str("username", username).Msg("BeginLogin started")
 
 	// The user must have been registered previously, so we check in our user database
-	user, err := s.operations.User().GetByName(username)
+	user, err := s.vault.GetUserById(username)
 
 	// It is an error if the user doesn't exist
 	if err != nil {
@@ -288,7 +285,7 @@ func (s *WebAuthnHandlerPB) FinishLoginPB(c echo.Context) error {
 	zlog.Info().Str("username", username).Msg("FinishLogin started")
 
 	// Get user from Storage
-	user, err := s.operations.User().GetByName(username)
+	user, err := s.vault.GetUserById(username)
 
 	// It is an error if the user doesn't exist
 	if err != nil {
