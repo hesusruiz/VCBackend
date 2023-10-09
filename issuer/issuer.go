@@ -28,6 +28,7 @@ type Issuer struct {
 	rootServer *handlers.Server
 	vault      *vault.Vault
 	cfg        *yaml.YAML
+	cfgIssuer  *yaml.YAML
 	id         string
 	name       string
 	did        string
@@ -39,14 +40,14 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 
 	issuer := &Issuer{}
 	issuer.rootServer = s
-	issuer.cfg = cfg
 
 	issuer.id = cfg.String("issuer.id")
 	issuer.name = cfg.String("issuer.name")
 
 	// Connect to the Issuer vault
-	cfgIssuer := yaml.New(cfg.Map("issuer"))
-	if issuer.vault, err = vault.New(cfgIssuer); err != nil {
+	issuer.cfg = yaml.New(cfg.Map("issuer"))
+
+	if issuer.vault, err = vault.New(issuer.cfg); err != nil {
 		panic(err)
 	}
 
@@ -141,6 +142,7 @@ func (i *Issuer) IssuerPageDisplayQRURL(c *fiber.Ctx) error {
 	base64Img = "data:image/png;base64," + base64Img
 
 	// URL to direct the wallet to retrieve the credential
+	sameDeviceWallet := i.cfg.String("")
 	template = "https://wallet.mycredential.eu?command=getvc&vcid=https://{{hostname}}{{prefix}}/credential/{{id}}"
 	t = fasttemplate.New(template, "{{", "}}")
 	sameDeviceURI := t.ExecuteString(map[string]interface{}{
