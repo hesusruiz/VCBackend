@@ -126,7 +126,7 @@ require (
 	github.com/google/uuid v1.3.1
 	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/hashicorp/hcl/v2 v2.15.0 // indirect
-	github.com/hesusruiz/vcutils v0.0.0-20221011172906-f573373bbe40
+	github.com/hesusruiz/vcutils v1.1.1
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/lestrrat-go/jwx/v2 v2.0.13
 	github.com/mattn/go-colorable v0.1.13 // indirect

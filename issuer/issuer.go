@@ -28,7 +28,6 @@ type Issuer struct {
 	rootServer *handlers.Server
 	vault      *vault.Vault
 	cfg        *yaml.YAML
-	cfgIssuer  *yaml.YAML
 	id         string
 	name       string
 	did        string
@@ -41,12 +40,16 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 	issuer := &Issuer{}
 	issuer.rootServer = s
 
-	issuer.id = cfg.String("issuer.id")
-	issuer.name = cfg.String("issuer.name")
+	icfg := cfg.Map("issuer")
+	if len(icfg) == 0 {
+		panic("no configuration for Issuer found")
+	}
+	issuer.cfg = yaml.New(icfg)
+
+	issuer.id = issuer.cfg.String("id")
+	issuer.name = issuer.cfg.String("name")
 
 	// Connect to the Issuer vault
-	issuer.cfg = yaml.New(cfg.Map("issuer"))
-
 	if issuer.vault, err = vault.New(issuer.cfg); err != nil {
 		panic(err)
 	}
@@ -58,6 +61,7 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 		panic(err)
 	}
 	issuer.did = user.DID()
+	zlog.Info().Str("id", issuer.id).Str("name", issuer.name).Str("DID", issuer.did).Msg("starting Issuer")
 
 	// CSRF for protecting the forms
 	csrfHandler := csrf.New(csrf.Config{
@@ -142,14 +146,15 @@ func (i *Issuer) IssuerPageDisplayQRURL(c *fiber.Ctx) error {
 	base64Img = "data:image/png;base64," + base64Img
 
 	// URL to direct the wallet to retrieve the credential
-	sameDeviceWallet := i.cfg.String("")
-	template = "https://wallet.mycredential.eu?command=getvc&vcid=https://{{hostname}}{{prefix}}/credential/{{id}}"
+	sameDeviceWallet := i.cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
+	template = "{{sameDeviceWallet}}?command=getvc&vcid={{protocol}}://{{hostname}}{{prefix}}/credential/{{id}}"
 	t = fasttemplate.New(template, "{{", "}}")
 	sameDeviceURI := t.ExecuteString(map[string]interface{}{
-		"protocol": c.Protocol(),
-		"hostname": c.Hostname(),
-		"prefix":   issuerAPIPrefix,
-		"id":       id,
+		"sameDeviceWallet": sameDeviceWallet,
+		"protocol":         c.Protocol(),
+		"hostname":         c.Hostname(),
+		"prefix":           issuerAPIPrefix,
+		"id":               id,
 	})
 
 	// Render index

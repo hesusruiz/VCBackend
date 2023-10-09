@@ -463,7 +463,7 @@ func copyStaticAssets(cfg *yaml.YAML) {
 	// HTML files are a special case of static assets. The common case for a PWA is that there is just
 	// one html file in the root of the project source directory.
 	// In the future, the 'htmlfiles' entry may be used to pre-process the html files in special ways
-	pages := cfg.ListString("htmlfiles", []any{defaulthtmlfile})
+	pages := cfg.ListString("htmlfiles", []string{defaulthtmlfile})
 
 	sourceDir = cfg.String("sourcedir", defaultsourcedir)
 	targetDir = cfg.String("targetdir", defaulttargetdir)

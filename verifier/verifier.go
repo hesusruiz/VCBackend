@@ -51,11 +51,20 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 	}
 	verifier.pdp = pdp
 
-	verifier.id = cfg.String("verifier.id")
-	verifier.name = cfg.String("verifier.name")
+	// Connect to the Verifier vault
+	vcfg := cfg.Map("verifier")
+	if len(vcfg) == 0 {
+		panic("no configuration for Verifier found")
+	}
+	verifier.cfg = yaml.New(vcfg)
+
+	verifier.id = verifier.cfg.String("id")
+	verifier.name = verifier.cfg.String("name")
 
 	// Connect to the Verifier store engine
-	verifier.vault = vault.Must(vault.New(yaml.New(cfg.Map("verifier"))))
+	if verifier.vault, err = vault.New(verifier.cfg); err != nil {
+		panic(err)
+	}
 
 	// Create the Verifier user
 	// TODO: the password is only for testing
@@ -63,9 +72,8 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 	if err != nil {
 		panic(err)
 	}
-	zlog.Info().Str("VerifierDID", verifier.did).Msg("")
-
 	verifier.did = user.DID()
+	zlog.Info().Str("id", verifier.id).Str("name", verifier.name).Str("DID", verifier.did).Msg("starting Verifier")
 
 	// Create a storage entry for OIDC4VP flow expiration
 	verifier.stateSession = memory.New()
@@ -181,7 +189,9 @@ func (v *Verifier) PageDisplaySimpleQR(c *fiber.Ctx) error {
 
 	escaped_request_uri := url.QueryEscape(request_uri)
 
-	redirected_uri := c.Protocol() + "://wallet.mycredential.eu?request_uri=" + escaped_request_uri
+	sameDeviceWallet := v.cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
+
+	redirected_uri := sameDeviceWallet + "?request_uri=" + escaped_request_uri
 
 	// Create the QR code for cross-device SIOP
 	png, err := qrcode.Encode(request_uri, qrcode.Medium, 256)
