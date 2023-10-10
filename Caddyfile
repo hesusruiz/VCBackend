@@ -1,0 +1,11 @@
+issuer.mycredential.eu {
+	reverse_proxy 172.31.40.66:3000
+}
+
+verifier.mycredential.eu {
+	reverse_proxy 172.31.40.66:3000
+}
+
+wallet.mycredential.eu {
+	reverse_proxy 172.31.40.66:8090
+}

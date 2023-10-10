@@ -39,24 +39,13 @@ type Verifier struct {
 
 // Setup creates and setups the Verifier routes
 func Setup(s *handlers.Server, cfg *yaml.YAML) {
+	var err error
 
 	verifier := &Verifier{}
 
 	verifier.rootServer = s
+
 	verifier.cfg = cfg
-
-	pdp, err := NewPDP("script.star")
-	if err != nil {
-		panic(err)
-	}
-	verifier.pdp = pdp
-
-	// Connect to the Verifier vault
-	vcfg := cfg.Map("verifier")
-	if len(vcfg) == 0 {
-		panic("no configuration for Verifier found")
-	}
-	verifier.cfg = yaml.New(vcfg)
 
 	verifier.id = verifier.cfg.String("id")
 	verifier.name = verifier.cfg.String("name")
@@ -74,6 +63,16 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 	}
 	verifier.did = user.DID()
 	zlog.Info().Str("id", verifier.id).Str("name", verifier.name).Str("DID", verifier.did).Msg("starting Verifier")
+
+	policiesFile := verifier.cfg.String("authnPolicies")
+	zlog.Info().Str("file", policiesFile).Msg("starting Policy Decision Point")
+
+	// Start the Policy Decision Point engine
+	pdp, err := NewPDP(policiesFile)
+	if err != nil {
+		panic(err)
+	}
+	verifier.pdp = pdp
 
 	// Create a storage entry for OIDC4VP flow expiration
 	verifier.stateSession = memory.New()

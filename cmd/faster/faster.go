@@ -33,12 +33,8 @@ import (
 	zlog "github.com/rs/zerolog/log"
 )
 
-var (
-	port      = flag.String("port", ":3500", "Port to listen on")
-	autobuild = flag.Bool("auto", true, "Perform build on every request to the root path")
-)
-
 const (
+	defaultConfigFile              = "./data/config/devserver.yaml"
 	defaultsourcedir               = "front/src"
 	defaulttargetdir               = "docs"
 	defaulthtmlfile                = "index.html"
@@ -51,11 +47,20 @@ const (
 	defaultdevserver_autobuild     = true
 )
 
+var (
+	configFile = flag.String("config", LookupEnvOrString("CONFIG_FILE", defaultConfigFile), "path to configuration file")
+	autobuild  = flag.Bool("auto", true, "Perform build on every request to the root path")
+)
+
+func LookupEnvOrString(key string, defaultVal string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	return defaultVal
+}
+
 type Application struct {
-	cfg               *yaml.YAML
-	entryPointMapping map[string]string
-	entryPointCSS     map[string]string
-	pageMapping       map[string]string
+	cfg *yaml.YAML
 }
 
 // main starts the build process, with the option of starting a development
@@ -87,7 +92,7 @@ func main() {
 	app := &Application{}
 
 	// Read the configuration file
-	cfg := readConfiguration()
+	cfg := readConfiguration(*configFile)
 	app.cfg = cfg
 
 	// Prepare the arguments map
@@ -114,7 +119,7 @@ func main() {
 
 	// Perform a standard build
 	if args["build"] {
-		result = build(cfg)
+		result = Build(cfg)
 	}
 
 	// Watch and build
@@ -141,9 +146,12 @@ func main() {
 
 }
 
-// build performs a standard build
-func build(cfg *yaml.YAML) api.BuildResult {
+// Build performs a standard Build
+func Build(cfg *yaml.YAML) api.BuildResult {
 	// processTemplates(cfg)
+	source := cfg.String("sourcedir")
+	target := cfg.String("targetdir")
+	fmt.Printf("Building: %s --> %s\n", source, target)
 
 	preprocess(cfg)
 	result := buildAndBundle(cfg)
@@ -157,7 +165,6 @@ func build(cfg *yaml.YAML) api.BuildResult {
 
 // preprocess is executed before build, for example to clean the target directory
 func preprocess(cfg *yaml.YAML) {
-	fmt.Println("Preprocessing")
 	if cfg.Bool("cleantarget") {
 		deleteTargetDir(cfg)
 	}
@@ -173,7 +180,6 @@ func deleteTargetDir(cfg *yaml.YAML) {
 
 // buildAndBundle uses ESBUILD to build and bundle js/css files
 func buildAndBundle(cfg *yaml.YAML) api.BuildResult {
-	fmt.Println("Building")
 
 	// Generate the options structure
 	options := buildOptions(cfg)
@@ -237,7 +243,6 @@ func buildOptions(cfg *yaml.YAML) api.BuildOptions {
 
 // postprocess is executed after the build for example to modify the resulting files
 func postprocess(r api.BuildResult, cfg *yaml.YAML) error {
-	fmt.Println("Postprocessing")
 
 	// Get the metafile data and parse it as a string representing a JSON file
 	meta, err := yaml.ParseJson(r.Metafile)
@@ -297,7 +302,7 @@ func postprocess(r api.BuildResult, cfg *yaml.YAML) error {
 			// Add an entry to the root entry point map
 			rootEntryPointMap[outFile] = cssBundleBasename
 
-			fmt.Println("entryPoint:", outEntryPoint, "baseJS:", outFileBaseName, "baseCSS:", cssBundleBasename)
+			fmt.Println("entryPoint:", outEntryPoint, "-->", outFileBaseName, "+", cssBundleBasename)
 
 		}
 
@@ -478,11 +483,11 @@ func copyStaticAssets(cfg *yaml.YAML) {
 
 }
 
-func readConfiguration() *yaml.YAML {
+func readConfiguration(configFile string) *yaml.YAML {
 	var cfg *yaml.YAML
 	var err error
 
-	cfg, err = yaml.ParseYamlFile("devserver.yaml")
+	cfg, err = yaml.ParseYamlFile(configFile)
 	if err != nil {
 		fmt.Printf("Config file not found\n")
 		panic(err)
@@ -605,7 +610,7 @@ func DevServer(cfg *yaml.YAML) {
 			// Build if configured
 			if *autobuild || cfg.Bool("devserver.autobuild", defaultdevserver_autobuild) {
 				fmt.Println("<<<<<<<<<<<< Building >>>>>>>>>>>>>")
-				build(cfg)
+				Build(cfg)
 			}
 
 		}
@@ -655,7 +660,7 @@ func proxyHandler(targetHost string) fiber.Handler {
 // events, resetting the wait period for every new event.
 func watchAndBuild(cfg *yaml.YAML) {
 
-	build(cfg)
+	Build(cfg)
 
 	// Create a new watcher.
 	w, err := fsnotify.NewWatcher()
@@ -696,7 +701,7 @@ func dedupLoop(w *fsnotify.Watcher, cfg *yaml.YAML) {
 		// Callback we run.
 		printEvent = func(e fsnotify.Event) {
 			printTime(e.String())
-			build(cfg)
+			Build(cfg)
 
 			// Don't need to remove the timer if you don't have a lot of files.
 			mu.Lock()

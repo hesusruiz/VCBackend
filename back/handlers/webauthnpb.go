@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/duo-labs/webauthn/protocol"
 	"github.com/duo-labs/webauthn/webauthn"
@@ -37,46 +36,46 @@ type WebAuthnHandlerPB struct {
 }
 
 func NewWebAuthnHandlerPB(app *pocketbase.PocketBase, cfg *yaml.YAML) *WebAuthnHandlerPB {
-	var err error
+	// var err error
 
-	rpDisplayName := cfg.String("webauthn.RPDisplayName")
-	rpID := cfg.String("webauthn.RPID")
-	rpOrigin := cfg.String("webauthn.RPOrigin")
-	authenticatorAttachment := protocol.AuthenticatorAttachment(cfg.String("webauthn.AuthenticatorAttachment"))
-	userVerification := protocol.UserVerificationRequirement(cfg.String("webauthn.UserVerification"))
-	requireResidentKey := cfg.Bool("webauthn.RequireResidentKey")
-	attestationConveyancePreference := protocol.ConveyancePreference(cfg.String("webauthn.AttestationConveyancePreference"))
+	// rpDisplayName := cfg.String("webauthn.RPDisplayName")
+	// rpID := cfg.String("webauthn.RPID")
+	// rpOrigin := cfg.String("webauthn.RPOrigin")
+	// authenticatorAttachment := protocol.AuthenticatorAttachment(cfg.String("webauthn.AuthenticatorAttachment"))
+	// userVerification := protocol.UserVerificationRequirement(cfg.String("webauthn.UserVerification"))
+	// requireResidentKey := cfg.Bool("webauthn.RequireResidentKey")
+	// attestationConveyancePreference := protocol.ConveyancePreference(cfg.String("webauthn.AttestationConveyancePreference"))
 
 	// Create the WebAuthn backend server object
 	s := new(WebAuthnHandlerPB)
 
 	s.app = app
 
-	// Create the cache with expiration
-	s.cache = cache.New(1*time.Minute, 5*time.Minute)
+	// // Create the cache with expiration
+	// s.cache = cache.New(1*time.Minute, 5*time.Minute)
 
-	// The session store (in-memory, with cookies)
-	s.webAuthnSession = session.New(session.Config{Expiration: 24 * time.Hour})
-	s.webAuthnSession.RegisterType(webauthn.SessionData{})
+	// // The session store (in-memory, with cookies)
+	// s.webAuthnSession = session.New(session.Config{Expiration: 24 * time.Hour})
+	// s.webAuthnSession.RegisterType(webauthn.SessionData{})
 
-	// Pre-create the options object that will be sent to the authenticator in the client.
-	// We are not interested in authenticator attestation, so we do not set the AttestatioPreference field,
-	// which means it will default to (attestation: "none") in the WebAuthn API.
-	s.webAuthn, err = webauthn.New(&webauthn.Config{
-		RPDisplayName: rpDisplayName, // display name for your site
-		RPID:          rpID,          // generally the domain name for your site
-		RPOrigin:      rpOrigin,
-		AuthenticatorSelection: protocol.AuthenticatorSelection{
-			AuthenticatorAttachment: authenticatorAttachment, // Can also be "cross-platform" for USB keys or sw implementations
-			UserVerification:        userVerification,
-			RequireResidentKey:      &requireResidentKey,
-		},
-		AttestationPreference: attestationConveyancePreference,
-	})
+	// // Pre-create the options object that will be sent to the authenticator in the client.
+	// // We are not interested in authenticator attestation, so we do not set the AttestatioPreference field,
+	// // which means it will default to (attestation: "none") in the WebAuthn API.
+	// s.webAuthn, err = webauthn.New(&webauthn.Config{
+	// 	RPDisplayName: rpDisplayName, // display name for your site
+	// 	RPID:          rpID,          // generally the domain name for your site
+	// 	RPOrigin:      rpOrigin,
+	// 	AuthenticatorSelection: protocol.AuthenticatorSelection{
+	// 		AuthenticatorAttachment: authenticatorAttachment, // Can also be "cross-platform" for USB keys or sw implementations
+	// 		UserVerification:        userVerification,
+	// 		RequireResidentKey:      &requireResidentKey,
+	// 	},
+	// 	AttestationPreference: attestationConveyancePreference,
+	// })
 
-	if err != nil {
-		zlog.Panic().Err(err).Msg("failed to create WebAuthn from config")
-	}
+	// if err != nil {
+	// 	zlog.Panic().Err(err).Msg("failed to create WebAuthn from config")
+	// }
 
 	s.AddRoutesPB(app)
 

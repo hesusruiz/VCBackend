@@ -1,0 +1,55 @@
+server:
+  listenAddress: "0.0.0.0:3000"
+  staticDir: "back/www"
+  templateDir: "back/views"
+  environment: development
+  loglevel: DEBUG
+  walletProvisioning: "wallet.mycredential.eu"
+
+issuer:
+  id: HappyPets
+  name: HappyPets
+  password: ThePassword
+  store:
+    driverName: "sqlite3"
+    dataSourceName: "file:data/storage/issuer.sqlite?mode=rwc&cache=shared&_fk=1"
+  samedeviceWallet: "https://wallet.mycredential.eu"
+  credentialTemplatesDir: "data/credential_templates"
+  credentialInputDataFile: "data/example_data/employee_data.yaml"
+
+verifier:
+  id: PacketDelivery
+  name: PacketDelivery
+  password: ThePassword
+  store:
+    driverName: "sqlite3"
+    dataSourceName: "file:data/storage/verifier.sqlite?mode=rwc&cache=shared&_fk=1"
+  jwks_uri: "/.well-known/jwks_uri"
+  authnPolicies: "data/config/authn_policies.star"
+  protectedResource:
+    url: "https://www.google.com"
+  samedeviceWallet: "https://wallet.mycredential.eu"
+  credentialTemplatesDir: "data/credential_templates"
+
+  webauthn:
+    RPDisplayName: "EvidenceLedger"
+    RPID: "mycredential.eu"
+    RPOrigin: "https://wallet.mycredential.eu"
+    AuthenticatorAttachment: "platform"
+    UserVerification: "required"
+    RequireResidentKey: true
+    AttestationConveyancePreference: "indirect"
+
+
+wallet:
+  store:
+    driverName: "sqlite3"
+    dataSourceName: "file:data/storage/wallet.sqlite?mode=rwc&cache=shared&_fk=1"
+
+verifiableregistry:
+  password: ThePassword
+  store:
+    driverName: "sqlite3"
+    dataSourceName: "file:data/storage/verifiableregistry.sqlite?mode=rwc&cache=shared&_fk=1"
+
+

@@ -40,11 +40,7 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 	issuer := &Issuer{}
 	issuer.rootServer = s
 
-	icfg := cfg.Map("issuer")
-	if len(icfg) == 0 {
-		panic("no configuration for Issuer found")
-	}
-	issuer.cfg = yaml.New(icfg)
+	issuer.cfg = cfg
 
 	issuer.id = issuer.cfg.String("id")
 	issuer.name = issuer.cfg.String("name")
@@ -286,4 +282,39 @@ func (i *Issuer) IssuerPageCredentialDetails(c *fiber.Ctx) error {
 		"claims":    b.String(),
 	}
 	return c.Render("creddetails", m)
+}
+
+const defaultCredentialDataFile = "employee_data.yaml"
+
+func BatchGenerateCredentials(cfg *yaml.YAML) {
+
+	// Connect to the Issuer vault
+	issuerVault := vault.Must(vault.New(cfg))
+
+	// Parse credential data
+	credentialDataFile := cfg.String("credentialInputDataFile", defaultCredentialDataFile)
+	data, err := yaml.ParseYamlFile(credentialDataFile)
+	if err != nil {
+		panic(err)
+	}
+
+	// Get the top-level list (the list of credentials)
+	creds := data.List("")
+	if len(creds) == 0 {
+		panic("no credentials found in config")
+	}
+
+	// Iterate through the list creating each credential which will use its own template
+	for _, item := range creds {
+
+		// Cast to a map so it can be passed to CreateCredentialFromMap
+		cred, _ := item.(map[string]any)
+		_, _, err := issuerVault.CreateCredentialJWTFromMap(cred)
+		if err != nil {
+			zlog.Logger.Error().Err(err).Send()
+			continue
+		}
+
+	}
+
 }
