@@ -311,7 +311,7 @@ func BatchGenerateCredentials(cfg *yaml.YAML) {
 		cred, _ := item.(map[string]any)
 		_, _, err := issuerVault.CreateCredentialJWTFromMap(cred)
 		if err != nil {
-			zlog.Logger.Error().Err(err).Send()
+			zlog.Err(err).Send()
 			continue
 		}
 

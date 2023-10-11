@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/evidenceledger/vcdemo/vault/ent"
 	"github.com/google/uuid"
 	"github.com/hesusruiz/vcutils/yaml"
 	zlog "github.com/rs/zerolog/log"
@@ -37,6 +38,42 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 
 	credData := yaml.New(credmap)
 
+	// It is an error if the credential
+	email := yaml.GetString(credmap, "claims.email")
+	name := yaml.GetString(credmap, "claims.name")
+	if email == "" || name == "" {
+		err := fmt.Errorf("email or name not found")
+		return "", nil, err
+	}
+
+	// If the credential does not specify an identifier, we generate one
+	credentialID := yaml.GetString(credmap, "jti")
+	if credentialID != "" {
+
+		// Check if the credential already exists
+		oldCred, err := v.db.Credential.Get(context.Background(), credentialID)
+		if err == nil {
+			zlog.Info().Str("id", credentialID).Msg("credential already exists")
+			return credentialID, oldCred.Raw, err
+		} else {
+			if !ent.IsNotFound(err) {
+				return "", nil, err
+			}
+		}
+
+	} else {
+
+		// Generate the id as a UUID
+		newID, err := uuid.NewRandom()
+		if err != nil {
+			return "", nil, err
+		}
+		credentialID = newID.String()
+
+		// Set the unique id in the credential
+		credmap["jti"] = credentialID
+	}
+
 	// Create or get the DID of the issuer.
 	issuer, err := v.CreateOrGetUserWithDIDKey(v.id, v.name, "legalperson", v.password)
 	if err != nil {
@@ -48,7 +85,7 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 
 	// Create or get the DID of the subject.
 	// We will use his email as the unique ID
-	subject, err := v.CreateOrGetUserWithDIDKey(credData.String("claims.email"), credData.String("claims.name"), "naturalperson", "ThePassword")
+	subject, err := v.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
 	if err != nil {
 		return "", nil, err
 	}
@@ -56,22 +93,6 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 	claims := credData.Map("claims")
 	claims["id"] = subject.did
 	credmap["claims"] = claims
-
-	// Generate a credential ID (jti) if it was not specified in the input data
-	if len(credData.String("jti")) == 0 {
-
-		// Generate the id as a UUID
-		jti, err := uuid.NewRandom()
-		if err != nil {
-			return "", nil, err
-		}
-
-		// Set the unique id in the credential
-		credmap["jti"] = jti.String()
-
-	}
-
-	credentialID := credmap["jti"].(string)
 
 	// Generate the credential from the template
 	var b bytes.Buffer
@@ -82,7 +103,6 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 	}
 
 	// The serialized credential
-	fmt.Println("**** Serialized Credential ****")
 	rawJSONCred = b.Bytes()
 
 	// Compact the serialized representation by Unmarshall and Marshall
@@ -103,9 +123,6 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 		return "", nil, err
 	}
 
-	fmt.Printf("%v\n", string(prettyJSONCred))
-	fmt.Println("**** End Credential ****")
-
 	// Store credential
 	_, err = v.db.Credential.Create().
 		SetID(credentialID).
@@ -115,6 +132,11 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 		zlog.Logger.Error().Err(err).Send()
 		return "", nil, err
 	}
+
+	zlog.Info().Str("id", credentialID).Msg("credential created")
+	fmt.Println("**** Serialized Credential ****")
+	fmt.Printf("%v\n", string(prettyJSONCred))
+	fmt.Println("**** End Credential ****")
 
 	return credentialID, rawJSONCred, nil
 
