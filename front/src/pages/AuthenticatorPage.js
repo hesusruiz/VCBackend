@@ -29,6 +29,7 @@ window.MHR.register("AuthenticatorPage", class extends window.MHR.AbstractPage {
         // Display the title and message, with a button that goes to the home page
         let theHtml = html`
         <div class="w3-container w3-padding-64">
+
             <div class="w3-card-4 w3-center">
         
                 <header class="w3-container w3-center color-primary">
@@ -45,6 +46,7 @@ window.MHR.register("AuthenticatorPage", class extends window.MHR.AbstractPage {
                 </div>
 
             </div>
+            
         </div>
         `
         this.render(theHtml)

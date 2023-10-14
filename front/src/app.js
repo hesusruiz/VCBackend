@@ -11,7 +11,7 @@ import { log } from "./log";
 import './css/w3.css'
 
 // For rendering the HTML in the pages
-import { render, html } from 'uhtml';
+import { render, html, svg } from 'uhtml';
 
 // Translation support
 import './i18n/tr.js'
@@ -431,6 +431,7 @@ class AbstractPage {
 
         // Set the html tag function so subclasses do not have to import uhtml
         this.html = html
+        this.svg = svg
 
         // Create a <div> tag to contain the page
         this.domElem = document.createElement('page')

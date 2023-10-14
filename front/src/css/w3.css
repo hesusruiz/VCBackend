@@ -238,3 +238,24 @@ btn-danger, .btn-danger{
 .w3-half-centered{margin:auto;max-width: 500px;}
 .w3-margin-bottom5{margin-bottom:5px!important;margin-top:0px!important;margin-left:0px!important;font-size:12px!important}
 
+btn-icon, .btn-icon{
+    color: var(--fore-color-primary);
+    background-color: var(--bg-color-primary);
+    border-radius: 8px;
+    border:none;
+    display:inline-block;
+    padding:8px 16px;
+    overflow:hidden;
+    text-decoration:none;
+    text-align:center;
+    cursor:pointer;
+    white-space:nowrap;
+    -ms-text-size-adjust:none;
+}
+
+.icon {
+    height: 2rem;
+    width: 2rem;
+    vertical-align: middle;
+    fill:white;
+}

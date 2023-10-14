@@ -145,7 +145,7 @@ func buildOptions(cfg *yaml.YAML) api.BuildOptions {
 		},
 		Loader: map[string]api.Loader{
 			".png": api.LoaderDataURL,
-			".svg": api.LoaderText,
+			".svg": api.LoaderDataURL,
 		},
 		Metafile: true,
 		Charset:  api.CharsetUTF8,

@@ -2,12 +2,14 @@
 <html lang="en">
 
 <head>
+
     <script>
         // Set here the default home page for the app, before loading app.js
         window.homePage = "MicroWallet"
         // Configure the menu items, with entries like:
         //    {page:"NameOfPage", text:"Text in menu item", params: object to pass to page}
         window.menuItems = [
+            { page: "TestPage", text: "Test", params: "" },
             { page: "MicroWallet", text: "Home", params: "" },
             { page: "SelectCamera", text: "Camera" },
             { page: "LogsPage", text: "Show technical logs" },
@@ -16,36 +18,37 @@
         ]
         // The page mapping
         window.pageModules = {
-  "AuthInit": "/pages/AuthInit-J5CYMDGJ.js",
-  "AuthLogin": "/pages/AuthLogin-2IGT7SLW.js",
-  "AuthRegister": "/pages/AuthRegister-UFFPGJGV.js",
-  "AuthenticatorPage": "/pages/AuthenticatorPage-XD44WORK.js",
+  "AuthInit": "/pages/AuthInit-DUBVF6EB.js",
+  "AuthLogin": "/pages/AuthLogin-L6XTSIS2.js",
+  "AuthRegister": "/pages/AuthRegister-66TVGY55.js",
+  "AuthenticatorPage": "/pages/AuthenticatorPage-RKG5C2ZP.js",
   "ConfirmDelete": "/pages/ConfirmDelete-NWUD4UXV.js",
   "ConfirmDeleteAll": "/pages/ConfirmDeleteAll-JAOFAD6E.js",
   "ConfirmResetApp": "/pages/ConfirmResetApp-ZJZNA62H.js",
-  "DisplayNormalQR": "/pages/DisplayNormalQR-QTG3OWCO.js",
+  "DisplayNormalQR": "/pages/DisplayNormalQR-6RUKFCOP.js",
   "DisplayQR": "/pages/DisplayQR-U7OIADFI.js",
   "DisplayVC": "/pages/DisplayVC-VBPA324S.js",
   "ErrorPage": "/pages/ErrorPage-AC6QPEC3.js",
-  "IntroPage": "/pages/IntroPage-5NEUMWCY.js",
+  "IntroPage": "/pages/IntroPage-5VIBHTW3.js",
   "LoadAndSaveQRVC": "/pages/LoadAndSaveQRVC-6BBMA57A.js",
   "LoadAndVerifyQRVC": "/pages/LoadAndVerifyQRVC-3SG52E5I.js",
-  "LogsPage": "/pages/LogsPage-ZV2LAWCH.js",
+  "LogsPage": "/pages/LogsPage-XHRCNYXF.js",
   "MessagePage": "/pages/MessagePage-B7HHSYYU.js",
   "MicroWallet": "/pages/MicroWallet-R7D5AMO4.js",
-  "Page404": "/pages/Page404-54HAFBCQ.js",
-  "PrivacyPolicy": "/pages/PrivacyPolicy-OFVNA5LR.js",
+  "Page404": "/pages/Page404-IE6DW2SV.js",
+  "PrivacyPolicy": "/pages/PrivacyPolicy-X57PFC2S.js",
   "SIOPSelectCredential": "/pages/SIOPSelectCredential-WXOJXQSA.js",
-  "SWNotify": "/pages/SWNotify-HLEKOOBM.js",
-  "ScanQrPage": "/pages/ScanQrPage-D2Q56RGK.js",
-  "SelectCamera": "/pages/SelectCamera-T4XCXNJ4.js",
-  "TermsOfUse": "/pages/TermsOfUse-EPL2I3TV.js"
+  "SWNotify": "/pages/SWNotify-GAGYDBBU.js",
+  "ScanQrPage": "/pages/ScanQrPage-C6CHFRLF.js",
+  "SelectCamera": "/pages/SelectCamera-VRHJJCSU.js",
+  "TermsOfUse": "/pages/TermsOfUse-BZDR5Z74.js",
+  "TestPage": "/pages/TestPage-BLAMFNPG.js"
 }
     </script>
 
     <!-- Load the application -->
-    <link rel="stylesheet" href="app-5YALFZKT.css" />
-    <script type="module" src="app-OQ67HBDI.js"></script>
+    <link rel="stylesheet" href="app-CF7ZSK4U.css" />
+    <script type="module" src="app-BL6H3IY2.js"></script>
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -67,7 +70,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Private Verifiable Credentials" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <link href="/prism.css" rel="stylesheet">
+    <link href="prism.css" rel="stylesheet">
     <style>
     .loader {
         margin: auto;
@@ -88,6 +91,18 @@
         0% {transform: rotate(0deg);}
         100% {transform: rotate(360deg);}
     }
+
+    @font-face {
+        font-family: "Roboto";
+        src: url("./fonts/Roboto-Regular.ttf") format("truetype");
+    }
+    
+    @font-face {
+        font-family: "Roboto";
+        src: url("./fonts/Roboto-Medium.ttf") format("truetype");
+        font-weight: 450 500;
+    }
+     
     </style>
 
 </head>

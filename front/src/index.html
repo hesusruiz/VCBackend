@@ -2,12 +2,14 @@
 <html lang="en">
 
 <head>
+
     <script>
         // Set here the default home page for the app, before loading app.js
         window.homePage = "MicroWallet"
         // Configure the menu items, with entries like:
         //    {page:"NameOfPage", text:"Text in menu item", params: object to pass to page}
         window.menuItems = [
+            { page: "TestPage", text: "Test", params: "" },
             { page: "MicroWallet", text: "Home", params: "" },
             { page: "SelectCamera", text: "Camera" },
             { page: "LogsPage", text: "Show technical logs" },
@@ -42,7 +44,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Private Verifiable Credentials" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <link href="{{subdomainprefix}}/prism.css" rel="stylesheet">
+    <link href="prism.css" rel="stylesheet">
     <style>
     .loader {
         margin: auto;
@@ -63,6 +65,18 @@
         0% {transform: rotate(0deg);}
         100% {transform: rotate(360deg);}
     }
+
+    @font-face {
+        font-family: "Roboto";
+        src: url("./fonts/Roboto-Regular.ttf") format("truetype");
+    }
+    
+    @font-face {
+        font-family: "Roboto";
+        src: url("./fonts/Roboto-Medium.ttf") format("truetype");
+        font-weight: 450 500;
+    }
+     
     </style>
 
 </head>
