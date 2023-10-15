@@ -1,4 +1,3 @@
-
 import { Base64 } from 'js-base64';
 // @ts-ignore
 import photo_man from '../img/photo_man.png'
@@ -144,20 +143,15 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         }
 
         let theHtml = html`
-        <p></p>
-        <div class="w3-row">
-            <div class=" w3-container">
-                <p>
-                    <b>${rpDomain}</b> has requested a Verifiable Credential of type ${credentialType} to perform authentication.
-                </p>
-                <p>
-                    If you want to send the credential, click the button "Send Credential".
-                </p>
-            </div>
+        <ion-card color="warning">
+                
+            <ion-card-content>
+            <div style="line-height:1.2"><b>${rpDomain}</b> <span class="text-small">has requested a Verifiable Credential of type ${credentialType} to perform authentication.</span></div>
+            </ion-card-content>
             
-            ${vcToHtml(credentials[0], response_uri, state, this.WebAuthnSupported)}
-
-        </div>
+        </ion-card>
+        
+        ${vcToHtml(credentials[0], response_uri, state, this.WebAuthnSupported)}
         `
 
         this.render(theHtml)
@@ -182,34 +176,45 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
         avatar = photo_woman
     }
 
-    const div = html`<div class="w3-half w3-container w3-margin-bottom">
-        <div class="w3-card-4">
-            <div class="w3-padding-left w3-margin-bottom color-primary">
-                <h4>Employee</h4>
+    const div = html`
+    <ion-card>
+
+        <ion-card-header>
+            <ion-card-title>${vcs.name}</ion-card-title>
+            <ion-card-subtitle>Employee</ion-card-subtitle>
+        </ion-card-header>
+
+
+        <ion-card-content class="ion-padding-bottom">
+
+            <ion-avatar>
+                <img alt="Avatar" src=${avatar} />
+            </ion-avatar>
+
+            <div>
+                <p>${pos.department}</p>
+                <p>${pos.secretariat}</p>
+                <p>${pos.directorate}</p>
+                <p>${pos.subdirectorate}</p>
+                <p>${pos.service}</p>
+                <p>${pos.section}</p>
             </div>
 
-            <div class="w3-container">
-                <img src=${avatar} alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
-                <p class="w3-large">${vcs.name}</p>
-                <hr>
-            <div class="w3-row-padding">
+        </ion-card-content>
 
-            <div class=" w3-container">
-                <p class="w3-margin-bottom5">${pos.department}</p>
-                <p class="w3-margin-bottom5">${pos.secretariat}</p>
-                <p class="w3-margin-bottom5">${pos.directorate}</p>
-                <p class="w3-margin-bottom5">${pos.subdirectorate}</p>
-                <p class="w3-margin-bottom5">${pos.service}</p>
-                <p class="w3-margin-bottom5">${pos.section}</p>
-            </div>
+        <div class="ion-margin-start ion-margin-bottom">
+            <ion-button @click=${()=> MHR.cleanReload()}>
+                <ion-icon slot="start" name="chevron-back"></ion-icon>
+                ${T("Cancel")}
+            </ion-button>
 
-            <div class="w3-padding-16">
-              <btn-primary @click=${() => MHR.cleanReload()}>${T("Cancel")}</btn-primary>
-              <btn-primary @click=${(e)=> sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported)}>${T("Send Credential")}</btn-primary>
-            </div>
-
+            <ion-button @click=${(e)=> sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported)}>
+                <ion-icon slot="start" name="paper-plane"></ion-icon>
+                ${T("Send Credential")}
+            </ion-button>
         </div>
-    </div>`
+    </ion-card>
+    `
 
     return div
 
@@ -290,74 +295,6 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
                 gotoPage("AuthenticatorPage", res);
                 return
             }
-        }
-
-        // If we receive an HTTP status NotFound (404), it means the user does not have
-        // an authenticator device registered with the server.
-        if (response.status == 404) {
-
-            // The server sent us the email of the user as a response
-            var email = await response.text()
-            log.log("credential sent, registering user", email)
-
-            // Register new user with WebAuthn
-            let error = await registerUser(origin, email, state)
-
-            if (error == null) {
-
-                log.log("Authenticator credential sent successfully to server")
-                // The credential has been sent
-                gotoPage("MessagePage", {
-                    title: "Credential sent",
-                    msg: "Registration successful"
-                });
-
-            } else {
-
-                // There was an error, present it
-                log.error(error)
-                gotoPage("ErrorPage", {
-                    title: "Error",
-                    msg: "Error sending the credential"
-                });
-
-            }
-
-            return
-        }
-
-        // If response status is OK (200), we have to use its authenticator device to finish login
-        if (response.status == 200) {
-
-            // The server sent us the email of the user as a response
-            var email = await response.text()
-            log.log("credential sent, authenticating user", email)
-    
-            // Authenticate user with WebAuthn
-            let error = await loginUser(origin, email, state)
-
-            if (error) {
-
-                // There was an error, present it
-                log.error(error)
-                gotoPage("ErrorPage", {
-                    title: "Error",
-                    msg: "Error sending the credential"
-                });
-
-            } else {
-
-                log.log("Authenticator credential sent successfully to server")
-                // The credential has been sent
-                gotoPage("MessagePage", {
-                    title: "Credential sent",
-                    msg: "Authentication successful"
-                });
-        
-
-            }
-
-            return
         }
 
         // There was an error, present it

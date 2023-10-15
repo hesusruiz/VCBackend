@@ -8,7 +8,7 @@
 import { log } from "./log";
 
 // The CSS module
-import './css/w3.css'
+// import './css/w3.css'
 
 // For rendering the HTML in the pages
 import { render, html, svg } from 'uhtml';
@@ -60,7 +60,7 @@ if (!homePage) {
 var name404 = "Page404"
 
 // This will hold all pages in a ("pageName", pageClass) structure
-var pages = new Map()
+var pageNameToClass = new Map()
 
 /**
  * Register a new page name, associated to a class instance
@@ -69,7 +69,7 @@ var pages = new Map()
  */
 function route(pageName, classInstance) {
     // Populate the map
-    pages.set(pageName, classInstance)
+    pageNameToClass.set(pageName, classInstance)
 }
 
 // Set the default home page for the application
@@ -97,21 +97,25 @@ async function goHome() {
 async function gotoPage(pageName, pageData) {
     console.log("Inside gotoPage:", pageName)
 
-    // If pageName is not a registered page, go to the 404 error page
-    // passing the target page as pageData
-    var pageFunction = pageModulesMap[pageName]
-    if (!pageFunction) {
-        log.error("Target page does not exist: ", pageName);
-        pageData = pageName
-        pageName = name404
-        // Make sure that the page is loaded
+    // First we look if the page class is already instantiated
+    var pageClass = pageNameToClass.get(pageName)
+    if (!pageClass) {
+
+        // If pageName is not a registered page, go to the 404 error page
+        // passing the target page as pageData
+        var pageFunction = pageModulesMap[pageName]
+        if (!pageFunction) {
+            log.error("Target page does not exist: ", pageName);
+            pageData = pageName
+            pageName = name404
+        }
+
+        // Make sure the page is loaded.
         await import(pageModulesMap[pageName])
+
     }
 
-    // Load the page. This is a no-op if the module is already loaded.
-    await import(pageModulesMap[pageName])
-
-    // Create a new browser history state, to support the back button in the browser.
+    // Create a new state in the browser history, to support the back button in the browser.
     window.history.pushState(
         { pageName: pageName, pageData: pageData },
         `${pageName}`
@@ -134,7 +138,7 @@ async function processPageEntered(pageName, pageData, historyData) {
     // We call all pages instead of just the active one, because it is more robust and performance does not suffer much
     try {
         // @ts-ignore
-        for (let [name, classInstance] of pages) {
+        for (let [name, classInstance] of pageNameToClass) {
             // Hide the page
             classInstance.domElem.style.display = "none"
             // Call the page exit() method for all except the target page, so it can perform any cleanup 
@@ -147,17 +151,22 @@ async function processPageEntered(pageName, pageData, historyData) {
         return;
     }
 
-    let targetPage = pages.get(pageName)
+    let targetPage = pageNameToClass.get(pageName)
 
     // If the target page is not a registered page, go to the Page404 page,
     // passing the target page as pageData
     if (targetPage === undefined) {
         pageData = pageName
-        targetPage = pages.get(name404)
+        targetPage = pageNameToClass.get(name404)
     }
 
     // Reset scroll position to make sure the page is at the top
-    window.scrollTo(0, 0);
+    // window.scrollTo(0, 0);
+    const content = document.querySelector('ion-content')
+    if (content) {
+        // @ts-ignore
+        content.scrollToTop(500)
+    }
 
     // Invoke the page enter() function to enter the page
     // This will allow the page to create dynamic content
@@ -185,6 +194,8 @@ window.addEventListener("popstate", async function (event) {
     if (state == null) {
         return
     }
+
+    console.log(event)
 
     // Get the page name and data to send
     var pageName = state.pageName;
@@ -345,11 +356,11 @@ function T(e) {
  * @param {undefined} [e]
  */
 function resetAndGoHome(e) {
-    HeaderBar(false)
+    HeaderBar()
     goHome()
 }
 
-function HeaderBar(menu = false) {
+function HeaderBarOriginal(menu = false) {
     let header = document.querySelector('header')
 
     var subMenu = html``
@@ -385,6 +396,51 @@ ${subMenu}
     return;
 
 }
+
+
+/**
+ * @param {boolean} backButton
+ */
+function HeaderBar(backButton = true) {
+
+    var menuB = html`
+        <ion-buttons slot="end">
+        </ion-buttons>
+    `
+    if (!backButton) {
+        menuB = html`
+        <ion-buttons slot="end">
+            <ion-button @click=${()=> gotoPage("MenuPage", "")}>
+                <ion-icon name="menu"></ion-icon>
+            </ion-button>
+        </ion-buttons>`
+    }
+
+    if (backButton) {
+        return html`
+        <ion-toolbar color="primary">
+        <ion-buttons slot="start">
+            <ion-button @click=${()=> history.back()}>
+                <ion-icon slot="start" name="chevron-back"></ion-icon>
+                Back
+            </ion-button>
+        </ion-buttons>
+        <ion-title>Privacy Wallet</ion-title>
+        ${menuB}
+        </ion-toolbar>
+        `;
+    } else {
+        return html`
+        <ion-toolbar color="primary">
+        <ion-title>Privacy Wallet</ion-title>
+        ${menuB}
+        </ion-toolbar>
+    `;
+
+    }    
+
+}
+
 
 /**
  * @param {string} title
@@ -422,6 +478,7 @@ class AbstractPage {
     html;           // The uhtml html function, for subclasses
     domElem;        // The DOM Element that holds the page
     pageName;       // The name of the page for routing
+    headerBar = HeaderBar
 
     /**
      * @param {string} id
@@ -429,7 +486,7 @@ class AbstractPage {
     constructor(id) {
         if (!id) { throw "A page name is needed"}
 
-        // Set the html tag function so subclasses do not have to import uhtml
+        // Set the 'html' and 'svg' tag function so subclasses do not have to import 'uhtml'
         this.html = html
         this.svg = svg
 
@@ -457,7 +514,7 @@ class AbstractPage {
     /**
      * @param {(() => import("uhtml").Renderable) | import("uhtml").Renderable} theHtml
      */
-    render(theHtml) {
+    render(theHtml, backButton = true) {
         // This is called by subclasses to render its contents
 
         // Hide the Splash Screen (just in case it was being displayed)
@@ -470,7 +527,10 @@ class AbstractPage {
         this.domElem.style.display = "block"
 
         // Redraw the header just in case the menu was active
-        HeaderBar()
+        let header = document.getElementById('the_header')
+        if (header) {
+            render(header, HeaderBar(backButton))
+        }    
 
         // Render the html of the page into the DOM element of this page
         render(this.domElem, theHtml)
@@ -483,6 +543,8 @@ class AbstractPage {
     showError(title, message) {
         this.render(ErrorPanel(title, message))
     }
+
+
 }
 
 /**
@@ -490,7 +552,8 @@ class AbstractPage {
  * @param {any} classDefinition
  */
 function register(pageName, classDefinition) {
-    let instance = new classDefinition(pageName)
+    // Just create an instance. The constructor will take care of everything else
+    new classDefinition(pageName)
 }
 
 function cleanReload() {
@@ -535,6 +598,7 @@ window.MHR = {
     route: route,
     goHome: goHome,
     gotoPage: gotoPage,
+    processPageEntered: processPageEntered,
     AbstractPage: AbstractPage,
     register: register,
     ErrorPanel: ErrorPanel,

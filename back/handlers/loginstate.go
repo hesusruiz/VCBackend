@@ -11,7 +11,7 @@ const (
 	StateCompleted      = 3
 	StateDenied         = 4
 
-	StateExpiration = 200 * time.Second
+	StateExpirationDuration = 200 * time.Second
 )
 
 type State struct {

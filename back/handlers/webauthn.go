@@ -238,7 +238,7 @@ func (s *WebAuthnHandler) FinishRegistration(c *fiber.Ctx) error {
 	stateContent[0] = StateCompleted
 
 	// And update the status for the poller to retrieve it
-	s.stateSession.Set(stateKey, stateContent, StateExpiration)
+	s.stateSession.Set(stateKey, stateContent, StateExpirationDuration)
 
 	zlog.Info().
 		Str("username", username).
@@ -390,7 +390,7 @@ func (s *WebAuthnHandler) FinishLogin(c *fiber.Ctx) error {
 	stateContent[0] = StateCompleted
 
 	// And update the status for the poller to retrieve it
-	s.stateSession.Set(stateKey, stateContent, StateExpiration)
+	s.stateSession.Set(stateKey, stateContent, StateExpirationDuration)
 
 	zlog.Info().Str("username", username).Str("state", stateKey).Uint("status", uint(stateContent[0])).Msg("FinishLogin finished")
 

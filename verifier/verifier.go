@@ -182,7 +182,7 @@ func (v *Verifier) PageDisplaySimpleQR(c *fiber.Ctx) error {
 	status.SetStatus(handlers.StatePending)
 	status.SetContent(authRequest)
 
-	v.stateSession.Set(stateKey, status.Bytes(), handlers.StateExpiration)
+	v.stateSession.Set(stateKey, status.Bytes(), handlers.StateExpirationDuration)
 
 	request_uri := httpLocation(c) + "/authenticationrequest" + "/?jar=yes&state=" + stateKey
 
@@ -670,7 +670,7 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 		newState.SetStatus(handlers.StateDenied)
 		newState.SetContent(serialCredential)
 
-		v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpiration)
+		v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
 
 		zlog.Info().Msg("Authentication denied")
 		return fiber.NewError(fiber.StatusUnauthorized, "access denied")
@@ -703,7 +703,7 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 		newState.SetStatus(handlers.StateCompleted)
 		newState.SetContent(serialCredential)
 
-		v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpiration)
+		v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
 
 		zlog.Info().Msg("AuthenticationResponse from enterprise wallet success")
 		return c.SendString(email)
@@ -718,7 +718,11 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 			newState.SetStatus(handlers.StateRegistering)
 			newState.SetContent(serialCredential)
 
-			v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpiration)
+			err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
+			if err != nil {
+				zlog.Err(err).Send()
+				return err
+			}
 
 			zlog.Info().Msg("AuthenticationResponse success, new user created")
 
@@ -739,7 +743,11 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 			newState.SetContent(serialCredential)
 			newStateString := newState.String()
 
-			v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpiration)
+			err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
+			if err != nil {
+				zlog.Err(err).Send()
+				return err
+			}
 
 			zlog.Info().
 				Str("state", newStateString).

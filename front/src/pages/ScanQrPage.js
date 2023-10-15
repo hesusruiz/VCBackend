@@ -23,7 +23,7 @@ const QR_W3C_VC = 5
 const QR_OIDC4VCI = 6
 
 
-window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPage {
+window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
     displayPage                 // The page name used to display the HC1 QR code
     detectionInterval = 200     // Milliseconds between attempts to decode QR
     videoElement = {}           // DOMElement where the video is displayed, reused across invocations
@@ -207,7 +207,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
                 codes = await this.nativeBarcodeDetector.detect(this.videoElement.current)
             } catch (error) {
                 // Log an error if one happens
-                log.error(err);
+                log.error(error);
                 return;
             }
     
@@ -347,8 +347,6 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
     }
 
 })
-
-
 
 
 // This is the state object used by the background animation routine.

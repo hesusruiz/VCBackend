@@ -38,9 +38,10 @@ window.MHR.register("TestPage", class extends window.MHR.AbstractPage {
                 <p>Click accept to use it.</p>
                 </div>
                 
-                <btn-primary>
-                    Authenticate with biometry
-                </btn-primary>
+                <ion-button>
+                    <ion-icon slot="start" name="finger-print"></ion-icon>
+                    Ionic Authenticate with biometry
+                </ion-button>
 
                 <div class="w3-container w3-padding">
                     <btn-icon>

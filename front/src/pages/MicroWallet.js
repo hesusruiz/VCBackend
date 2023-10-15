@@ -6,12 +6,13 @@ const pb = new PocketBase(window.location.origin)
 // The logo in the header
 import photo_man from '../img/photo_man.png'
 import photo_woman from '../img/photo_woman.png'
+import { log } from '../log'
 
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
 let storage = window.MHR.storage
 
-window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.AbstractPage {
+window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
 
     constructor(id) {
         super(id)
@@ -65,7 +66,7 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
                     var vc_id = params.get("vcid")
                     await gotoPage("LoadAndSaveQRVC", vc_id)
                     return;
-            
+
                 default:
                     break;
             }
@@ -74,16 +75,19 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
         // Retrieve all recent credentials from storage
         var credentials = await storage.credentialsGetAllRecent()
         if (!credentials) {
-            gotoPage("ErrorPage", {"title": "Error", "msg": "Error getting recent credentials"})
+            gotoPage("ErrorPage", { "title": "Error", "msg": "Error getting recent credentials" })
             return
         }
 
         // Display the certificate
         const theDivs = []
-        
+
         for (const vcraw of credentials) {
 
+            // We use the hash of the credential as its unique ID
             const currentId = vcraw.hash
+
+            // Get the unencoded payload
             const vc = JSON.parse(vcraw.encoded)
             const vcs = vc.credentialSubject
             const pos = vcs.position
@@ -92,79 +96,141 @@ window.MHR.register("MicroWallet", class MicroWallet extends window.MHR.Abstract
                 avatar = photo_woman
             }
 
-            const div = html`<div class="w3-half w3-container w3-margin-bottom">
-                <div class="w3-card-4">
-                    <div class="w3-padding-left w3-margin-bottom color-primary">
-                        <h4>Employee</h4>
-                    </div>
+            const div = html`
+                <ion-card>
 
-                    <div class="w3-container">
-                        <img src=${avatar} alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
-                        <p class="w3-large">${vcs.name}</p>
-                        <hr>
-                    <div class="w3-row-padding">
+                    <ion-card-header>
+                        <ion-card-title>${vcs.name}</ion-card-title>
+                        <ion-card-subtitle>Employee</ion-card-subtitle>
+                    </ion-card-header>
 
-                    <div class=" w3-container">
-                        <p class="w3-margin-bottom5">${pos.department}</p>
-                        <p class="w3-margin-bottom5">${pos.secretariat}</p>
-                        <p class="w3-margin-bottom5">${pos.directorate}</p>
-                        <p class="w3-margin-bottom5">${pos.subdirectorate}</p>
-                        <p class="w3-margin-bottom5">${pos.service}</p>
-                        <p class="w3-margin-bottom5">${pos.section}</p>
+                    <ion-card-content class="ion-padding-bottom">
+
+                        <ion-avatar>
+                            <img alt="Avatar" src=${avatar} />
+                        </ion-avatar>
+
+                        <div>
+                            <p>${pos.department}</p>
+                            <p>${pos.secretariat}</p>
+                            <p>${pos.directorate}</p>
+                            <p>${pos.subdirectorate}</p>
+                            <p>${pos.service}</p>
+                            <p>${pos.section}</p>
+                        </div>
+
+                    </ion-card-content>
+
+                    <div class="ion-margin-start ion-margin-bottom">
+                        <ion-button @click=${() => gotoPage("DisplayVC", currentId)}>
+                            <ion-icon slot="start" name="construct"></ion-icon>
+                            ${T("Details")}
+                        </ion-button>
+
+                        <ion-button color="danger" @click=${() => this.presentActionSheet(currentId)}>
+                            <ion-icon slot="start" name="trash"></ion-icon>
+                            ${T("Delete")}
+                        </ion-button>
                     </div>
-        
-                    <div class="w3-padding-16">
-                        <btn-primary @click=${()=> gotoPage("DisplayVC",currentId)}>${T("Details")}</btn-primary>
-                        <btn-danger @click=${()=> gotoPage("ConfirmDelete", currentId)}>${T("Delete")}</btn-danger>
-                    </div>
-        
-                </div>
-            </div>`
-    
+                </ion-card>
+                `
             theDivs.push(div)
 
         }
 
+        var theHtml
+
         if (theDivs.length > 0) {
 
-            this.render(html`
-                <p></p>
-                <div class="w3-row">
-                    
-                    <div class="w3-container w3-margin-bottom">
-                        <div class="w3-card-4">
-                            <div class=" w3-center w3-margin-bottom color-primary">
-                                <h4>Authentication</h4>
-                            </div>
+            theHtml = html`
+                <ion-card>
+                    <ion-card-content>
+                        <h2>Click here to scan a QR code</h2>
+                    </ion-card-content>
 
-                            <div class="w3-container w3-padding-16 w3-center">
-                                <btn-primary @click=${()=> gotoPage("ScanQrPage")}>${T("Scan QR")}</btn-primary>
-                            </div>
-                
-                        </div>
+                    <div class="ion-margin-start ion-margin-bottom">
+                        <ion-button @click=${() => gotoPage("ScanQrPage")}>
+                            <ion-icon slot="start" name="camera"></ion-icon>
+                            ${T("Scan QR")}
+                        </ion-button>
                     </div>
 
-                    ${theDivs}
+                </ion-card>
 
-                </div>
+                ${theDivs}
 
-            `)
-            return
+                <ion-action-sheet id="mw_actionSheet" @ionActionSheetDidDismiss=${(ev) => this.deleteVC(ev)}>
+                </ion-action-sheet>
+
+            `
 
         } else {
 
             // We do not have a QR in the local storage
-            this.render(html`
-                <div class="w3-container">
-                    <h2>${T("There is no certificate.")}</h2>
-                    <p>You need to obtain one from an Issuer, by scanning the QR in the screen of the Issuer page</p>
-                    <btn-primary @click=${()=> gotoPage("ScanQrPage")}>${T("Scan a QR")}</btn-primary>
-                </div>
-            `)
-            return
+            theHtml = html`
+                <ion-card button="true" @click=${() => gotoPage("ScanQrPage")}>
+                    <ion-card-header>
+                        <ion-card-title>The wallet is empty</ion-card-title>
+                    </ion-card-header>
+
+                    <ion-card-content>
+                    <div class="text-medium">You need to obtain a Verifiable Credential from an Issuer, by scanning the QR in the screen of the Issuer page</div>
+                    </ion-card-content>
+
+                    <div class="ion-margin-start ion-margin-bottom">
+                        <ion-button @click=${() => gotoPage("ScanQrPage")}>
+                            <ion-icon slot="start" name="camera"></ion-icon>
+                            ${T("Scan a QR")}
+                        </ion-button>
+                    </div>
+
+                </ion-card>
+            `
 
         }
 
+        this.render(theHtml, false)
+
+    }
+
+
+    async presentActionSheet(currentId) {
+        const actionSheet = document.getElementById("mw_actionSheet")
+        actionSheet.header = 'Confirm to delete credential'
+        actionSheet.buttons = [
+            {
+                text: 'Delete',
+                role: 'destructive',
+                data: {
+                    action: 'delete',
+                },
+            },
+            {
+                text: 'Cancel',
+                role: 'cancel',
+                data: {
+                    action: 'cancel',
+                },
+            },
+        ];
+
+        this.credentialIdToDelete = currentId
+        await actionSheet.present();
+    }
+
+    async deleteVC(ev) {
+        // Delete only if event is delete
+        if (ev.detail.data) {
+            if (ev.detail.data.action == "delete") {
+                // Get the credential to delete
+                const currentId = this.credentialIdToDelete
+                log.log("deleting credential", currentId)
+                await storage.credentialsDelete(currentId)
+                goHome()
+                return
+            }
+        }
     }
 
 })
+

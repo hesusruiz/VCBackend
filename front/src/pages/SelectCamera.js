@@ -1,7 +1,11 @@
-import { html } from 'uhtml'
 import { getPreferredVideoDevice } from '../components/camerainfo'
 
-window.MHR.register("SelectCamera", class SelectCamera extends window.MHR.AbstractPage {
+let gotoPage = window.MHR.gotoPage
+let goHome = window.MHR.goHome
+let storage = window.MHR.storage
+let log = window.MHR.log
+
+window.MHR.register("SelectCamera", class extends window.MHR.AbstractPage {
 
     constructor(id) {
         super(id)
@@ -16,33 +20,32 @@ window.MHR.register("SelectCamera", class SelectCamera extends window.MHR.Abstra
                 this.render(html`<p>No camera available</p>`)
                 return;
             }
-    
+
             var videoDevices = preferredVideoDevices.videoDevices
-    
+
         } catch (error) {
             this.render(html`<p>No camera available</p>`)
             return;
-    }
+        }
 
         let theHtml = html`
-<section class="w3-container">
-    <h2>Select a camera</h2>
-    <div class="w3-bar-block w3-card">
-        ${videoDevices.map((camera) =>
-        html`
-        <a class="w3-bar-item w3-btn w3-border" @click=${()=>this.setCamera(camera.deviceId)} href="javascript:void(0)">
-            <p class="w3-medium">${camera.label}</p>
-        </a>`        
-        )}
-    </div>
-</section>`
+        <ion-list class="w3-container">
+            <ion-list-header>
+            <ion-label>Select a camera</ion-label>
+            </ion-list-header>
+            ${videoDevices.map((camera) =>
+                html`<ion-item button @click=${() => this.setCamera(camera.deviceId)}><ion-label>
+                <div class="text-larger">${camera.label}</div></a>
+                </ion-label></ion-item>`
+            )}
+        </ion-list>`
         this.render(theHtml)
     }
 
-    async setCamera(l) {
-        window.selectedCamera = l
-        localStorage.setItem("selectedCamera", l)
-        window.history.back()
+    async setCamera(cameraID) {
+        window.selectedCamera = cameraID
+        localStorage.setItem("selectedCamera", cameraID)
+        goHome()
     }
 
 })

@@ -9,7 +9,7 @@ function shortDate(timestamp) {
     return `${date.toISOString()}`
 }
 
-window.MHR.register("LogsPage", class LogsPage extends window.MHR.AbstractPage {
+window.MHR.register("LogsPage", class extends window.MHR.AbstractPage {
 
     constructor(id) {
         super(id)
@@ -28,11 +28,11 @@ window.MHR.register("LogsPage", class LogsPage extends window.MHR.AbstractPage {
             <h2>${T("Technical logs")} (${version})</h2>
         </div>
 
-        <ul class="w3-ul">
+        <ion-list>
             ${items.map(
-            ({timestamp, desc, item}, i) => html`<li>${shortDate(timestamp)}-${desc} ${item}</li>`
+            ({timestamp, desc, item}, i) => html`<ion-item><ion-label>${shortDate(timestamp)}-${desc} ${item}</ion-label></ion-item>`
             )}
-        </ul>
+        </ion-list>
 
         `;
 

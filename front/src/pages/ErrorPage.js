@@ -28,30 +28,28 @@ window.MHR.register("ErrorPage", class ErrorPage extends window.MHR.AbstractPage
 
         // Display the title and message, with a button that reloads the whole application
         let theHtml = html`
-        <div class="w3-container w3-padding-64">
-            <div class="w3-card-4 w3-center">
-        
-                <header class="w3-container w3-center color-error">
-                    <h3>${title}</h3>
-                </header>
-        
-                <div class="w3-container">
-                    <p>${msg}</p>
-                    <p>${T("Please click Accept to refresh the page.")}</p>
-                </div>
-                
-                <div class="w3-container w3-center w3-padding">
-                    <btn-danger onclick=${()=>window.MHR.cleanReload()}>${T("Accept")}</btn-danger>        
-                </div>
+
+        <ion-card>
+
+            <ion-card-header>
+                <ion-card-title>${title}</ion-card-title>
+            </ion-card-header>
+
+            <ion-card-content class="ion-padding-bottom">
+                <div class="text-larger">${msg}</div>
+                <div>${T("Please click Accept to refresh the page.")}</div>
+            </ion-card-content>
+
+            <div class="ion-margin-start ion-margin-bottom">
+
+                <ion-button color="danger" @click=${()=> window.MHR.cleanReload()}>
+                    ${T("Accept")}
+                </ion-button>
 
             </div>
-        </div>
+        </ion-card>
         `
         this.render(theHtml)
     }
 })
 
-function cleanReload() {
-    // Reload the application with a clean URL
-    location = window.location.origin + window.location.pathname
-}
