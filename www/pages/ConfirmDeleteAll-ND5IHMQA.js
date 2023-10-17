@@ -17,11 +17,8 @@ window.MHR.register("ConfirmDeleteAll", class ConfirmDeleteAll extends window.MH
                 <ion-card-title>${title}</ion-card-title>
             </ion-card-header>
 
-
             <ion-card-content class="ion-padding-bottom">
-
                 <div class="text-larger">${msg}</div>
-
             </ion-card-content>
 
             <div class="ion-margin-start ion-margin-bottom">

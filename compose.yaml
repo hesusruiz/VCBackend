@@ -17,11 +17,14 @@ services:
 
   vcbackend:
     build: .
+    image: vcdemo:latest
     restart: unless-stopped
     container_name: "vcdemo"
     ports:
       - "3000:3000"
       - "8090:8090"
+    volumes:
+      - ./data:/app/data
 
 # Caddy requires write access to two locations: a data directory, and a configuration directory.
 # While it's not necessary to persist the files stored in the configuration directory, it can be convenient.

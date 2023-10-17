@@ -87,7 +87,7 @@ func (s *WebAuthnHandlerPB) AddRoutesPB(app *pocketbase.PocketBase) {
 
 	// Serves static files from the provided public dir (if exists)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
-		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./wallet/www"), false))
+		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./www"), false))
 
 		e.Router.GET("/webauthn/register/begin/:username", s.BeginRegistrationPB)
 		e.Router.POST("/webauthn/register/finish/:username", s.FinishRegistrationPB)

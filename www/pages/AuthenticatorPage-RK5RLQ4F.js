@@ -180,17 +180,36 @@ async function loginUser(origin, username, state) {
     credentialRequestOptions.publicKey.allowCredentials.forEach(function(listItem) {
       listItem.id = bufferDecode(listItem.id);
     });
-    try {
-      var assertion = await navigator.credentials.get({
-        publicKey: credentialRequestOptions.publicKey
-      });
-      if (assertion == null) {
-        log.error("null assertion received from authenticator device");
-        return "error";
+    const discoverable = true;
+    var assertion;
+    if (discoverable) {
+      credentialRequestOptions.publicKey.allowCredentials = [];
+      try {
+        assertion = await navigator.credentials.get({
+          publicKey: credentialRequestOptions.publicKey
+        });
+        if (assertion == null) {
+          log.error("null assertion received from authenticator device");
+          return "error";
+        }
+      } catch (error) {
+        log.error(error);
+        return error;
       }
-    } catch (error) {
-      log.error(error);
-      return error;
+      log.log("Discoverable Assertion created", assertion);
+    } else {
+      try {
+        assertion = await navigator.credentials.get({
+          publicKey: credentialRequestOptions.publicKey
+        });
+        if (assertion == null) {
+          log.error("null assertion received from authenticator device");
+          return "error";
+        }
+      } catch (error) {
+        log.error(error);
+        return error;
+      }
     }
     log.log("Authenticator created Assertion", assertion);
     let authData = assertion.response.authenticatorData;
@@ -240,7 +259,6 @@ async function loginUser(origin, username, state) {
 }
 window.MHR.register("AuthenticatorSuccessPage", class extends window.MHR.AbstractPage {
   constructor(id) {
-    console.log("*************Inside AuthenticatorSuccessPage****************");
     super(id);
   }
   enter(pageData) {
@@ -252,7 +270,6 @@ window.MHR.register("AuthenticatorSuccessPage", class extends window.MHR.Abstrac
             <ion-card-header>
                 <ion-card-title>Authentication success</ion-card-title>
             </ion-card-header>
-
 
             <ion-card-content class="ion-padding-bottom">
 

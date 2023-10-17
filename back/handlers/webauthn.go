@@ -41,7 +41,6 @@ func NewWebAuthnHandler(back *Server, sess *memory.Storage, v *vault.Vault, cfg 
 	rpOrigin := cfg.String("webauthn.RPOrigin")
 	authenticatorAttachment := protocol.AuthenticatorAttachment(cfg.String("webauthn.AuthenticatorAttachment", "cross-platform"))
 	userVerification := protocol.UserVerificationRequirement(cfg.String("webauthn.UserVerification", "required"))
-	// requireResidentKey := cfg.Bool("webauthn.RequireResidentKey", false)
 	residentKey := cfg.String("webauthn.ResidentKey", "preferred")
 	attestationConveyancePreference := protocol.ConveyancePreference(cfg.String("webauthn.AttestationConveyancePreference", "indirect"))
 

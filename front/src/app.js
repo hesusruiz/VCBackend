@@ -7,9 +7,6 @@
 // Logging support
 import { log } from "./log";
 
-// The CSS module
-// import './css/w3.css'
-
 // For rendering the HTML in the pages
 import { render, html, svg } from 'uhtml';
 
@@ -95,23 +92,26 @@ async function goHome() {
  * @param {any} pageData
  */
 async function gotoPage(pageName, pageData) {
-    console.log("Inside gotoPage:", pageName)
+    log.log("Inside gotoPage:", pageName)
 
     // First we look if the page class is already instantiated
     var pageClass = pageNameToClass.get(pageName)
     if (!pageClass) {
 
-        // If pageName is not a registered page, go to the 404 error page
+        // Try to load dynamically the page.
+        try {
+            await import(pageModulesMap[pageName])            
+        } catch (error) {
+            log.error(error)
+        }
+
+        // If pageName still does not exist, go to the 404 error page
         // passing the target page as pageData
-        var pageFunction = pageModulesMap[pageName]
-        if (!pageFunction) {
+        if (!pageNameToClass.get(pageName)) {
             log.error("Target page does not exist: ", pageName);
             pageData = pageName
             pageName = name404
         }
-
-        // Make sure the page is loaded.
-        await import(pageModulesMap[pageName])
 
     }
 
@@ -360,43 +360,6 @@ function resetAndGoHome(e) {
     goHome()
 }
 
-function HeaderBarOriginal(menu = false) {
-    let header = document.querySelector('header')
-
-    var subMenu = html``
-    var flag = !menu
-
-    if (menu) {
-        subMenu = html`
-        <div id="mainmenu" class="w3-bar-block w3-card color-medium">
-            ${window.
-            // @ts-ignore
-            menuItems.map(
-                ({page, params, text}) => html`<a href="#" class="w3-bar-item w3-button" onclick=${()=>{HeaderBar();gotoPage(page, params)}}>${text}</a>`
-            )}
-        </div>
-        `;
-    }
-
-    var fullHB = html`
-<div class="w3-bar w3-card w3-large color-primary">
-    <a class="w3-bar-item w3-btn" onclick=${() => resetAndGoHome()}>
-        <img style="height:1.5em; margin-bottom:5px" src=${logo_img} alt="EvidenceLedger logo">
-    </a>
-    <div class="w3-bar-item">Privacy Wallet</div>
-    <a class="w3-bar-item w3-btn w3-right" onclick=${() => HeaderBar(flag)}>☰</a>
-</div>
-
-${subMenu}    
-`;
-    
-    // @ts-ignore
-    render(header, fullHB)
-
-    return;
-
-}
-
 
 /**
  * @param {boolean} backButton
@@ -448,23 +411,25 @@ function HeaderBar(backButton = true) {
  */
 function ErrorPanel(title, message) {
     let theHtml = html`
-    <div class="w3-container w3-padding-64">
-        <div class="w3-card-4 w3-center">
-    
-            <header class="w3-padding-left w3-margin-bottom w3-center color-error">
-                <h4>${title}</h4>
-            </header>
-    
-            <div class="w3-container">
-                ${message}
-            </div>
-            
-            <div class="w3-container w3-center w3-padding">
-                <btn-danger onclick=${()=>cleanReload()}>${T("Home")}</btn-danger>        
-            </div>
+
+    <ion-card>
+        <ion-card-header>
+            <ion-card-title>${title}</ion-card-title>
+        </ion-card-header>
+
+        <ion-card-content class="ion-padding-bottom">
+            <div class="text-larger">${message}</div>
+        </ion-card-content>
+
+        <div class="ion-margin-start ion-margin-bottom">
+
+            <ion-button color="danger" @click=${()=> cleanReload()}>
+                <ion-icon slot="start" name="home"></ion-icon>
+                ${T("Home")}
+            </ion-button>
 
         </div>
-    </div>
+    </ion-card>
     `
 
     return theHtml
@@ -544,7 +509,6 @@ class AbstractPage {
         this.render(ErrorPanel(title, message))
     }
 
-
 }
 
 /**
@@ -563,7 +527,28 @@ function cleanReload() {
     return    
 }
 
+register("Page404", class extends AbstractPage {
 
+    /**
+     * @param {string} id
+     */
+    constructor(id) {
+        super(id)
+    }
+
+    /**
+     * @param {any} pageData
+     */
+    enter(pageData) {
+
+        this.showError("Page not found", `The requested page does not exist: ${pageData}`)
+    }
+})
+
+
+/**
+ * @param {string} input
+ */
 function btoaUrl(input) {
 
     // Encode using the standard Javascript function
@@ -575,6 +560,9 @@ function btoaUrl(input) {
     return astr;
 }
 
+/**
+ * @param {string} input
+ */
 function atobUrl(input) {
 
     // Replace non-url compatible chars with base64 standard chars

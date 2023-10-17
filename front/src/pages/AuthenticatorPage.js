@@ -249,19 +249,44 @@ async function loginUser(origin, username, state) {
             listItem.id = bufferDecode(listItem.id)
         });
 
-        // Call the authenticator to create the assertion
-        try {
-            var assertion = await navigator.credentials.get({
-                publicKey: credentialRequestOptions.publicKey
-            })
-            if (assertion == null) {
-                log.error("null assertion received from authenticator device")
-                return "error"
+        const discoverable = true
+        var assertion
+
+        if (discoverable) {
+            credentialRequestOptions.publicKey.allowCredentials = []
+            // Call the authenticator to create the assertion
+            try {
+                assertion = await navigator.credentials.get({
+                    publicKey: credentialRequestOptions.publicKey
+                })
+                if (assertion == null) {
+                    log.error("null assertion received from authenticator device")
+                    return "error"
+                }
+            } catch (error) {
+                // Log and present the error page
+                log.error(error)
+                return error
             }
-        } catch (error) {
-            // Log and present the error page
-            log.error(error)
-            return error
+
+            log.log("Discoverable Assertion created", assertion)
+
+        } else {
+            // Call the authenticator to create the assertion
+            try {
+                assertion = await navigator.credentials.get({
+                    publicKey: credentialRequestOptions.publicKey
+                })
+                if (assertion == null) {
+                    log.error("null assertion received from authenticator device")
+                    return "error"
+                }
+            } catch (error) {
+                // Log and present the error page
+                log.error(error)
+                return error
+            }
+
         }
 
         log.log("Authenticator created Assertion", assertion)
@@ -331,7 +356,6 @@ async function loginUser(origin, username, state) {
 window.MHR.register("AuthenticatorSuccessPage", class extends window.MHR.AbstractPage {
 
     constructor(id) {
-        console.log("*************Inside AuthenticatorSuccessPage****************")
         super(id)
     }
 
@@ -346,7 +370,6 @@ window.MHR.register("AuthenticatorSuccessPage", class extends window.MHR.Abstrac
             <ion-card-header>
                 <ion-card-title>Authentication success</ion-card-title>
             </ion-card-header>
-
 
             <ion-card-content class="ion-padding-bottom">
 

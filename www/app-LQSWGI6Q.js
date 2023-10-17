@@ -80,16 +80,19 @@ async function goHome() {
   }
 }
 async function gotoPage(pageName, pageData) {
-  console.log("Inside gotoPage:", pageName);
+  log.log("Inside gotoPage:", pageName);
   var pageClass = pageNameToClass.get(pageName);
   if (!pageClass) {
-    var pageFunction = pageModulesMap[pageName];
-    if (!pageFunction) {
+    try {
+      await import(pageModulesMap[pageName]);
+    } catch (error) {
+      log.error(error);
+    }
+    if (!pageNameToClass.get(pageName)) {
       log.error("Target page does not exist: ", pageName);
       pageData = pageName;
       pageName = name404;
     }
-    await import(pageModulesMap[pageName]);
   }
   window.history.pushState(
     { pageName, pageData },
@@ -236,23 +239,25 @@ function HeaderBar(backButton = true) {
 }
 function ErrorPanel(title, message) {
   let theHtml = html`
-    <div class="w3-container w3-padding-64">
-        <div class="w3-card-4 w3-center">
-    
-            <header class="w3-padding-left w3-margin-bottom w3-center color-error">
-                <h4>${title}</h4>
-            </header>
-    
-            <div class="w3-container">
-                ${message}
-            </div>
-            
-            <div class="w3-container w3-center w3-padding">
-                <btn-danger onclick=${() => cleanReload()}>${T2("Home")}</btn-danger>        
-            </div>
+
+    <ion-card>
+        <ion-card-header>
+            <ion-card-title>${title}</ion-card-title>
+        </ion-card-header>
+
+        <ion-card-content class="ion-padding-bottom">
+            <div class="text-larger">${message}</div>
+        </ion-card-content>
+
+        <div class="ion-margin-start ion-margin-bottom">
+
+            <ion-button color="danger" @click=${() => cleanReload()}>
+                <ion-icon slot="start" name="home"></ion-icon>
+                ${T2("Home")}
+            </ion-button>
 
         </div>
-    </div>
+    </ion-card>
     `;
   return theHtml;
 }
@@ -313,6 +318,20 @@ function cleanReload() {
   window.location = window.location.origin + window.location.pathname;
   return;
 }
+register("Page404", class extends AbstractPage {
+  /**
+   * @param {string} id
+   */
+  constructor(id) {
+    super(id);
+  }
+  /**
+   * @param {any} pageData
+   */
+  enter(pageData) {
+    this.showError("Page not found", `The requested page does not exist: ${pageData}`);
+  }
+});
 function btoaUrl(input) {
   let astr = btoa(input);
   astr = astr.replace(/\+/g, "-").replace(/\//g, "_");

@@ -168,7 +168,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
 
             // We do not have a QR in the local storage
             theHtml = html`
-                <ion-card button="true" @click=${() => gotoPage("ScanQrPage")}>
+                <ion-card>
                     <ion-card-header>
                         <ion-card-title>The wallet is empty</ion-card-title>
                     </ion-card-header>
