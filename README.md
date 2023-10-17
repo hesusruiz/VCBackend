@@ -19,13 +19,25 @@ Build the image:
 docker compose build
 ```
 
-Run the demo:
+Create in batch the credentials specified in the file `data/example_data/employee_data.yaml`:
+
+```
+docker compose credentials
+```
+
+The demo can be reset (with no credentials) with:
+
+```
+docker compose cleandb
+```
+
+After some credentials have been created, you can start the server for the demo:
 
 ```
 docker compose up
 ```
 
-Or you can start the server in the background:
+Or you can start the server in the background and it will run until you stop it with `docker compose down`:
 
 ```
 docker compose up -d
@@ -99,7 +111,8 @@ deletes the database files and also creates sample credentials to have the demo 
 
 # Configuration
 
-The configuration file in `server.yaml` provides for some configuration of VCDemo. An example config file is:
+The configuration file in `server.yaml` provides for some configuration of VCDemo. Below you can see an example configuration file.
+In order to run the demo yourself, the minimum changes are related to the domain names that have to be accessible externally:
 
 ```yaml
 server:
@@ -108,10 +121,7 @@ server:
   templateDir: "back/views"
   environment: development
   loglevel: DEBUG
-
-store:
-  driverName: "sqlite3"
-  dataSourceName: "file:issuer.sqlite?mode=rwc&cache=shared&_fk=1"
+  walletProvisioning: "wallet.mycredential.eu"
 
 issuer:
   id: HappyPets
@@ -119,7 +129,10 @@ issuer:
   password: ThePassword
   store:
     driverName: "sqlite3"
-    dataSourceName: "file:issuer.sqlite?mode=rwc&cache=shared&_fk=1"
+    dataSourceName: "file:data/storage/issuer.sqlite?mode=rwc&cache=shared&_fk=1"
+  samedeviceWallet: "https://wallet.mycredential.eu"
+  credentialTemplatesDir: "data/credential_templates"
+  credentialInputDataFile: "data/example_data/employee_data.yaml"
 
 verifier:
   id: PacketDelivery
@@ -127,29 +140,32 @@ verifier:
   password: ThePassword
   store:
     driverName: "sqlite3"
-    dataSourceName: "file:verifier.sqlite?mode=rwc&cache=shared&_fk=1"
-  uri_prefix: /verifier
-  jwks_uri: /.well-known/jwks_uri
+    dataSourceName: "file:data/storage/verifier.sqlite?mode=rwc&cache=shared&_fk=1"
+  jwks_uri: "/.well-known/jwks_uri"
+  authnPolicies: "data/config/authn_policies.py"
   protectedResource:
     url: "https://www.google.com"
+  samedeviceWallet: "https://wallet.mycredential.eu"
+  credentialTemplatesDir: "data/credential_templates"
+
+  webauthn:
+    RPDisplayName: "EvidenceLedger"
+    RPID: "mycredential.eu"
+    RPOrigin: "https://wallet.mycredential.eu"
+    AuthenticatorAttachment: "platform"
+    UserVerification: "required"
+    ResidentKey: "required"
+    AttestationConveyancePreference: "indirect"
+
+
+wallet:
+  store:
+    driverName: "sqlite3"
+    dataSourceName: "file:data/storage/wallet.sqlite?mode=rwc&cache=shared&_fk=1"
 
 verifiableregistry:
   password: ThePassword
   store:
     driverName: "sqlite3"
-    dataSourceName: "file:verifiableregistry.sqlite?mode=rwc&cache=shared&_fk=1"
-
-wallet:
-  store:
-    driverName: "sqlite3"
-    dataSourceName: "file:wallet.sqlite?mode=rwc&cache=shared&_fk=1"
-
-webauthn:
-  RPDisplayName: "EvidenceLedger"
-  RPID: "mycredential.eu"
-  RPOrigin: "https://wallet.mycredential.eu"
-  AuthenticatorAttachment: "platform"
-  UserVerification: "required"
-  RequireResidentKey: true
-  AttestationConveyancePreference: "indirect"
+    dataSourceName: "file:data/storage/verifiableregistry.sqlite?mode=rwc&cache=shared&_fk=1"
 ```
