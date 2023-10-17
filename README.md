@@ -4,7 +4,35 @@ VCDemo includes in a single binary demo versions of Issuer, Verifier and Wallet 
 
 This facilitates installation and allows to see how all components fit together and the protocol flows between them.
 
-## Requirements
+## Running with Docker
+
+Clone the repository and move into it:
+
+```
+git clone git@github.com:evidenceledger/VCDemo.git
+cd VCDemo
+```
+
+Build the image:
+
+```
+docker compose build
+```
+
+Run the demo:
+
+```
+docker compose up
+```
+
+Or you can start the server in the background:
+
+```
+docker compose up -d
+```
+
+
+## Running 'native': requirements
 
 The backend is developed in `Go` (>=1.19) and the frontend requires `npm` (>=9.8).
 
