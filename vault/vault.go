@@ -90,6 +90,12 @@ func New(cfg *yaml.YAML) (v *Vault, err error) {
 	// Get the configured parameters for the database
 	storeDriverName := cfg.String("store.driverName")
 	storeDataSourceName := cfg.String("store.dataSourceName")
+	workDir, err := os.Getwd()
+	if err != nil {
+		zlog.Err(err).Msg("failed getting current working directory")
+		return nil, err
+	}
+	zlog.Info().Str("cwd", workDir).Str("storeDriverName", storeDriverName).Str("storeDataSourceName", storeDataSourceName).Msg("opening vault")
 
 	// Open the database
 	v.db, err = ent.Open(storeDriverName, storeDataSourceName)

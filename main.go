@@ -26,6 +26,7 @@ import (
 	"github.com/gofiber/template/html"
 )
 
+const dataDirectory = "data"
 const defaultConfigFile = "./data/config/server.yaml"
 const defaultBuildConfigFile = "./data/config/devserver.yaml"
 const defaultTemplateDir = "back/views"
@@ -59,6 +60,12 @@ func main() {
 		fmt.Println()
 		fmt.Println("The server has the following flags:")
 		flag.PrintDefaults()
+	}
+
+	// Make the default directory for db files
+	err := os.MkdirAll("data/storage", 0775)
+	if err != nil {
+		panic(err)
 	}
 
 	// Parse command-line flags
