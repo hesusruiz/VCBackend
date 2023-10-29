@@ -172,7 +172,10 @@ func (v *Verifier) PageDisplaySimpleQR(c *fiber.Ctx) error {
 	response_uri := httpLocation(c) + "/authenticationresponse"
 
 	// Create the Authentication Request
-	authRequest, _ := v.createJWTSecuredAuthenticationRequest(response_uri, stateKey)
+	authRequest, err := v.createJWTSecuredAuthenticationRequest(response_uri, stateKey)
+	if err != nil {
+		return err
+	}
 	//v.rootServer.Logger.Info("AuthRequest", authRequest)
 	zlog.Info().Str("AuthRequest", string(authRequest)).Send()
 
@@ -574,6 +577,7 @@ func (v *Verifier) APIWalletAuthenticationRequest(c *fiber.Ctx) error {
 	}
 
 	authenticationRequest := stateContent[1:]
+	zlog.Info().Str("authenticationRequest", string(authenticationRequest)).Msg("")
 
 	return c.Send(authenticationRequest)
 }

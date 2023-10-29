@@ -13,14 +13,14 @@ import { log } from "../log";
 //    "credentials" for storing the credentials
 //    "settings" for miscellaneous things
 //    "logs" for persistent logging of important events for diagnostic
-
 import Dexie from "dexie"
 
 export var db = new Dexie('PrivacyWalletNg');
-db.version(0.5).stores({
+db.version(0.7).stores({
     credentials: 'hash, timestamp, type',
-    settings: 'key'
-    //    logs: '++id, timestamp'
+    settings: 'key',
+    dids: 'did',
+    logs: '++id, timestamp'
 });
 
 
@@ -127,7 +127,6 @@ async function credentialsGet(key) {
         alert("Error getting credential")
     }
 
-    log.log("CredentialGet: ", credential)
     return credential;
 
 }
@@ -200,8 +199,8 @@ async function mylog_entry(_level, _desc, _item) {
     var logItem = {
         timestamp: Date.now(),
         level: _level,
-        desc: _desc,
-        item: _item
+        desc: JSON.stringify(_desc),
+        item: JSON.stringify(_item)
     }
 
     // Store the object
@@ -231,16 +230,27 @@ async function mylog_entry(_level, _desc, _item) {
 async function mylog(_desc) {
     if (LOG_ALL) {
         var args = Array.prototype.slice.call(arguments, 1);
-        console.log(_desc, args)
-        mylog_entry("N", _desc, args)
+        if (args.length > 0) {
+            console.log(_desc, args)
+            mylog_entry("N", _desc, args)    
+        } else {
+            console.log(_desc)
+            mylog_entry("N", _desc)    
+        }
     }
 }
 
 async function myerror(_desc) {
     var args = Array.prototype.slice.call(arguments, 1);
-    console.error(_desc, args)
-    mylog_entry("E", _desc, args)
+    if (args.length > 0) {
+        console.log(_desc, args)
+        mylog_entry("E", _desc, args)    
+    } else {
+        console.log(_desc)
+        mylog_entry("E", _desc)    
+    }
 }
+
 
 
 // The following are simple wrappers to insulate from future changes in the db
@@ -292,6 +302,51 @@ async function showError(_text) {
     return;
 }
 
+// **************************************************
+// DID storage, including associated private keys
+// **************************************************
+
+async function didSave(_didObject) {
+
+    // Check if did already exists
+    const oldDID = await db.dids.get(_didObject.did)
+    if (oldDID) {
+        log.log("DID already existed")
+        return oldDID
+    }
+
+    // Create the object to store
+    var object_to_store = {
+        did:        _didObject.did,
+        privateKey: _didObject.privateKey,
+        timestamp:  Date.now(),
+    }
+
+    // Store the object
+    await db.dids.add(object_to_store)
+
+    // Successful save, return the credential stored
+    return object_to_store;
+
+}
+
+async function didGet(did) {
+    const oldDID = await db.dids.get(did)
+    return oldDID
+}
+
+async function didFirst() {
+    const firstDID = await db.dids.toCollection().first()
+    return firstDID
+}
+
+async function hash(inputString) {
+    var data = new TextEncoder().encode(inputString);
+    var hash = await crypto.subtle.digest('SHA-256', data)
+    var hashArray = Array.from(new Uint8Array(hash));   // convert buffer to byte array
+    var hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex
+}
 
 // **************************************************
 // End of Local database management
@@ -319,6 +374,9 @@ export var storage = {
     credentialsGet: credentialsGet,
     credentialsGetAllRecent: credentialsGetAllRecent,
     credentialsGetAllKeys: credentialsGetAllKeys,
+    didSave: didSave,
+    didGet: didGet,
+    didFirst: didFirst,
     recentLogs: recentLogs,
     clearLogs: clearLogs,
     resetDatabase: resetDatabase

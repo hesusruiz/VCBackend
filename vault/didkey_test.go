@@ -2,6 +2,8 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/evidenceledger/vcdemo/vault/ent"
@@ -24,6 +26,18 @@ func TestDIDKey(t *testing.T) {
 				did: "did:key:z2dmzD81cgPx8Vki7JbuuMmFYrWPgYoytykUZ3eyqht1j9KbpB33KYjExVXDTYogTZn23fXdtEpErHvhvmuu3CkikhTh6CetfaEPtKv8i4nnV8D3wnrVT7xBT9Yve7RGtBkte9o2ssiiz27V65WRiRYnEHnMJuaRwwS83sDs7m4WzhuKTJ",
 			},
 		},
+		{
+			name: "Another EBSI DID key",
+			args: args{
+				did: "did:key:z2dmzD81cgPx8Vki7JbuuMmFYrWPgYoytykUZ3eyqht1j9KbrXvBzPktzb33FeUNFTaHY2jCWbkKjvNeLe9weXDqBE7fHqzoF5CJd1gcxtqgrGbetUfzpf9Rp7EGsB8FiQgNP2s3L5NNcfZWTeyeDAGjSDmjd7E5GYxR99KstHoSb3PXn4",
+			},
+		},
+		{
+			name: "Our DID 1",
+			args: args{
+				did: "did:key:zDowk6ZHp3nXCP9S5gemSLvehA5qZ9YSaqWmQMTkrsCSdqs4ZKpwuygamincgobZTVAqMRHiwNrdgi726b5281S9gkwb2kkc967YRsXVNWZfjwUKsUneKLAZk9utTfDGp5qmYaGbT4L1SBrbTBkCbynX9Yy4M7eK3SfXUHv5igWKhKYfeWMf4mztqjJGVVf9DSvjMRApg9N3W3XcbnMvc",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -32,6 +46,8 @@ func TestDIDKey(t *testing.T) {
 				t.Errorf("DIDKeyToPubKey() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			jsonbuf, _ := json.Marshal(gotPublicKey)
+			fmt.Printf("%s", jsonbuf)
 			didBack, err := PubKeyToDIDKey(gotPublicKey)
 			if err != nil {
 				t.Errorf("DIDKeyToPubKey->PubKeyToDIDKey error = %v", err)

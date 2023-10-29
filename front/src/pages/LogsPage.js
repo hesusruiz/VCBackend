@@ -1,6 +1,8 @@
 import { html } from 'uhtml'
 import { log } from '../log'
 
+let recentLogs = window.MHR.storage.recentLogs
+
 let version = "1.0.1"
 
 function shortDate(timestamp) {
@@ -15,13 +17,9 @@ window.MHR.register("LogsPage", class extends window.MHR.AbstractPage {
         super(id)
     }
 
-    enter() {
+    async enter() {
         let html = this.html
-
-        let items = []
-        for (let i = 0; i < log.num_items(); i++) {
-            items.push(log.item(i))
-        }
+        var items = await recentLogs()
 
         let theHtml = html`
         <div class="w3-container">
@@ -30,7 +28,22 @@ window.MHR.register("LogsPage", class extends window.MHR.AbstractPage {
 
         <ion-list>
             ${items.map(
-            ({timestamp, desc, item}, i) => html`<ion-item><ion-label>${shortDate(timestamp)}-${desc} ${item}</ion-label></ion-item>`
+            ({timestamp, level, desc, item}, i) => {
+                if (level == "E") {
+                    var theHtml = html`
+                    <ion-item><ion-label class="ion-text-wrap"><ion-text color="danger">
+                    ${shortDate(timestamp)} ${desc} ${item}
+                    </ion-text></ion-label></ion-item>
+                    `
+                } else {
+                    var theHtml = html`
+                    <ion-item><ion-label class="ion-text-wrap">
+                    ${shortDate(timestamp)} ${desc} ${item}
+                    </ion-label></ion-item>
+                    `
+                }
+                return theHtml
+            }
             )}
         </ion-list>
 

@@ -42,9 +42,14 @@ verifier:
 
 
 wallet:
+  id: "hesusruiz"
+  name: "Jesus Ruiz"
+  password: ThePassword
   store:
     driverName: "sqlite3"
     dataSourceName: "file:data/storage/wallet.sqlite?mode=rwc&cache=shared&_fk=1"
+  credentialTemplatesDir: "data/credential_templates"
+
 
 verifiableregistry:
   password: ThePassword

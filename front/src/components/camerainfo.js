@@ -24,7 +24,7 @@ export function getPlatformOS() {
 
     return os;
 }
-console.log(getPlatformOS())
+console.log("running on:", getPlatformOS())
 
 export async function getVideoDevices() {
     // Returns an array of video devices or undefined if none

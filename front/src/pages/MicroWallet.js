@@ -1,6 +1,6 @@
 import PocketBase from '../components/pocketbase.es.mjs'
 
-console.log("connec to:", window.location.origin)
+console.log("Wallet served from:", window.location.origin)
 const pb = new PocketBase(window.location.origin)
 
 // The logo in the header
@@ -11,6 +11,8 @@ import { log } from '../log'
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
 let storage = window.MHR.storage
+let myerror = window.MHR.storage.myerror
+let mylog = window.MHR.storage.mylog
 
 window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
 
@@ -19,7 +21,11 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
     }
 
     async enter() {
+
         let html = this.html
+
+        // Create our DID in the server
+        const newUser = await createUser()
 
         // const record = await pb.collection('users').create(data);
         // console.log(record)
@@ -44,6 +50,24 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         let scope = params.get("scope")
         let command = params.get("command")
         let request_uri = params.get("request_uri")
+        let credential_offer_uri = params.get("credential_offer_uri")
+
+        console.log(document.location)
+
+        // Check for redirect during the authentication flow
+        if (document.URL.includes("state=") && document.URL.includes("auth-mock")) {
+            console.log("************Redirected with state**************")
+            gotoPage("LoadAndSaveQRVC", document.URL)
+            return;
+        }
+        
+        if (document.URL.includes("code=")) {
+            alert("Redirect with code")
+            console.log("************Redirected with code**************")
+            gotoPage("LoadAndSaveQRVC", document.URL)
+            return;
+        }
+        
 
         // QR code found in URL. Process and display it
         if (scope !== null) {
@@ -56,6 +80,11 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             request_uri = decodeURIComponent(request_uri)
             console.log(request_uri)
             gotoPage("SIOPSelectCredential", request_uri)
+            return;
+        }
+
+        if (credential_offer_uri) {
+            await gotoPage("LoadAndSaveQRVC", document.location.href)
             return;
         }
 
@@ -83,6 +112,11 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         const theDivs = []
 
         for (const vcraw of credentials) {
+
+            if (vcraw.type !== "w3cvc") {
+                console.log("skipping unknown credential type")
+                continue
+            }
 
             // We use the hash of the credential as its unique ID
             const currentId = vcraw.hash
@@ -233,4 +267,31 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
     }
 
 })
+
+async function createUser() {
+
+    var body = {
+        email: "hesus.ruiz@gmail.com",
+        name: "Jesus Ruiz"
+    }
+
+    let response = await fetch("/createnaturalperson", {
+        method: "POST",
+        cache: "no-cache",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body),
+        mode: "cors"
+    });
+    if (response.ok) {
+        const jres = await response.json();
+        log.log(jres)
+        await window.MHR.storage.didSave(jres)
+        return jres
+    } else {
+        throw new Error(response.statusText)
+    }
+
+}
 

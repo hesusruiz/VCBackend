@@ -6,16 +6,19 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/evidenceledger/vcdemo/vault/ent/did"
 	"github.com/evidenceledger/vcdemo/vault/ent/user"
-	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/multiformats/go-multibase"
 	"github.com/multiformats/go-multicodec"
+	zlog "github.com/rs/zerolog/log"
 )
 
 // GenDIDKey generates a new 'did:key' DID by creating an EC key pair
@@ -32,8 +35,8 @@ func GenDIDKey() (did string, privateKey jwk.Key, err error) {
 	if err != nil {
 		return "", nil, err
 	}
-	privKeyJWK.Set(jwk.AlgorithmKey, jwa.ES256)
-	privKeyJWK.Set(jwk.KeyUsageKey, jwk.ForSignature)
+	// privKeyJWK.Set(jwk.AlgorithmKey, jwa.ES256)
+	// privKeyJWK.Set(jwk.KeyUsageKey, jwk.ForSignature)
 
 	pubKeyJWK, err := privKeyJWK.PublicKey()
 	if err != nil {
@@ -70,6 +73,16 @@ func PubKeyToDIDKey(pubKeyJWK jwk.Key) (did string, err error) {
 
 	return "did:key:" + mb, nil
 
+}
+
+func DIDKeyIdentifier(did string) (string, error) {
+	if !strings.HasPrefix(did, "did:key:") {
+		return "", ErrDIDKeyInvalid
+	}
+
+	identifier := strings.TrimPrefix(did, "did:key:")
+
+	return did + "#" + identifier, nil
 }
 
 func DIDKeyToPubKey(did string) (publicKey jwk.Key, err error) {
@@ -202,4 +215,38 @@ func (v *Vault) DIDKeyToPublicKey(did string) (publicKey jwk.Key, err error) {
 
 	return publicKey, nil
 
+}
+
+func (v *Vault) SignWithDIDKey(did string, stringToSign string) (signedString string, err error) {
+	zlog.Info().Str("stringToSign", stringToSign).Msg("")
+
+	// Get the private key corresponding to the DID of the signer
+	jwkPrivkey, err := v.DIDKeyToPrivateKey(did)
+	if err != nil {
+		return "", err
+	}
+
+	jsonbuf, err := json.Marshal(jwkPrivkey)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println(string(jsonbuf))
+
+	privateKey := &ecdsa.PrivateKey{}
+	err = jwkPrivkey.Raw(privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	// Sign the string with the private key
+	hash := sha256.Sum256([]byte(stringToSign))
+
+	sig, err := ecdsa.SignASN1(rand.Reader, privateKey, hash[:])
+	if err != nil {
+		panic(err)
+	}
+
+	signature := base64.RawURLEncoding.EncodeToString(sig)
+
+	return stringToSign + "." + signature, nil
 }

@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
@@ -19,7 +20,7 @@ func (v *Vault) CreateToken(credData map[string]any, issuerID string) ([]byte, e
 		tok.Set(k, v)
 	}
 
-	signed, err := jwt.Sign(tok, jwt.WithKey(privkey.Algorithm(), privkey))
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256, privkey))
 	if err != nil {
 		return nil, err
 	}
@@ -28,34 +29,15 @@ func (v *Vault) CreateToken(credData map[string]any, issuerID string) ([]byte, e
 
 }
 
-func (v *Vault) VerifyToken(token []byte, issuerID string) (jwt.Token, error) {
+func (v *Vault) VerifyToken(token []byte, issuerDID string) (jwt.Token, error) {
 
 	// Get the private key corresponding to the first (main) DID of the issuer of the token
-	publicKey, err := DIDKeyToPubKey(issuerID)
+	publicKey, err := DIDKeyToPubKey(issuerDID)
 	if err != nil {
 		return nil, err
 	}
 
-	tok, err := jwt.Parse(token, jwt.WithKey(publicKey.Algorithm(), publicKey))
+	tok, err := jwt.Parse(token, jwt.WithKey(jwa.ES256, publicKey))
 	return tok, err
-
-	// tokenParts := strings.Split(token, ".")
-	// if len(tokenParts) != 3 {
-	// 	return nil, fmt.Errorf("malformed token")
-	// }
-
-	// payloadRaw, err := base64.RawURLEncoding.DecodeString(tokenParts[1])
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// var pj any
-	// json.Unmarshal(payloadRaw, &pj)
-	// prettypj, _ := json.MarshalIndent(pj, "", "  ")
-	// fmt.Println(string(prettypj))
-
-	// p := yaml.New(pj)
-
-	// return p, nil
 
 }

@@ -99,7 +99,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             this.showError("Error", "Invalid scope specified")
             return
         }
-        const credentialType = scopeParts[scopeParts.length-1]       
+        const displayCredType = scopeParts[scopeParts.length-1]       
 
         // response_uri is the endpoint where we have to send the Authentication Response
         // We are going to extract the RP identity from that URL
@@ -122,7 +122,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         // Select credentials of the requested type, specified in "scope"
         var credentials = []
         for (const cc of credStructs) {
-            const vc = JSON.parse(cc.encoded)
+            const vc = cc.decoded
             const vctype = vc.type
             if (vctype.includes(scope)) {
                 console.log("found", cc.encoded)
@@ -134,7 +134,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         // Error message if no credentials satisfy the condition 
         if (credentials.length == 0) {
             var msg = html`
-                <p><b>${rpDomain}</b> has requested a Verifiable Credential of type ${credentialType} to perform authentication,
+                <p><b>${rpDomain}</b> has requested a Verifiable Credential of type ${displayCredType} to perform authentication,
                 but you do not have any credential of that type.</p>
                 <p>Please go to an Issuer to obtain one.</p>
             `
@@ -146,7 +146,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         <ion-card color="warning">
                 
             <ion-card-content>
-            <div style="line-height:1.2"><b>${rpDomain}</b> <span class="text-small">has requested a Verifiable Credential of type ${credentialType} to perform authentication.</span></div>
+            <div style="line-height:1.2"><b>${rpDomain}</b> <span class="text-small">has requested a Verifiable Credential of type ${displayCredType} to perform authentication.</span></div>
             </ion-card-content>
             
         </ion-card>

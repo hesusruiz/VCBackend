@@ -27,9 +27,9 @@ const pageModulesMap = window.pageModules
 // get the base path of the application in runtime
 var parsedUrl  = new URL(import.meta.url)
 var fullPath = parsedUrl.pathname
-console.log(fullPath)
+console.log("Fullpath of app:", fullPath)
 var basePath = fullPath.substring(0, fullPath.lastIndexOf('/'))
-console.log(basePath)
+console.log("Base path:", basePath)
 
 // Prepend the base path of the application to each page module name
 // We do it only if the base path contains more than a '/'
@@ -93,36 +93,47 @@ async function goHome() {
  */
 async function gotoPage(pageName, pageData) {
     log.log("Inside gotoPage:", pageName)
+    // if (pageName == "EBSIRedirect") {
+    //     debugger
+    // }
 
-    // First we look if the page class is already instantiated
-    var pageClass = pageNameToClass.get(pageName)
-    if (!pageClass) {
+    // Catch any exceptions and present an error page in case of error
+    try {
 
-        // Try to load dynamically the page.
-        try {
+        // First we look if the page class is already instantiated
+        var pageClass = pageNameToClass.get(pageName)
+        if (!pageClass) {
+
+            // Try to load dynamically the page.
             await import(pageModulesMap[pageName])            
-        } catch (error) {
-            log.error(error)
+
+            // If pageName still does not exist, go to the 404 error page
+            // passing the target page as pageData
+            if (!pageNameToClass.get(pageName)) {
+                log.error("Target page does not exist: ", pageName);
+                pageData = pageName
+                pageName = name404
+            }
+
         }
 
-        // If pageName still does not exist, go to the 404 error page
-        // passing the target page as pageData
-        if (!pageNameToClass.get(pageName)) {
-            log.error("Target page does not exist: ", pageName);
-            pageData = pageName
-            pageName = name404
-        }
+        // Create a new state in the browser history, to support the back button in the browser.
+        window.history.pushState(
+            { pageName: pageName, pageData: pageData },
+            `${pageName}`
+        );
 
+        // Process the page transition
+        await processPageEntered(pageNameToClass, pageName, pageData, false);
+        
+    } catch (error) {
+
+        log.error(error)
+        // Show an error
+        await processPageEntered(pageNameToClass, "ErrorPage", {title: error.name, msg: error.message}, false);
+        
     }
 
-    // Create a new state in the browser history, to support the back button in the browser.
-    window.history.pushState(
-        { pageName: pageName, pageData: pageData },
-        `${pageName}`
-    );
-
-    // Process the page transition
-    await processPageEntered(pageName, pageData, false);
 }
 
 // Handle page transition
@@ -131,24 +142,24 @@ async function gotoPage(pageName, pageData) {
  * @param {any} pageData
  * @param {boolean} historyData
  */
-async function processPageEntered(pageName, pageData, historyData) {
+async function processPageEntered(pageNameToClass, pageName, pageData, historyData) {
 
     // Hide all pages of the application. Later we unhide the one we are entering
     // We also tell all other pages to exit, so they can perform any cleanup
     // We call all pages instead of just the active one, because it is more robust and performance does not suffer much
-    try {
-        // @ts-ignore
-        for (let [name, classInstance] of pageNameToClass) {
-            // Hide the page
-            classInstance.domElem.style.display = "none"
-            // Call the page exit() method for all except the target page, so it can perform any cleanup 
-            if ((name !== pageName) && classInstance.exit) {
+    // @ts-ignore
+    for (let [name, classInstance] of pageNameToClass) {
+        // Hide the page
+        classInstance.domElem.style.display = "none"
+        // Call the page exit() method for all except the target page, so it can perform any cleanup 
+        if ((name !== pageName) && classInstance.exit) {
+            try {
                 await classInstance.exit()
-            }
+            } catch (error) {
+                // We just log the error and continue the loop
+                log.error(`error calling exit() on ${name}: ${error.name}`);
+            }            
         }
-    } catch (error) {
-        log.error("Trying to call exit", error);
-        return;
     }
 
     let targetPage = pageNameToClass.get(pageName)
@@ -170,19 +181,13 @@ async function processPageEntered(pageName, pageData, historyData) {
 
     // Invoke the page enter() function to enter the page
     // This will allow the page to create dynamic content
-    try {
-        if (targetPage.enter) {
-            await targetPage.enter(pageData, historyData);
-        } else {
-            // Static pages do not have to implement the enter() method.
-            // Dynamic pages control their visibility as they need.
-            // For static pages we make sure the target page is visible.
-            targetPage.style.display = "block"
-        }
-
-    } catch (error) {
-        log.error("Calling enter()", error);
-        return;
+    if (targetPage.enter) {
+        await targetPage.enter(pageData, historyData);
+    } else {
+        // Static pages do not have to implement the enter() method.
+        // Dynamic pages control their visibility as they need.
+        // For static pages we make sure the target page is visible.
+        targetPage.style.display = "block"
     }
 
 }
@@ -202,7 +207,13 @@ window.addEventListener("popstate", async function (event) {
     var pageData = state.pageData;
 
     // Process the page transition
-    await processPageEntered(pageName, pageData, true);
+    try {
+        await processPageEntered(pageNameToClass, pageName, pageData, true);        
+    } catch (error) {
+        log.error(error)
+        // Show an error
+        await processPageEntered(pageNameToClass, "ErrorPage", {title: error.name, msg: error.message}, false);
+    }
 
 });
 
@@ -231,7 +242,7 @@ async function getAndUpdateVersion() {
 // When this event is fired the DOM is fully loaded and safe to manipulate
 // @ts-ignore
 window.addEventListener('DOMContentLoaded', async (event) => {
-    console.log("DOMContentLoaded")
+    console.log("window.DOMContentLoaded event fired")
 
     // Get the version of the application asynchronously
     getAndUpdateVersion()
@@ -253,7 +264,7 @@ var INSTALL_SERVICE_WORKER = true
 // When called the DOM is fully loaded and safe to manipulate
 // @ts-ignore
 window.addEventListener('load', async (event) => {
-    console.log("load")
+    console.log("window.load event fired")
 
     // Install Service Worker only when in Production
     // @ts-ignore
@@ -545,6 +556,64 @@ register("Page404", class extends AbstractPage {
     }
 })
 
+register("ErrorPage", class extends AbstractPage {
+
+    /**
+     * @param {string} id
+     */
+    constructor(id) {
+        super(id)
+    }
+
+    /**
+     * @param {{ title: string; msg: string; }} pageData
+     */
+    enter(pageData) {
+        let html = this.html
+
+        // We expect pageData to be an object with two fields:
+        // - title: the string to be used for the title of the error page
+        // - msg: the string with the details of the error
+
+        // Provide a default title if the user did not set the title
+        let title = T("Error")
+        if (pageData && pageData.title) {
+            title = T(pageData.title)
+        }
+
+        //Provide a defaul message if the user did not specify it
+        let msg = T("An error has happened.")
+        if (pageData && pageData.msg) {
+            msg = T(pageData.msg)
+        }
+
+        // Display the title and message, with a button that reloads the whole application
+        let theHtml = html`
+
+        <ion-card>
+
+            <ion-card-header>
+                <ion-card-title>${title}</ion-card-title>
+            </ion-card-header>
+
+            <ion-card-content class="ion-padding-bottom">
+                <div class="text-larger">${msg}</div>
+                <div>${T("Please click Accept to refresh the page.")}</div>
+            </ion-card-content>
+
+            <div class="ion-margin-start ion-margin-bottom">
+
+                <ion-button color="danger" @click=${()=> cleanReload()}>
+                    ${T("Accept")}
+                </ion-button>
+
+            </div>
+        </ion-card>
+        `
+        this.render(theHtml)
+    }
+})
+
 
 /**
  * @param {string} input
@@ -594,5 +663,6 @@ window.MHR = {
     html: html,
     render: render,
     btoaUrl: btoaUrl,
-    atobUrl: atobUrl
+    atobUrl: atobUrl,
+    pageNameToClass: pageNameToClass
 }

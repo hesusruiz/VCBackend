@@ -24,7 +24,7 @@ export function decodeJWT(jwt) {
     }    
 
     if (components.length != 3) {
-        decoded.error = "Malformed certificate, not enough components"
+        decoded.error = "Malformed certificate, not enough components: " + components.length
         log.error(decoded.error);
         return decoded;
     }

@@ -18,7 +18,7 @@ window.MHR.register("MenuPage", class extends window.MHR.AbstractPage {
             // @ts-ignore
             menuItems.map(
                 ({page, params, text}) => html`
-                <ion-item><ion-label onclick=${()=>{MHR.processPageEntered(page, params)}}><span class="text-menu">${text}</span></ion-label></ion-item>
+                <ion-item><ion-label onclick=${()=>{MHR.processPageEntered(MHR.pageNameToClass, page, params)}}><span class="text-menu">${text}</span></ion-label></ion-item>
             `)}
         </ion-list>
         `;

@@ -97,6 +97,12 @@ func main() {
 	}
 	verifierCfg := yaml.New(vcfg)
 
+	wcfg := cfg.Map("wallet")
+	if len(wcfg) == 0 {
+		panic("no configuration for Wallet found")
+	}
+	walletCfg := yaml.New(wcfg)
+
 	// Create default credentials
 	if args["credentials"] {
 		issuer.BatchGenerateCredentials(issuerCfg)
@@ -162,7 +168,7 @@ func main() {
 	s.Static("/static", cfg.String("server.staticDir", defaultStaticDir))
 
 	// Start the Wallet backend server
-	wallet.Start(cfg)
+	wallet.Start(walletCfg)
 
 	// Start the server
 	log.Fatal(s.Listen(cfg.String("server.listenAddress")))
