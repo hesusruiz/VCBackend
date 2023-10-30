@@ -1,6 +1,8 @@
 import { html } from 'uhtml'
 import { log } from '../log'
 
+let recentLogs = window.MHR.storage.recentLogs
+
 let version = "1.0.1"
 
 function shortDate(timestamp) {
@@ -9,30 +11,41 @@ function shortDate(timestamp) {
     return `${date.toISOString()}`
 }
 
-window.MHR.register("LogsPage", class LogsPage extends window.MHR.AbstractPage {
+window.MHR.register("LogsPage", class extends window.MHR.AbstractPage {
 
     constructor(id) {
         super(id)
     }
 
-    enter() {
+    async enter() {
         let html = this.html
-
-        let items = []
-        for (let i = 0; i < log.num_items(); i++) {
-            items.push(log.item(i))
-        }
+        var items = await recentLogs()
 
         let theHtml = html`
         <div class="w3-container">
             <h2>${T("Technical logs")} (${version})</h2>
         </div>
 
-        <ul class="w3-ul">
+        <ion-list>
             ${items.map(
-            ({timestamp, desc, item}, i) => html`<li>${shortDate(timestamp)}-${desc} ${item}</li>`
+            ({timestamp, level, desc, item}, i) => {
+                if (level == "E") {
+                    var theHtml = html`
+                    <ion-item><ion-label class="ion-text-wrap"><ion-text color="danger">
+                    ${shortDate(timestamp)} ${desc} ${item}
+                    </ion-text></ion-label></ion-item>
+                    `
+                } else {
+                    var theHtml = html`
+                    <ion-item><ion-label class="ion-text-wrap">
+                    ${shortDate(timestamp)} ${desc} ${item}
+                    </ion-label></ion-item>
+                    `
+                }
+                return theHtml
+            }
             )}
-        </ul>
+        </ion-list>
 
         `;
 

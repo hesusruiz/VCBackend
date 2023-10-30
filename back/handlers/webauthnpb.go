@@ -2,22 +2,25 @@ package handlers
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
-	"time"
 
 	"github.com/duo-labs/webauthn/protocol"
 	"github.com/duo-labs/webauthn/webauthn"
-	"github.com/hesusruiz/vcbackend/internal/cache"
+	"github.com/evidenceledger/vcdemo/internal/cache"
+	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/labstack/echo/v5"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/jws"
+	"github.com/lestrrat-go/jwx/v2/jwt"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/hesusruiz/vcbackend/back/operations"
 	"github.com/hesusruiz/vcutils/yaml"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,55 +32,79 @@ import (
 
 type Map map[string]interface{}
 
-type WebAuthnHandlerPB struct {
+type WalletServer struct {
 	app             *pocketbase.PocketBase
 	cache           *cache.Cache
-	operations      *operations.Manager
+	vault           *vault.Vault
 	webAuthn        *webauthn.WebAuthn
 	webAuthnSession *session.Store
+	cfg             *yaml.YAML
+	password        string
+	id              string
+	name            string
+	did             string
 }
 
-func NewWebAuthnHandlerPB(app *pocketbase.PocketBase, cfg *yaml.YAML) *WebAuthnHandlerPB {
+func NewWebAuthnHandlerPB(app *pocketbase.PocketBase, cfg *yaml.YAML) *WalletServer {
 	var err error
 
-	rpDisplayName := cfg.String("webauthn.RPDisplayName")
-	rpID := cfg.String("webauthn.RPID")
-	rpOrigin := cfg.String("webauthn.RPOrigin")
-	authenticatorAttachment := protocol.AuthenticatorAttachment(cfg.String("webauthn.AuthenticatorAttachment"))
-	userVerification := protocol.UserVerificationRequirement(cfg.String("webauthn.UserVerification"))
-	requireResidentKey := cfg.Bool("webauthn.RequireResidentKey")
-	attestationConveyancePreference := protocol.ConveyancePreference(cfg.String("webauthn.AttestationConveyancePreference"))
+	jwt.Settings(jwt.WithFlattenAudience(true))
+
+	// rpDisplayName := cfg.String("webauthn.RPDisplayName")
+	// rpID := cfg.String("webauthn.RPID")
+	// rpOrigin := cfg.String("webauthn.RPOrigin")
+	// authenticatorAttachment := protocol.AuthenticatorAttachment(cfg.String("webauthn.AuthenticatorAttachment"))
+	// userVerification := protocol.UserVerificationRequirement(cfg.String("webauthn.UserVerification"))
+	// requireResidentKey := cfg.Bool("webauthn.RequireResidentKey")
+	// attestationConveyancePreference := protocol.ConveyancePreference(cfg.String("webauthn.AttestationConveyancePreference"))
 
 	// Create the WebAuthn backend server object
-	s := new(WebAuthnHandlerPB)
-
+	s := new(WalletServer)
 	s.app = app
 
-	// Create the cache with expiration
-	s.cache = cache.New(1*time.Minute, 5*time.Minute)
+	s.cfg = cfg
+	s.id = cfg.String("id")
+	s.name = cfg.String("name")
+	s.password = cfg.String("password")
 
-	// The session store (in-memory, with cookies)
-	s.webAuthnSession = session.New(session.Config{Expiration: 24 * time.Hour})
-	s.webAuthnSession.RegisterType(webauthn.SessionData{})
-
-	// Pre-create the options object that will be sent to the authenticator in the client.
-	// We are not interested in authenticator attestation, so we do not set the AttestatioPreference field,
-	// which means it will default to (attestation: "none") in the WebAuthn API.
-	s.webAuthn, err = webauthn.New(&webauthn.Config{
-		RPDisplayName: rpDisplayName, // display name for your site
-		RPID:          rpID,          // generally the domain name for your site
-		RPOrigin:      rpOrigin,
-		AuthenticatorSelection: protocol.AuthenticatorSelection{
-			AuthenticatorAttachment: authenticatorAttachment, // Can also be "cross-platform" for USB keys or sw implementations
-			UserVerification:        userVerification,
-			RequireResidentKey:      &requireResidentKey,
-		},
-		AttestationPreference: attestationConveyancePreference,
-	})
-
-	if err != nil {
-		zlog.Panic().Err(err).Msg("failed to create WebAuthn from config")
+	// Connect to the vault
+	if s.vault, err = vault.New(cfg); err != nil {
+		panic(err)
 	}
+
+	// Create a default wallet user
+	user, err := s.vault.CreateOrGetUserWithDIDKey(s.id, s.name, "legalperson", s.password)
+	if err != nil {
+		panic(err)
+	}
+	s.did = user.DID()
+	zlog.Info().Str("id", s.id).Str("name", s.name).Str("DID", s.did).Msg("starting Wallet backend")
+
+	// // Create the cache with expiration
+	// s.cache = cache.New(1*time.Minute, 5*time.Minute)
+
+	// // The session store (in-memory, with cookies)
+	// s.webAuthnSession = session.New(session.Config{Expiration: 24 * time.Hour})
+	// s.webAuthnSession.RegisterType(webauthn.SessionData{})
+
+	// // Pre-create the options object that will be sent to the authenticator in the client.
+	// // We are not interested in authenticator attestation, so we do not set the AttestatioPreference field,
+	// // which means it will default to (attestation: "none") in the WebAuthn API.
+	// s.webAuthn, err = webauthn.New(&webauthn.Config{
+	// 	RPDisplayName: rpDisplayName, // display name for your site
+	// 	RPID:          rpID,          // generally the domain name for your site
+	// 	RPOrigin:      rpOrigin,
+	// 	AuthenticatorSelection: protocol.AuthenticatorSelection{
+	// 		AuthenticatorAttachment: authenticatorAttachment, // Can also be "cross-platform" for USB keys or sw implementations
+	// 		UserVerification:        userVerification,
+	// 		RequireResidentKey:      &requireResidentKey,
+	// 	},
+	// 	AttestationPreference: attestationConveyancePreference,
+	// })
+
+	// if err != nil {
+	// 	zlog.Panic().Err(err).Msg("failed to create WebAuthn from config")
+	// }
 
 	s.AddRoutesPB(app)
 
@@ -85,11 +112,14 @@ func NewWebAuthnHandlerPB(app *pocketbase.PocketBase, cfg *yaml.YAML) *WebAuthnH
 
 }
 
-func (s *WebAuthnHandlerPB) AddRoutesPB(app *pocketbase.PocketBase) {
+func (s *WalletServer) AddRoutesPB(app *pocketbase.PocketBase) {
 
 	// Serves static files from the provided public dir (if exists)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
-		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./wallet/www"), false))
+		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./www"), false))
+
+		e.Router.POST("/createnaturalperson", s.CreateNaturalPerson)
+		e.Router.POST("/signtoken", s.SignToken)
 
 		e.Router.GET("/webauthn/register/begin/:username", s.BeginRegistrationPB)
 		e.Router.POST("/webauthn/register/finish/:username", s.FinishRegistrationPB)
@@ -101,8 +131,135 @@ func (s *WebAuthnHandlerPB) AddRoutesPB(app *pocketbase.PocketBase) {
 
 }
 
+type SignTokenRequest struct {
+	SubjectDID string `json:"subjectDID"`
+	Headers    string `json:"headers"`
+	Payload    string `json:"payload"`
+}
+
+func (s *WalletServer) SignToken(c echo.Context) error {
+	var err error
+
+	zlog.Info().Msg("SignToken started")
+
+	sts := &SignTokenRequest{}
+	if err := c.Bind(sts); err != nil {
+		return err
+	}
+
+	zlog.Info().Str("SubjectDID", sts.SubjectDID).Str("headers", sts.Headers).Str("payload", sts.Payload).Msg("")
+
+	var headers map[string]any
+	err = json.Unmarshal([]byte(sts.Headers), &headers)
+	if err != nil {
+		return err
+	}
+
+	var payload map[string]any
+	err = json.Unmarshal([]byte(sts.Payload), &payload)
+	if err != nil {
+		return err
+	}
+
+	// Get the private key corresponding to the first (main) DID of the issuer of the token
+	privkey, err := s.vault.DIDKeyToPrivateKey(sts.SubjectDID)
+	if err != nil {
+		return err
+	}
+
+	keyId, err := vault.DIDKeyIdentifier(sts.SubjectDID)
+	if err != nil {
+		return err
+	}
+	err = privkey.Set(jwk.KeyIDKey, keyId)
+	if err != nil {
+		return err
+	}
+
+	jsonbuf, err := json.Marshal(privkey)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(jsonbuf))
+
+	tok := jwt.New()
+	for k, v := range payload {
+		tok.Set(k, v)
+	}
+
+	hdrs := jws.NewHeaders()
+	typHeader := headers["typ"]
+	hdrs.Set(jws.TypeKey, typHeader)
+	// hdrs.Set(jws.TypeKey, `openid4vci-proof+jwt`)
+
+	keyOption := jwt.WithKey(jwa.ES256, privkey, jws.WithProtectedHeaders(hdrs))
+	signedBytes, err := jwt.Sign(tok, keyOption)
+	if err != nil {
+		return err
+	}
+	signedString := string(signedBytes)
+
+	// encodedHeaders := base64.RawURLEncoding.EncodeToString([]byte(sts.Headers))
+	// encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(sts.Payload))
+
+	// signedString, err := s.vault.SignWithDIDKey(sts.SubjectDID, encodedHeaders+"."+encodedPayload)
+	// if err != nil {
+	// 	return err
+	// }
+	zlog.Info().Str("signedString", signedString).Msg("Signature performed")
+
+	// Verify that it is correct
+	_, err = s.vault.VerifyToken([]byte(signedString), sts.SubjectDID)
+	if err != nil {
+		return err
+	}
+	zlog.Info().Msg("Token signature verified successfuly")
+
+	return c.JSON(http.StatusOK, Map{
+		"signedString": signedString,
+	})
+
+}
+
+type CreateNaturalPersonRequest struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
+func (s *WalletServer) CreateNaturalPerson(c echo.Context) error {
+
+	sts := &CreateNaturalPersonRequest{}
+	if err := c.Bind(sts); err != nil {
+		return err
+	}
+	zlog.Info().Str("name", sts.Name).Str("email", sts.Email).Msg("CreateDIDkey started")
+
+	// Get user from the Storage. The user is automatically created if it does not exist
+	user, err := s.vault.CreateOrGetUserWithDIDKey(sts.Email, sts.Name, "naturalperson", "ThePassword")
+	if err != nil {
+		return err
+	}
+
+	zlog.Info().Str("username", user.WebAuthnName()).Str("DID", user.DID()).Msg("User retrieved or created")
+
+	privKey, err := s.vault.DIDKeyToPrivateKey(user.DID())
+	if err != nil {
+		return err
+	}
+	jsonbuf, err := json.Marshal(privKey)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, Map{
+		"did":        user.DID(),
+		"privateKey": string(jsonbuf),
+	})
+
+}
+
 // BeginRegistration is called from the wallet to start registering a new authenticator device in the server
-func (s *WebAuthnHandlerPB) BeginRegistrationPB(c echo.Context) error {
+func (s *WalletServer) BeginRegistrationPB(c echo.Context) error {
 
 	// The new WebAuthn credential will be associated to a user via its email
 
@@ -115,16 +272,14 @@ func (s *WebAuthnHandlerPB) BeginRegistrationPB(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, errText)
 	}
 
-	// The displayname will be the first part of the email address
-	displayName := strings.Split(username, "@")[0]
-
 	zlog.Info().Str("username", username).Msg("BeginRegistration started")
 
 	// Get user from the Storage. The user is automatically created if it does not exist
-	user, err := s.operations.User().CreateOrGet(username, displayName)
+	user, err := s.vault.CreateOrGetUserWithDIDKey(username, username, "naturalperson", "ThePassword")
 	if err != nil {
 		return err
 	}
+
 	zlog.Info().Str("username", user.WebAuthnName()).Msg("User retrieved or created")
 
 	// We should exclude all the credentials already registered
@@ -156,7 +311,7 @@ func (s *WebAuthnHandlerPB) BeginRegistrationPB(c echo.Context) error {
 
 }
 
-func (s *WebAuthnHandlerPB) FinishRegistrationPB(c echo.Context) error {
+func (s *WalletServer) FinishRegistrationPB(c echo.Context) error {
 
 	// Get username from the path of the HTTP request
 	username := c.PathParam("username")
@@ -169,7 +324,7 @@ func (s *WebAuthnHandlerPB) FinishRegistrationPB(c echo.Context) error {
 	zlog.Info().Str("username", username).Msg("FinishRegistration started")
 
 	// Get user from Storage
-	user, err := s.operations.User().GetByName(username)
+	user, err := s.vault.GetUserById(username)
 
 	// It is an error if the user doesn't exist
 	if err != nil {
@@ -210,7 +365,7 @@ func (s *WebAuthnHandlerPB) FinishRegistrationPB(c echo.Context) error {
 	}
 
 	// Add the new credential to the user
-	user.AddCredential(*credential)
+	user.WebAuthnAddCredential(*credential)
 
 	creds := user.WebAuthnCredentials()
 	fmt.Println("======== LIST of CREDENTIALS")
@@ -229,7 +384,7 @@ func (s *WebAuthnHandlerPB) FinishRegistrationPB(c echo.Context) error {
 // The Authenticator will sign our challenge (and other items) with its private key, and the client will invoke
 // the FinishLoging API, where we will be able to check the signature with the public key that we stored in
 // a previous registration phase.
-func (s *WebAuthnHandlerPB) BeginLoginPB(c echo.Context) error {
+func (s *WalletServer) BeginLoginPB(c echo.Context) error {
 
 	// We need from the client a unique user name (an email address in our case).
 	// Get username from the path of the HTTP request
@@ -243,7 +398,7 @@ func (s *WebAuthnHandlerPB) BeginLoginPB(c echo.Context) error {
 	zlog.Info().Str("username", username).Msg("BeginLogin started")
 
 	// The user must have been registered previously, so we check in our user database
-	user, err := s.operations.User().GetByName(username)
+	user, err := s.vault.GetUserById(username)
 
 	// It is an error if the user doesn't exist
 	if err != nil {
@@ -275,7 +430,7 @@ func (s *WebAuthnHandlerPB) BeginLoginPB(c echo.Context) error {
 
 }
 
-func (s *WebAuthnHandlerPB) FinishLoginPB(c echo.Context) error {
+func (s *WalletServer) FinishLoginPB(c echo.Context) error {
 
 	// Get username from the path of the HTTP request
 	username := c.PathParam("username")
@@ -288,7 +443,7 @@ func (s *WebAuthnHandlerPB) FinishLoginPB(c echo.Context) error {
 	zlog.Info().Str("username", username).Msg("FinishLogin started")
 
 	// Get user from Storage
-	user, err := s.operations.User().GetByName(username)
+	user, err := s.vault.GetUserById(username)
 
 	// It is an error if the user doesn't exist
 	if err != nil {

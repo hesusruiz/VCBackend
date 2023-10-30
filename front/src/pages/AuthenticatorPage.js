@@ -28,24 +28,25 @@ window.MHR.register("AuthenticatorPage", class extends window.MHR.AbstractPage {
 
         // Display the title and message, with a button that goes to the home page
         let theHtml = html`
-        <div class="w3-container w3-padding-64">
-            <div class="w3-card-4 w3-center">
-        
-                <header class="w3-container w3-center color-primary">
-                    <h3>${title}</h3>
-                </header>
-        
-                <div class="w3-container">
-                <p>The server requires additional security with an authenticator.</p>
-                <p>Click accept to use it.</p>
-                </div>
-                
-                <div class="w3-container w3-center w3-padding">
-                    <btn-primary onclick=${()=>webAuthn(authType, origin, email, state)}>${T("Accept")}</btn-primary>        
-                </div>
-
+        <ion-card>
+    
+            <ion-card-header>
+                <ion-card-title>${title}</ion-card-title>
+            </ion-card-header>
+    
+            <ion-card-content>
+            <div style="font-size:16px">The server requires additional security with an authenticator.</div>
+            <div style="font-size:16px">Click below to use it.</div>
+            </ion-card-content>
+            
+            <div class="ion-margin-start ion-margin-bottom">
+                <ion-button expand="block" @click=${()=> webAuthn(authType, origin, email, state)}>
+                    <ion-icon size="large" slot="start" name="finger-print"></ion-icon>
+                    ${T("Use biometric authentication")}
+                </ion-button>
             </div>
-        </div>
+
+        </ion-card>            
         `
         this.render(theHtml)
     }
@@ -97,7 +98,9 @@ async function webAuthn(authType, origin, username, state) {
             return
         }
     }
-    window.MHR.cleanReload()
+
+    // TODO: display a success page
+    gotoPage("AuthenticatorSuccessPage")
     return
 }
 
@@ -246,19 +249,44 @@ async function loginUser(origin, username, state) {
             listItem.id = bufferDecode(listItem.id)
         });
 
-        // Call the authenticator to create the assertion
-        try {
-            var assertion = await navigator.credentials.get({
-                publicKey: credentialRequestOptions.publicKey
-            })
-            if (assertion == null) {
-                log.error("null assertion received from authenticator device")
-                return "error"
+        const discoverable = true
+        var assertion
+
+        if (discoverable) {
+            credentialRequestOptions.publicKey.allowCredentials = []
+            // Call the authenticator to create the assertion
+            try {
+                assertion = await navigator.credentials.get({
+                    publicKey: credentialRequestOptions.publicKey
+                })
+                if (assertion == null) {
+                    log.error("null assertion received from authenticator device")
+                    return "error"
+                }
+            } catch (error) {
+                // Log and present the error page
+                log.error(error)
+                return error
             }
-        } catch (error) {
-            // Log and present the error page
-            log.error(error)
-            return error
+
+            log.log("Discoverable Assertion created", assertion)
+
+        } else {
+            // Call the authenticator to create the assertion
+            try {
+                assertion = await navigator.credentials.get({
+                    publicKey: credentialRequestOptions.publicKey
+                })
+                if (assertion == null) {
+                    log.error("null assertion received from authenticator device")
+                    return "error"
+                }
+            } catch (error) {
+                // Log and present the error page
+                log.error(error)
+                return error
+            }
+
         }
 
         log.log("Authenticator created Assertion", assertion)
@@ -323,6 +351,47 @@ async function loginUser(origin, username, state) {
 
 
 }
+
+
+window.MHR.register("AuthenticatorSuccessPage", class extends window.MHR.AbstractPage {
+
+    constructor(id) {
+        super(id)
+    }
+
+    enter(pageData) {
+        let html = this.html
+
+        // Display the title and message, with a button that goes to the home page
+        let theHtml = html`
+
+        <ion-card>
+
+            <ion-card-header>
+                <ion-card-title>Authentication success</ion-card-title>
+            </ion-card-header>
+
+            <ion-card-content class="ion-padding-bottom">
+
+                <div class="text-larger">The authentication process has been completed</div>
+
+            </ion-card-content>
+
+            <div class="ion-margin-start ion-margin-bottom">
+
+                <ion-button @click=${()=> window.MHR.cleanReload()}>
+                    <ion-icon slot="start" name="home"></ion-icon>
+                    ${T("Home")}
+                </ion-button>
+
+            </div>
+        </ion-card>
+        `
+
+        this.render(theHtml)
+    }
+
+})
 
 
 // Base64 to ArrayBuffer

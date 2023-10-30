@@ -1,59 +1,63 @@
 package issuer
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"time"
 
+	"github.com/evidenceledger/vcdemo/back/handlers"
+	"github.com/evidenceledger/vcdemo/internal/util"
+	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/utils"
-	"github.com/hesusruiz/vcbackend/back/handlers"
-	"github.com/hesusruiz/vcbackend/back/operations"
-	"github.com/hesusruiz/vcbackend/internal/util"
-	"github.com/hesusruiz/vcbackend/vault"
 	"github.com/hesusruiz/vcutils/yaml"
+	zlog "github.com/rs/zerolog/log"
 	qrcode "github.com/skip2/go-qrcode"
 	"github.com/valyala/fasttemplate"
 )
 
-const defaultConfigFile = "./server.yaml"
-const defaultTemplateDir = "back/views"
-const defaultStaticDir = "back/www"
-const defaultStoreDriverName = "sqlite3"
-const defaultStoreDataSourceName = "file:issuer.sqlite?mode=rwc&cache=shared&_fk=1"
 const defaultPassword = "ThePassword"
 
-const issuerPrefix = "/issuer/api/v1"
-const verifierPrefix = "/verifier/api/v1"
-const walletPrefix = "/wallet/api/v1"
+const issuerAPIPrefix = "/issuer/api/v1"
 
 type Issuer struct {
 	rootServer *handlers.Server
 	vault      *vault.Vault
 	cfg        *yaml.YAML
-	operations *operations.Manager
+	id         string
+	name       string
 	did        string
 }
 
 // Setup creates and setups the Issuer routes
 func Setup(s *handlers.Server, cfg *yaml.YAML) {
+	var err error
 
 	issuer := &Issuer{}
 	issuer.rootServer = s
+
 	issuer.cfg = cfg
 
-	// Connect to the Issuer store engine
-	issuer.vault = vault.Must(vault.New(yaml.New(cfg.Map("issuer"))))
+	issuer.id = issuer.cfg.String("id")
+	issuer.name = issuer.cfg.String("name")
 
-	// Create the issuer and verifier users
+	// Connect to the Issuer vault
+	if issuer.vault, err = vault.New(issuer.cfg); err != nil {
+		panic(err)
+	}
+
+	// Create the issuer user
 	// TODO: the password is only for testing
-	_, issuer.did, _ = issuer.vault.CreateOrGetUserWithDIDKey(cfg.String("issuer.id"), cfg.String("issuer.name"), "legalperson", cfg.String("issuer.password"))
-
-	// Backend Operations for the Verifier
-	issuer.operations = operations.NewManager(issuer.vault, cfg)
+	user, err := issuer.vault.CreateOrGetUserWithDIDKey(issuer.id, issuer.name, "legalperson", cfg.String("issuer.password", defaultPassword))
+	if err != nil {
+		panic(err)
+	}
+	issuer.did = user.DID()
+	zlog.Info().Str("id", issuer.id).Str("name", issuer.name).Str("DID", issuer.did).Msg("starting Issuer")
 
 	// CSRF for protecting the forms
 	csrfHandler := csrf.New(csrf.Config{
@@ -68,7 +72,7 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 	s.Get("/issuer", issuer.HandleIssuerHome)
 
 	// Define the prefix for Issuer routes
-	issuerRoutes := s.Group(issuerPrefix)
+	issuerRoutes := s.Group(issuerAPIPrefix)
 	issuerRoutes.Use(cors.New())
 
 	// Forms for new credential
@@ -94,18 +98,12 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 func (i *Issuer) HandleIssuerHome(c *fiber.Ctx) error {
 
 	// Get the list of credentials
-	credsSummary, err := i.operations.GetAllCredentials()
-	if err != nil {
-		return err
-	}
+	credsSummary := i.vault.GetAllCredentials()
 
 	// Render template
 	m := fiber.Map{
-		"issuerPrefix":   issuerPrefix,
-		"verifierPrefix": verifierPrefix,
-		"walletPrefix":   walletPrefix,
-		"prefix":         issuerPrefix,
-		"credlist":       credsSummary,
+		"apiPrefix": issuerAPIPrefix,
+		"credlist":  credsSummary,
 	}
 	return c.Render("issuer_home", m)
 }
@@ -113,10 +111,7 @@ func (i *Issuer) HandleIssuerHome(c *fiber.Ctx) error {
 func (i *Issuer) IssuerAPIAllCredentials(c *fiber.Ctx) error {
 
 	// Get the list of credentials
-	credsSummary, err := i.operations.GetAllCredentials()
-	if err != nil {
-		return err
-	}
+	credsSummary := i.vault.GetAllCredentials()
 
 	return c.JSON(credsSummary)
 }
@@ -132,7 +127,7 @@ func (i *Issuer) IssuerPageDisplayQRURL(c *fiber.Ctx) error {
 	issuerCredentialURI := t.ExecuteString(map[string]interface{}{
 		"protocol": c.Protocol(),
 		"hostname": c.Hostname(),
-		"prefix":   issuerPrefix,
+		"prefix":   issuerAPIPrefix,
 		"id":       id,
 	})
 
@@ -147,22 +142,22 @@ func (i *Issuer) IssuerPageDisplayQRURL(c *fiber.Ctx) error {
 	base64Img = "data:image/png;base64," + base64Img
 
 	// URL to direct the wallet to retrieve the credential
-	template = "https://wallet.mycredential.eu?command=getvc&vcid=https://{{hostname}}{{prefix}}/credential/{{id}}"
+	sameDeviceWallet := i.cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
+	template = "{{sameDeviceWallet}}?command=getvc&vcid={{protocol}}://{{hostname}}{{prefix}}/credential/{{id}}"
 	t = fasttemplate.New(template, "{{", "}}")
 	sameDeviceURI := t.ExecuteString(map[string]interface{}{
-		"protocol": c.Protocol(),
-		"hostname": c.Hostname(),
-		"prefix":   issuerPrefix,
-		"id":       id,
+		"sameDeviceWallet": sameDeviceWallet,
+		"protocol":         c.Protocol(),
+		"hostname":         c.Hostname(),
+		"prefix":           issuerAPIPrefix,
+		"id":               id,
 	})
 
 	// Render index
 	m := fiber.Map{
-		"issuerPrefix":   issuerPrefix,
-		"verifierPrefix": verifierPrefix,
-		"walletPrefix":   walletPrefix,
-		"qrcode":         base64Img,
-		"url":            sameDeviceURI,
+		"apiPrefix": issuerAPIPrefix,
+		"qrcode":    base64Img,
+		"url":       sameDeviceURI,
 	}
 	return c.Render("issuer_present_qr", m)
 }
@@ -173,7 +168,7 @@ func (i *Issuer) IssuerAPICredential(c *fiber.Ctx) error {
 	credID := c.Params("id")
 
 	// Get the raw credential from the Vault
-	rawCred, err := i.vault.Client.Credential.Get(context.Background(), credID)
+	rawCred, err := i.vault.DB().Credential.Get(context.Background(), credID)
 	if err != nil {
 		return err
 	}
@@ -189,11 +184,8 @@ func (i *Issuer) IssuerPageNewCredentialFormDisplay(c *fiber.Ctx) error {
 
 	// Display the form to enter credential data
 	m := fiber.Map{
-		"issuerPrefix":   issuerPrefix,
-		"verifierPrefix": verifierPrefix,
-		"walletPrefix":   walletPrefix,
-		"csrftoken":      c.Locals("csrftoken"),
-		"prefix":         issuerPrefix,
+		"apiPrefix": issuerAPIPrefix,
+		"csrftoken": c.Locals("csrftoken"),
 	}
 
 	return c.Render("issuer_newcredential", m)
@@ -212,17 +204,17 @@ type waltResponse struct {
 }
 
 func (i *Issuer) CreateNewCredential(c *fiber.Ctx) error {
-	i.rootServer.Logger.Info("Create a new credential")
+	zlog.Info().Msg("Create a new credential")
 	// The user submitted the form. Get all the data
 	newCred := &NewCredentialForm{}
 	if err := c.BodyParser(newCred); err != nil {
-		i.rootServer.Logger.Infof("Error parsing: %s", err)
+		zlog.Err(err).Msgf("error parsing")
 		return err
 	}
 
 	credentialString, err := i.createNewCredential(newCred)
 	if err != nil {
-		i.rootServer.Logger.Infof("Error: %s", err)
+		zlog.Err(err).Msg("error creating credential")
 		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
@@ -234,95 +226,6 @@ func (i *Issuer) CreateNewCredential(c *fiber.Ctx) error {
 func (i *Issuer) createNewCredential(newCred *NewCredentialForm) (credString []byte, err error) {
 	panic("Not implemented")
 }
-
-// func (i *Issuer) createNewCredentialOld(newCred *NewCredentialForm) (credString []byte, err error) {
-// 	if newCred.Email == "" || newCred.FirstName == "" || newCred.FamilyName == "" ||
-// 		newCred.Roles == "" || newCred.Target == "" {
-// 		return credString, errors.New("invalid_credential")
-// 	}
-// 	// Convert to the hierarchical map required for the template
-// 	claims := fiber.Map{}
-
-// 	claims["firstName"] = newCred.FirstName
-// 	claims["familyName"] = newCred.FamilyName
-// 	claims["email"] = newCred.Email
-
-// 	names := strings.Split(newCred.Roles, ",")
-// 	var roles []map[string]any
-// 	role := map[string]any{
-// 		"target": newCred.Target,
-// 		"names":  names,
-// 	}
-
-// 	roles = append(roles, role)
-// 	claims["roles"] = roles
-
-// 	credentialData := fiber.Map{}
-// 	credentialData["credentialSubject"] = claims
-
-// 	// Get the issuer DID
-// 	issuerDID, err := i.server.issuerVault.GetDIDForUser(i.server.cfg.String("issuer.id"))
-// 	if err != nil {
-// 		return credString, err
-// 	}
-
-// 	// Call the issuer of SSI Kit
-// 	agent := fiber.Post(i.server.ssiKit.signatoryUrl + "/v1/credentials/issue")
-
-// 	config := fiber.Map{
-// 		"issuerDid":  issuerDID,
-// 		"subjectDid": "did:key:z6Mkfdio1n9SKoZUtKdr9GTCZsRPbwHN8f7rbJghJRGdCt88",
-// 		// "verifierDid": "theVerifier",
-// 		// "issuerVerificationMethod": "string",
-// 		"proofType": "LD_PROOF",
-// 		// "domain":                   "string",
-// 		// "nonce":                    "string",
-// 		// "proofPurpose":             "string",
-// 		// "credentialId":             "string",
-// 		// "issueDate":                "2022-10-06T18:09:14.570Z",
-// 		// "validDate":                "2022-10-06T18:09:14.570Z",
-// 		// "expirationDate":           "2022-10-06T18:09:14.570Z",
-// 		// "dataProviderIdentifier":   "string",
-// 	}
-
-// 	bodyRequest := fiber.Map{
-// 		"templateId":     "PacketDeliveryService",
-// 		"config":         config,
-// 		"credentialData": credentialData,
-// 	}
-
-// 	agent.JSON(bodyRequest)
-// 	agent.ContentType("application/json")
-// 	agent.Set("accept", "application/json")
-// 	_, returnBody, errors := agent.Bytes()
-// 	if len(errors) > 0 {
-// 		i.server.logger.Errorw("error calling SSI Kit", zap.Errors("errors", errors))
-// 		return credString, fmt.Errorf("error calling SSI Kit: %v", errors[0])
-// 	}
-
-// 	parsed, err := yaml.ParseJson(string(returnBody))
-// 	if err != nil {
-// 		return credString, err
-// 	}
-
-// 	credentialID := parsed.String("id")
-// 	if len(credentialID) == 0 {
-// 		i.server.logger.Errorw("id field not found in credential")
-// 		return credString, fmt.Errorf("id field not found in credential")
-// 	}
-
-// 	// Store credential
-// 	_, err = i.server.issuerVault.Client.Credential.Create().
-// 		SetID(credentialID).
-// 		SetRaw([]uint8(returnBody)).
-// 		Save(context.Background())
-// 	if err != nil {
-// 		i.server.logger.Errorw("error storing the credential", zap.Error(err))
-// 		return credString, err
-// 	}
-
-// 	return returnBody, err
-// }
 
 func (i *Issuer) IssuerPageNewCredentialFormPost(c *fiber.Ctx) error {
 
@@ -341,11 +244,8 @@ func (i *Issuer) IssuerPageNewCredentialFormPost(c *fiber.Ctx) error {
 
 	// Render
 	m := fiber.Map{
-		"issuerPrefix":   issuerPrefix,
-		"verifierPrefix": verifierPrefix,
-		"walletPrefix":   walletPrefix,
-		"claims":         util.PrettyFormatJSON(str),
-		"prefix":         issuerPrefix,
+		"apiPrefix": issuerAPIPrefix,
+		"claims":    util.PrettyFormatJSON(str),
 	}
 	return c.Render("creddetails", m)
 }
@@ -359,18 +259,62 @@ func (i *Issuer) IssuerPageCredentialDetails(c *fiber.Ctx) error {
 	// Get the ID of the credential
 	credID := c.Params("id")
 
-	claims, err := i.operations.GetCredentialLD(credID)
+	entCredential, err := i.vault.DB().Credential.Get(context.Background(), credID)
+	if err != nil {
+		return err
+	}
+
+	var iface any
+	err = json.Unmarshal(entCredential.Raw, &iface)
+	if err != nil {
+		return err
+	}
+
+	var b bytes.Buffer
+	err = json.Indent(&b, entCredential.Raw, "", "  ")
 	if err != nil {
 		return err
 	}
 
 	// Render
 	m := fiber.Map{
-		"issuerPrefix":   issuerPrefix,
-		"verifierPrefix": verifierPrefix,
-		"walletPrefix":   walletPrefix,
-		"claims":         claims,
-		"prefix":         issuerPrefix,
+		"APIPrefix": issuerAPIPrefix,
+		"claims":    b.String(),
 	}
 	return c.Render("creddetails", m)
+}
+
+const defaultCredentialDataFile = "employee_data.yaml"
+
+func BatchGenerateCredentials(cfg *yaml.YAML) {
+
+	// Connect to the Issuer vault
+	issuerVault := vault.Must(vault.New(cfg))
+
+	// Parse credential data
+	credentialDataFile := cfg.String("credentialInputDataFile", defaultCredentialDataFile)
+	data, err := yaml.ParseYamlFile(credentialDataFile)
+	if err != nil {
+		panic(err)
+	}
+
+	// Get the top-level list (the list of credentials)
+	creds := data.List("")
+	if len(creds) == 0 {
+		panic("no credentials found in config")
+	}
+
+	// Iterate through the list creating each credential which will use its own template
+	for _, item := range creds {
+
+		// Cast to a map so it can be passed to CreateCredentialFromMap
+		cred, _ := item.(map[string]any)
+		_, _, err := issuerVault.CreateCredentialJWTFromMap(cred)
+		if err != nil {
+			zlog.Err(err).Send()
+			continue
+		}
+
+	}
+
 }

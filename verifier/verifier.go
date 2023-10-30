@@ -1,6 +1,7 @@
 package verifier
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -8,28 +9,19 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strings"
 	"time"
 
+	"github.com/evidenceledger/vcdemo/back/handlers"
+	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/storage/memory"
-	"github.com/hesusruiz/vcbackend/back/handlers"
-	"github.com/hesusruiz/vcbackend/back/operations"
-	"github.com/hesusruiz/vcbackend/vault"
 	"github.com/hesusruiz/vcutils/yaml"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	zlog "github.com/rs/zerolog/log"
 	qrcode "github.com/skip2/go-qrcode"
-	"github.com/valyala/fasttemplate"
-	"go.uber.org/zap"
 )
 
-const defaultConfigFile = "./server.yaml"
-const defaultTemplateDir = "back/views"
-const defaultStaticDir = "back/www"
-const defaultStoreDriverName = "sqlite3"
-const defaultStoreDataSourceName = "file:issuer.sqlite?mode=rwc&cache=shared&_fk=1"
-const defaultPassword = "ThePassword"
-
-const issuerPrefix = "/issuer/api/v1"
 const verifierPrefix = "/verifier/api/v1"
 const walletPrefix = "/wallet/api/v1"
 
@@ -37,39 +29,56 @@ type Verifier struct {
 	rootServer   *handlers.Server
 	vault        *vault.Vault
 	cfg          *yaml.YAML
-	stateSession *memory.Storage
-	operations   *operations.Manager
-	webAuthn     *handlers.WebAuthnHandler
 	id           string
+	name         string
 	did          string
+	pdp          *PDP
+	stateSession *memory.Storage
+	webAuthn     *handlers.WebAuthnHandler
 }
 
 // Setup creates and setups the Verifier routes
 func Setup(s *handlers.Server, cfg *yaml.YAML) {
+	var err error
 
 	verifier := &Verifier{}
 
 	verifier.rootServer = s
+
 	verifier.cfg = cfg
 
-	verifier.id = cfg.String("verifier.id")
+	verifier.id = verifier.cfg.String("id")
+	verifier.name = verifier.cfg.String("name")
 
 	// Connect to the Verifier store engine
-	verifier.vault = vault.Must(vault.New(yaml.New(cfg.Map("verifier"))))
+	if verifier.vault, err = vault.New(verifier.cfg); err != nil {
+		panic(err)
+	}
 
-	// Create the Verifier users
+	// Create the Verifier user
 	// TODO: the password is only for testing
-	_, verifier.did, _ = verifier.vault.CreateOrGetUserWithDIDKey(cfg.String("verifier.id"), cfg.String("verifier.name"), "legalperson", cfg.String("verifier.password"))
-	zlog.Info().Str("VerifierDID", verifier.did).Msg("")
+	user, err := verifier.vault.CreateOrGetUserWithDIDKey(verifier.id, verifier.name, "legalperson", cfg.String("verifier.password"))
+	if err != nil {
+		panic(err)
+	}
+	verifier.did = user.DID()
+	zlog.Info().Str("id", verifier.id).Str("name", verifier.name).Str("DID", verifier.did).Msg("starting Verifier")
 
-	// Backend Operations for the Verifier
-	verifier.operations = operations.NewManager(verifier.vault, cfg)
+	policiesFile := verifier.cfg.String("authnPolicies")
+	zlog.Info().Str("file", policiesFile).Msg("starting Policy Decision Point")
+
+	// Start the Policy Decision Point engine
+	pdp, err := NewPDP(policiesFile)
+	if err != nil {
+		panic(err)
+	}
+	verifier.pdp = pdp
 
 	// Create a storage entry for OIDC4VP flow expiration
 	verifier.stateSession = memory.New()
 
 	// WebAuthn
-	verifier.webAuthn = handlers.NewWebAuthnHandler(s, verifier.stateSession, verifier.operations, cfg)
+	verifier.webAuthn = handlers.NewWebAuthnHandler(s, verifier.stateSession, verifier.vault, cfg)
 
 	s.Get("/verifier", verifier.HandleVerifierHome)
 
@@ -79,14 +88,13 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 	// Routes consist of a set of pages rendering HTML using templates and a set of APIs
 
 	// The JWKS endpoint
-	jwks_uri := s.Cfg.String("verifier.uri_prefix") + s.Cfg.String("verifier.jwks_uri")
-	s.Get(jwks_uri, s.VerifierAPIJWKS)
+	jwks_uri := cfg.String("verifier.jwks_uri")
+	verifierRoutes.Get(jwks_uri, verifier.VerifierAPIJWKS)
 
 	// ***********************
 	// Main application pages
 
 	// Display a QR code to login for mobile wallet or a link for enterprise wallet
-	verifierRoutes.Get("/displayqr", verifier.PageDisplayQRSIOP)
 	verifierRoutes.Get("/displaysimpleqr", verifier.PageDisplaySimpleQR)
 
 	// Error page when login session has expired without the user sending the credential
@@ -112,7 +120,6 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 
 	// Used by the login page from the browser, to check successful login or expiration
 	verifierRoutes.Get("/poll/:state", verifier.APIInternalPoll)
-	verifierRoutes.Get("/token/:state", verifier.APIInternalToken)
 
 	// **********************************
 	// Wallet APIs used by the wallet
@@ -136,47 +143,24 @@ func (v *Verifier) HandleVerifierHome(c *fiber.Ctx) error {
 	return c.Render("verifier_home", m)
 }
 
-// PageDisplayQRSIOP displays a QR code to be scanned by the Wallet to start the SIOP process
-func (v *Verifier) PageDisplayQRSIOP(c *fiber.Ctx) error {
+func (v *Verifier) VerifierAPIJWKS(c *fiber.Ctx) error {
 
-	// Generate the stateKey that will be used for checking expiration and also successful logon
-	stateKey := generateNonce()
-
-	// Create an entry in storage that will expire.
-	// The entry is identified by the nonce
-	status := handlers.NewState()
-	status.SetStatus(handlers.StatePending)
-
-	v.stateSession.Set(stateKey, status.Bytes(), handlers.StateExpiration)
-
-	// This is the endpoint inside the QR that the wallet will use to send the VC/VP
-	response_uri := httpLocation(c) + "/authenticationresponse"
-
-	// Create the Authentication Request
-	authRequest, sameDeviceAuthRequest := createAuthenticationRequest(v.rootServer.VerifierDID, response_uri, stateKey)
-	//v.rootServer.Logger.Info("AuthRequest", authRequest)
-	zlog.Info().Str("AuthRequest", authRequest).Send()
-
-	// Create the QR code for cross-device SIOP
-	png, err := qrcode.Encode(authRequest, qrcode.Medium, 256)
+	// Get public keys from Verifier
+	did, err := v.vault.GetDIDForUser(v.id)
 	if err != nil {
 		return err
 	}
 
-	// Convert the image data to a dataURL
-	base64Img := base64.StdEncoding.EncodeToString(png)
-	base64Img = "data:image/png;base64," + base64Img
-
-	// Render the page
-	m := fiber.Map{
-		"verifierPrefix": verifierPrefix,
-		"walletPrefix":   walletPrefix,
-		"qrcode":         base64Img,
-		"prefix":         verifierPrefix,
-		"state":          stateKey,
-		"authRequest2":   sameDeviceAuthRequest,
+	pubKey, err := v.vault.DIDKeyToPublicKey(did)
+	if err != nil {
+		return err
 	}
-	return c.Render("verifier_present_qr", m)
+
+	keySet := jwk.NewSet()
+	keySet.AddKey(pubKey)
+
+	return c.JSON(keySet)
+
 }
 
 func (v *Verifier) PageDisplaySimpleQR(c *fiber.Ctx) error {
@@ -188,7 +172,10 @@ func (v *Verifier) PageDisplaySimpleQR(c *fiber.Ctx) error {
 	response_uri := httpLocation(c) + "/authenticationresponse"
 
 	// Create the Authentication Request
-	authRequest, _ := v.createJWTSecuredAuthenticationRequest(response_uri, stateKey)
+	authRequest, err := v.createJWTSecuredAuthenticationRequest(response_uri, stateKey)
+	if err != nil {
+		return err
+	}
 	//v.rootServer.Logger.Info("AuthRequest", authRequest)
 	zlog.Info().Str("AuthRequest", string(authRequest)).Send()
 
@@ -198,18 +185,15 @@ func (v *Verifier) PageDisplaySimpleQR(c *fiber.Ctx) error {
 	status.SetStatus(handlers.StatePending)
 	status.SetContent(authRequest)
 
-	v.stateSession.Set(stateKey, status.Bytes(), handlers.StateExpiration)
+	v.stateSession.Set(stateKey, status.Bytes(), handlers.StateExpirationDuration)
 
 	request_uri := httpLocation(c) + "/authenticationrequest" + "/?jar=yes&state=" + stateKey
 
 	escaped_request_uri := url.QueryEscape(request_uri)
 
-	redirected_uri := c.Protocol() + "://wallet.mycredential.eu?request_uri=" + escaped_request_uri
+	sameDeviceWallet := v.cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
 
-	// https://server.example.com/authorize?
-	// client_id=s6BhdRkqt3
-	// &request_uri=https%3A%2F%2Ftfp.example.org%2Frequest.jwt
-	// %2FGkurKxf5T0Y-mnPFCHqWOMiZi4VS138cQO_V7PZHAdM
+	redirected_uri := sameDeviceWallet + "?request_uri=" + escaped_request_uri
 
 	// Create the QR code for cross-device SIOP
 	png, err := qrcode.Encode(request_uri, qrcode.Medium, 256)
@@ -336,7 +320,10 @@ func (v *Verifier) PageLoginCompleted(c *fiber.Ctx) error {
 		return c.Render("displayerror", m)
 	}
 
-	zlog.Info().Str("stateKey", stateKey).Str("status", handlers.StatusToString(stateStatus)).Msg("PageLoginCompleted with state")
+	zlog.Info().
+		Str("stateKey", stateKey).
+		Str("status", handlers.StatusToString(stateStatus)).
+		Msg("PageLoginCompleted with state")
 
 	// get the credential from the storage
 	rawCred := stateContent[1:]
@@ -351,16 +338,19 @@ func (v *Verifier) PageLoginCompleted(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "credential received not in JSON format")
 	}
 
+	claims := map[string]any{
+		"credential": decoded,
+	}
 	// Create an access token from the credential
-	accessToken, err := v.vault.CreateAccessToken(rawCred, v.rootServer.Cfg.String("verifier.id"))
+	accessToken, err := v.vault.CreateToken(claims, v.did)
 	if err != nil {
 		return err
 	}
-	v.rootServer.Logger.Info("Access Token created", string(accessToken))
+	zlog.Info().Str("token", string(accessToken)).Msg("Access Token created")
 
 	// Set it in a cookie
 	cookie := new(fiber.Cookie)
-	cookie.Name = "dbsamvf"
+	cookie.Name = "dsbamvf"
 	cookie.Value = string(accessToken)
 	cookie.Expires = time.Now().Add(1 * time.Hour)
 
@@ -393,10 +383,12 @@ func (v *Verifier) PageLoginDenied(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, handlers.ErrNoStateReceived.Error())
 	}
 
+	zlog.Info().Str("stateKey", stateKey).Msg("PageLoginDenied")
+
 	stateContent, _ := v.stateSession.Get(stateKey)
 	if len(stateContent) < 2 {
 		// Render an error
-		err := handlers.ErrNoCredentialFoundInState
+		err := handlers.ErrInvalidStateReceived
 		zlog.Err(err).Send()
 		m := fiber.Map{
 			"error": err.Error(),
@@ -448,27 +440,83 @@ func (v *Verifier) PageAccessProtectedService(c *fiber.Ctx) error {
 	var returnBody []byte
 	var errors []error
 
-	// Get the access token from the cookie
-	accessToken := c.Cookies("dbsamvf")
-	v.rootServer.Logger.Info("Access Token received", accessToken)
+	// Try to get the access token from the cookie (for interactive HTML pages)
+	accessToken := c.Cookies("dsbamvf")
+
+	// Otherwise, try to teh the token from the Authorization HTTP Request header
+	if len(accessToken) == 0 {
+		auth := strings.Split(c.Get("authorization"), " ")
+		if len(auth) > 1 {
+			accessToken = auth[1]
+			c.Locals("bearer", accessToken)
+		}
+	}
+
+	// It is an error to receive a request withou Access Token
+	if len(accessToken) == 0 {
+		zlog.Error().Str("token", accessToken).Msg("no Access Token received")
+		return fiber.NewError(fiber.StatusUnauthorized, "no Access Token received")
+	}
+	zlog.Info().Str("token", accessToken).Msg("Access Token received")
+
+	// Verify the format and the signature of the Access Token.
+	// No content verification is done here.
+	// The token should have been signed by ourselves.
+	token, err := v.vault.VerifyToken([]byte(accessToken), v.did)
+	if err != nil {
+		return err
+	}
+
+	// Convert the token payload to a manageable format
+	payload, err := token.AsMap(context.Background())
+	if err != nil {
+		return err
+	}
+
+	// Minimal verification that it contains the credential object
+	credential, ok := payload["credential"]
+	if !ok {
+		zlog.Error().Msg("credential not found in Access Token")
+		return fiber.NewError(fiber.StatusBadRequest, "credential not found in Access Token")
+	}
+	zlog.Info().Msgf("%s", credential)
 
 	// Check if the user has configured a protected service to access
 	protected := v.rootServer.Cfg.String("verifier.protectedResource.url")
-	if len(protected) > 0 {
+	if len(protected) == 0 {
+		zlog.Error().Msg("no protected resource was configured")
+		return fiber.NewError(fiber.StatusInternalServerError, "bad configuration: no protected resource")
+	}
 
-		// Prepare to GET to the url
-		agent := fiber.Get(protected)
+	// Perform access control
+	rawcred, err := json.Marshal(credential)
+	if err != nil {
+		return err
+	}
+	authorized := v.pdp.TakeAuthnDecision(Authorize, c, string(rawcred), protected)
+	if !authorized {
+		zlog.Error().Msg("no authorization")
 
-		// Set the Authentication header
-		agent.Set("Authorization", "Bearer "+accessToken)
-
-		agent.Set("accept", "application/json")
-		code, returnBody, errors = agent.Bytes()
-		if len(errors) > 0 {
-			v.rootServer.Logger.Errorw("error calling the protected resource", zap.Errors("errors", errors))
-			return fmt.Errorf("error calling the protected resource: %v", errors[0])
+		// Render
+		m := fiber.Map{
+			"verifierPrefix": verifierPrefix,
+			"claims":         credential,
 		}
+		return c.Render("verifier_logindenied", m)
 
+	}
+
+	// Prepare to GET to the url
+	agent := fiber.Get(protected)
+
+	// Set the Authentication header
+	agent.Set("Authorization", "Bearer "+accessToken)
+
+	agent.Set("accept", "application/json")
+	code, returnBody, errors = agent.Bytes()
+	if len(errors) > 0 {
+		zlog.Err(errors[0]).Msg("error calling the protected resource")
+		return errors[0]
 	}
 
 	// Render
@@ -508,34 +556,6 @@ func (v *Verifier) APIInternalPoll(c *fiber.Ctx) error {
 
 }
 
-// retrieve token for the given session("state"-paramter)
-func (v *Verifier) APIInternalToken(c *fiber.Ctx) error {
-	v.rootServer.Logger.Info("Get the token")
-	// get the stateKey
-	stateKey := c.Params("state")
-
-	v.rootServer.Logger.Infof("Get for state %s", stateKey)
-	// get the credential from the storage
-	rawCred, _ := v.stateSession.Get(stateKey)
-	if len(rawCred) == 0 {
-
-		v.rootServer.Logger.Infof("No credential stored for '%s'", stateKey)
-		c.Status(403)
-		return errors.New("No_such_credential")
-	}
-
-	// Create an access token from the credential
-	accessToken, err := v.vault.CreateAccessToken(rawCred, v.rootServer.Cfg.String("verifier.id"))
-	if err != nil {
-		v.rootServer.Logger.Infof("Was not able to create the token. Err: %s", err)
-		c.Status(500)
-		return err
-	}
-	v.rootServer.Logger.Info("Access Token created", string(accessToken))
-
-	return c.SendString(string(accessToken))
-}
-
 func (v *Verifier) APIWalletAuthenticationRequest(c *fiber.Ctx) error {
 
 	// Get the stateKey
@@ -550,13 +570,14 @@ func (v *Verifier) APIWalletAuthenticationRequest(c *fiber.Ctx) error {
 	// get the JWT Authentication Request Object from the storage
 	stateContent, _ := v.stateSession.Get(stateKey)
 	if len(stateContent) == 0 {
-
-		v.rootServer.Logger.Infof("No Authentication Request stored for '%s'", stateKey)
+		err := errors.New("no Authentication Request stored for stateKey")
+		zlog.Err(err).Send()
 		c.Status(403)
-		return errors.New("no such authentication request")
+		return err
 	}
 
 	authenticationRequest := stateContent[1:]
+	zlog.Info().Str("authenticationRequest", string(authenticationRequest)).Msg("")
 
 	return c.Send(authenticationRequest)
 }
@@ -585,13 +606,14 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 		return err
 	}
 
+	// Get the vp_token field
 	vp_token := authResponse.String("vp_token")
 	if len(vp_token) == 0 {
 
 		// Try to see if the request is coming from the enterprise wallet
 		cred := authResponse.String("credential")
 		if len(cred) == 0 {
-			err := fmt.Errorf("no vp_token found")
+			err := fmt.Errorf("no credential found")
 			zlog.Err(err).Send()
 			return err
 		}
@@ -612,12 +634,20 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 			return err
 		}
 
+		// Parse the VP object into a map
 		vp, err := yaml.ParseJson(string(rawVP))
 		if err != nil {
 			zlog.Err(err).Msg("invalid vp received")
 			return err
 		}
+
+		// Get the list of credentials in the VP
 		credentials := vp.List("verifiableCredential")
+		if len(credentials) == 0 {
+			err := fmt.Errorf("no 'verifiableCredential' member found")
+			zlog.Err(err).Send()
+			return err
+		}
 
 		// TODO: for the moment, we accept only the first credential inside the VP
 		firstCredential := credentials[0]
@@ -625,22 +655,18 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 
 	}
 
-	// Get the email of the user
-	email := theCredential.String("credentialSubject.email")
-	name := theCredential.String("credentialSubject.name")
-	positionSection := theCredential.String("credentialSubject.position.section")
-	zlog.Info().Str("email", email).Msg("data in vp_token")
-
+	// Serialize the credential into a JSON string
 	serialCredential, err := json.Marshal(theCredential.Data())
 	if err != nil {
 		return err
 	}
-	zlog.Info().Str("credential", string(serialCredential))
+	zlog.Info().Str("credential", string(serialCredential)).Send()
 
-	zlog.Info().Str("section", positionSection).Msg("Performing access control")
+	// Invoke the PDP (Policy Decision Point) to authenticate/authorize this request
+	accepted := v.pdp.TakeAuthnDecision(Authenticate, c, string(serialCredential), "")
+	zlog.Info().Bool("Authenticated", accepted).Msg("")
 
-	// We only allow one specific position value in the section claim
-	if positionSection != "Section of other good things" {
+	if !accepted {
 
 		// Deny access
 		// Set the credential in storage, and wait for the polling from client
@@ -648,24 +674,23 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 		newState.SetStatus(handlers.StateDenied)
 		newState.SetContent(serialCredential)
 
-		v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpiration)
+		v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
 
 		zlog.Info().Msg("Authentication denied")
-		return fiber.NewError(fiber.StatusUnauthorized, email)
+		return fiber.NewError(fiber.StatusUnauthorized, "access denied")
 
 	}
 
-	// Get user from Database
-	usr, _ := v.operations.User().GetByName(email)
-	if usr == nil {
+	// Get the email of the user
+	email := theCredential.String("credentialSubject.email")
+	name := theCredential.String("credentialSubject.name")
+	zlog.Info().Str("email", email).Msg("data in vp_token")
 
-		// User not found, we automatically create a new user with the data from the credential
-		usr, err = v.operations.User().CreateOrGet(email, name)
-		if err != nil {
-			zlog.Err(err).Msg("error creating user")
-			return err
-		}
-		zlog.Info().Str("email", email).Msg("new user created")
+	// Get user from Database
+	usr, err := v.vault.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
+	if err != nil {
+		zlog.Err(err).Msg("CreateOrGetUserWithDIDKey error")
+		return err
 	}
 
 	// Check if the user has a registered WebAuthn credential
@@ -682,7 +707,7 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 		newState.SetStatus(handlers.StateCompleted)
 		newState.SetContent(serialCredential)
 
-		v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpiration)
+		v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
 
 		zlog.Info().Msg("AuthenticationResponse from enterprise wallet success")
 		return c.SendString(email)
@@ -697,7 +722,11 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 			newState.SetStatus(handlers.StateRegistering)
 			newState.SetContent(serialCredential)
 
-			v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpiration)
+			err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
+			if err != nil {
+				zlog.Err(err).Send()
+				return err
+			}
 
 			zlog.Info().Msg("AuthenticationResponse success, new user created")
 
@@ -718,7 +747,11 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 			newState.SetContent(serialCredential)
 			newStateString := newState.String()
 
-			v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpiration)
+			err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
+			if err != nil {
+				zlog.Err(err).Send()
+				return err
+			}
 
 			zlog.Info().
 				Str("state", newStateString).
@@ -735,53 +768,6 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 		}
 
 	}
-}
-
-func createAuthenticationRequest(verifierDID string, response_uri string, state string) (string, string) {
-
-	// This specifies the type of credential that the Verifier will accept
-	// TODO: In this use case it is hardcoded, which is enough if the Verifier is simple and uses
-	// only one type of credential for authenticating its users.
-
-	// We use a template to generate the final string
-	template := "{{origin}}?client_id_scheme={{client_id_scheme}}" +
-		"&scope={{scope}}" +
-		"&response_type={{response_type}}" +
-		"&response_mode={{response_mode}}" +
-		"&client_id={{client_id}}" +
-		"&client_id_scheme={{client_id_scheme}}" +
-		"&response_uri={{response_uri}}" +
-		"&state={{state}}" +
-		"&nonce={{nonce}}"
-
-	t := fasttemplate.New(template, "{{", "}}")
-
-	templateData := map[string]interface{}{
-		"scope":            "dsba.credentials.presentation.Employee",
-		"response_type":    "vp_token",
-		"response_mode":    "direct_post",
-		"client_id":        verifierDID,
-		"client_id_scheme": "did",
-		"response_uri":     url.QueryEscape(response_uri),
-		"state":            state,
-		"nonce":            generateNonce(),
-	}
-
-	const originOIDC = "openid://"
-	const originSameDevice = "https://wallet.mycredential.eu"
-
-	templateData["origin"] = originOIDC
-	authRequest := t.ExecuteString(templateData)
-
-	templateData["origin"] = originSameDevice
-	authRequestSameDevice := t.ExecuteString(templateData)
-
-	fmt.Println("***********************************")
-	fmt.Println(authRequestSameDevice)
-	fmt.Println("***********************************")
-
-	return authRequest, authRequestSameDevice
-
 }
 
 // createJWTSecuredAuthenticationRequest creates an Authorization Request Object according to:
@@ -811,7 +797,7 @@ func (v *Verifier) createJWTSecuredAuthenticationRequest(response_uri string, st
 		"nonce":            generateNonce(),
 	}
 
-	jar, err := v.vault.CreateToken(jarPlain, v.id)
+	jar, err := v.vault.CreateToken(jarPlain, v.did)
 	if err != nil {
 		return nil, err
 	}

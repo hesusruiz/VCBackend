@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/hesusruiz/vcbackend/back/handlers"
+	"github.com/evidenceledger/vcdemo/back/handlers"
 	"github.com/hesusruiz/vcutils/yaml"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"

@@ -4,19 +4,13 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/hesusruiz/vcbackend/internal/jwt"
-	"github.com/hesusruiz/vcbackend/vault"
+	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/hesusruiz/vcutils/yaml"
 	zlog "github.com/rs/zerolog/log"
 )
 
-type CredentialClaims struct {
-	jwt.RegisteredClaims
-	Other map[string]any
-}
-
 const defaultConfigFile = "./server.yaml"
-const defaultCredentialDataFile = "cmd/creds/sampledata/employee_data.yaml"
+const defaultCredentialDataFile = "employee_data.yaml"
 
 var (
 	configFile = flag.String("config", defaultConfigFile, "path to configuration file")

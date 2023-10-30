@@ -1,0 +1,6 @@
+curl --request GET \
+  --url 'https://api-conformance.ebsi.eu/conformance/v3/auth-mock/authorize?
+  scope=openid&
+  response_type=code&
+  client_id=https%3A%2F%2Fmy-issuer.eu%2Fsuffix%2Fxyz&
+  redirect_uri=https%3A%2F%2Fmy-issuer.eu%2Fsuffix%2Fxyz%2Fcode-cb' 

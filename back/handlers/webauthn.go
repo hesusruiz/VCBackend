@@ -6,14 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/duo-labs/webauthn/protocol"
 	"github.com/duo-labs/webauthn/webauthn"
-	"github.com/hesusruiz/vcbackend/internal/cache"
+	"github.com/evidenceledger/vcdemo/internal/cache"
+	"github.com/evidenceledger/vcdemo/vault"
 
-	"github.com/hesusruiz/vcbackend/back/operations"
 	"github.com/hesusruiz/vcutils/yaml"
 
 	"github.com/gofiber/fiber/v2"
@@ -28,13 +27,13 @@ import (
 type WebAuthnHandler struct {
 	rootServer      *Server
 	stateSession    *memory.Storage
-	operations      *operations.Manager
+	vault           *vault.Vault
 	WebAuthn        *webauthn.WebAuthn
 	webAuthnSession *session.Store
 	cache           *cache.Cache
 }
 
-func NewWebAuthnHandler(back *Server, sess *memory.Storage, ops *operations.Manager, cfg *yaml.YAML) *WebAuthnHandler {
+func NewWebAuthnHandler(back *Server, sess *memory.Storage, v *vault.Vault, cfg *yaml.YAML) *WebAuthnHandler {
 	var err error
 
 	rpDisplayName := cfg.String("webauthn.RPDisplayName")
@@ -42,7 +41,6 @@ func NewWebAuthnHandler(back *Server, sess *memory.Storage, ops *operations.Mana
 	rpOrigin := cfg.String("webauthn.RPOrigin")
 	authenticatorAttachment := protocol.AuthenticatorAttachment(cfg.String("webauthn.AuthenticatorAttachment", "cross-platform"))
 	userVerification := protocol.UserVerificationRequirement(cfg.String("webauthn.UserVerification", "required"))
-	// requireResidentKey := cfg.Bool("webauthn.RequireResidentKey", false)
 	residentKey := cfg.String("webauthn.ResidentKey", "preferred")
 	attestationConveyancePreference := protocol.ConveyancePreference(cfg.String("webauthn.AttestationConveyancePreference", "indirect"))
 
@@ -50,7 +48,7 @@ func NewWebAuthnHandler(back *Server, sess *memory.Storage, ops *operations.Mana
 	s := new(WebAuthnHandler)
 
 	s.rootServer = back
-	s.operations = ops
+	s.vault = v
 	s.stateSession = sess
 
 	// Create the cache with expiration
@@ -114,12 +112,12 @@ func (s *WebAuthnHandler) BeginRegistration(c *fiber.Ctx) error {
 	username := utils.CopyString(usernameParam)
 
 	// The displayname will be the first part of the email address
-	displayName := strings.Split(username, "@")[0]
+	// displayName := strings.Split(username, "@")[0]
 
 	zlog.Info().Str("username", username).Msg("BeginRegistration started")
 
 	// Get user from the Storage. The user is automatically created if it does not exist
-	user, err := s.operations.User().CreateOrGet(username, displayName)
+	user, err := s.vault.CreateOrGetUserWithDIDKey(username, username, "naturalperson", "ThePassword")
 	if err != nil {
 		return err
 	}
@@ -185,7 +183,7 @@ func (s *WebAuthnHandler) FinishRegistration(c *fiber.Ctx) error {
 		Msg("FinishRegistration started")
 
 	// Get user from Storage
-	user, err := s.operations.User().GetByName(username)
+	user, err := s.vault.GetUserById(username)
 
 	// It is an error if the user doesn't exist
 	if err != nil {
@@ -229,7 +227,7 @@ func (s *WebAuthnHandler) FinishRegistration(c *fiber.Ctx) error {
 	}
 
 	// Add the new credential to the user
-	user.AddCredential(*credential)
+	user.WebAuthnAddCredential(*credential)
 
 	creds := user.WebAuthnCredentials()
 	fmt.Println("======== LIST of CREDENTIALS")
@@ -239,7 +237,7 @@ func (s *WebAuthnHandler) FinishRegistration(c *fiber.Ctx) error {
 	stateContent[0] = StateCompleted
 
 	// And update the status for the poller to retrieve it
-	s.stateSession.Set(stateKey, stateContent, StateExpiration)
+	s.stateSession.Set(stateKey, stateContent, StateExpirationDuration)
 
 	zlog.Info().
 		Str("username", username).
@@ -269,7 +267,7 @@ func (s *WebAuthnHandler) BeginLogin(c *fiber.Ctx) error {
 	zlog.Info().Str("username", username).Msg("BeginLogin started")
 
 	// The user must have been registered previously, so we check in our user database
-	user, err := s.operations.User().GetByName(username)
+	user, err := s.vault.GetUserById(username)
 
 	// It is an error if the user doesn't exist
 	if err != nil {
@@ -336,7 +334,7 @@ func (s *WebAuthnHandler) FinishLogin(c *fiber.Ctx) error {
 	zlog.Info().Str("username", username).Str("state", stateKey).Uint("status", uint(stateContent[0])).Msg("FinishLogin started")
 
 	// Get user from Storage
-	user, err := s.operations.User().GetByName(username)
+	user, err := s.vault.GetUserById(username)
 
 	// It is an error if the user doesn't exist
 	if err != nil {
@@ -391,7 +389,7 @@ func (s *WebAuthnHandler) FinishLogin(c *fiber.Ctx) error {
 	stateContent[0] = StateCompleted
 
 	// And update the status for the poller to retrieve it
-	s.stateSession.Set(stateKey, stateContent, StateExpiration)
+	s.stateSession.Set(stateKey, stateContent, StateExpirationDuration)
 
 	zlog.Info().Str("username", username).Str("state", stateKey).Uint("status", uint(stateContent[0])).Msg("FinishLogin finished")
 
@@ -434,7 +432,7 @@ func (s *WebAuthnHandler) ListCredentials(c *fiber.Ctx) error {
 	zlog.Info().Str("username", username).Msg("User is logged in")
 
 	// Get user from Storage
-	user, err := s.operations.User().GetByName(username)
+	user, err := s.vault.GetUserById(username)
 	if err != nil {
 		zlog.Warn().Msg("user not found")
 		return err

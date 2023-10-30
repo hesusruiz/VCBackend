@@ -18,12 +18,9 @@ reset:
 	rm -f wallet.sqlite
 	go run cmd/creds/main.go
 
-serve:
-	go run .
-
 build:
 	go run cmd/faster/faster.go
 
-buildandserve:
+serve:
 	go run cmd/faster/faster.go
 	go run .

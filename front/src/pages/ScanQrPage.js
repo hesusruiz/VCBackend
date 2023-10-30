@@ -2,6 +2,8 @@ import { html } from 'uhtml'
 import { log } from '../log'
 import { getPreferredVideoDevice, getPlatformOS } from '../components/camerainfo'
 
+let myerror = window.MHR.storage.myerror
+let mylog = window.MHR.storage.mylog
 
 // This is to facilitate debugging of certificates
 var testQRdata = "HC1:NC"
@@ -23,7 +25,7 @@ const QR_W3C_VC = 5
 const QR_OIDC4VCI = 6
 
 
-window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPage {
+window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
     displayPage                 // The page name used to display the HC1 QR code
     detectionInterval = 200     // Milliseconds between attempts to decode QR
     videoElement = {}           // DOMElement where the video is displayed, reused across invocations
@@ -39,12 +41,12 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
 
         // Check if native barcode detection is supported
         if (!('BarcodeDetector' in window)) {
-            console.log('Barcode Detector is not supported by this browser.')
+            mylog('Barcode Detector is not supported by this browser.')
 
             // Native support not available, import the ZXING javascript library
             this.zxingPromise = import('@zxing/browser')
         } else {
-            console.log('Barcode Detector supported!');
+            mylog('Barcode Detector supported!');
 
             // create new detector
             this.nativeBarcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
@@ -93,7 +95,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
 
         let constraints;
         if (!this.lastUsedCameraId) {
-            console.log("Constraints without camera")
+            mylog("Constraints without camera")
             constraints = {
                 audio: false,
                 video: {
@@ -102,7 +104,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
                 }
             }
         } else {
-            console.log("Constraints with deviceID:", this.lastUsedCameraId)
+            mylog("Constraints with deviceID:", this.lastUsedCameraId)
             constraints = {
                 audio: false,
                 video: {
@@ -119,7 +121,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
             let videoTracks = stream.getVideoTracks()
             for (let i = 0; i < videoTracks.length; i++) {
                 let caps = videoTracks[i].getCapabilities()
-                console.log(caps)
+                mylog(caps)
             }
 
             // Assign the camera stream to the video element in the page
@@ -128,7 +130,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
             this.videoElement.current.setAttribute('muted', 'true');
             this.videoElement.current.setAttribute('playsinline', 'true');
             this.videoElement.current.srcObject = stream
-            console.log(stream)
+            mylog(stream)
 
         } catch (error) {
             log.error("Error getting stream", error)
@@ -142,33 +144,33 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
 
         // Try to use the camera explicitly configured by the user
         var selectedCameraId = localStorage.getItem("selectedCamera")
-        console.log("User selected camera:", selectedCameraId)
+        mylog("User selected camera:", selectedCameraId)
 
         // If nothing configured, try to use last one used, if any
         if (!selectedCameraId) {
             selectedCameraId = this.lastUsedCameraId
-            console.log("Last used camera:", selectedCameraId)
+            mylog("Last used camera:", selectedCameraId)
         }
 
         // Some Android phones have a problem selecting automatically the best camera for scanning (eg. some Samsung)
         // If we are in Android and this is the first time, try to select the most appropriate camera
         // This will request permission from the user
         if (!selectedCameraId && ("Android" == getPlatformOS())) {
-            console.log("We are in Andoid and this is the first time")
+            mylog("We are in Andoid and this is the first time")
             let allVideoDevices;
             try {
                 allVideoDevices = await getPreferredVideoDevice()
-                console.log("Video devices in Android:", allVideoDevices)
+                mylog("Video devices in Android:", allVideoDevices)
             } catch (error) {
                 log.error("Error requesting camera access", error)
             }
             if (allVideoDevices && allVideoDevices.defaultPreferredCamera) {
                 selectedCameraId = allVideoDevices.defaultPreferredCamera.deviceId
-                console.log("Selected camera in Android:", selectedCameraId)
+                mylog("Selected camera in Android:", selectedCameraId)
             }
 
             if (!selectedCameraId) {
-                console.log("In Android and no selected camera")
+                mylog("In Android and no selected camera")
             }
 
         }
@@ -179,7 +181,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
 
     // canPlay is called when the video element is ready, so we can start detecting QR codes
     async canPlay() {
-        console.log("Video can play, try to detect QR")
+        mylog("Video can play, try to detect QR")
         // The video stream is ready, show the 'video' element
         this.videoElement.current.style.display = "block"
 
@@ -207,7 +209,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
                 codes = await this.nativeBarcodeDetector.detect(this.videoElement.current)
             } catch (error) {
                 // Log an error if one happens
-                log.error(err);
+                log.error(error);
                 return;
             }
     
@@ -221,7 +223,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
             // We will process the first one that is recognized
             for (const barcode of codes) {
                 // Log the barcode to the console
-                console.log(barcode)
+                mylog(barcode)
                 qrData = barcode.rawValue
                 qrType = this.detectQRtype(qrData)
                 if (qrType != QR_UNKNOWN) {
@@ -236,7 +238,7 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
             try {
                 const result = await this.zxingReader.decodeOnceFromVideoElement(this.videoElement.current);     
                 qrData = result.text
-                console.log("RESULT", qrData)
+                mylog("RESULT", qrData)
             } catch (error) {
                 log.error("ZXING decoding error", error)
             }
@@ -260,21 +262,21 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
 
         // Handle HCERT data
         if (qrType === QR_HC1) {
-            console.log("Going to ", "DisplayHcert")
+            mylog("Going to ", "DisplayHcert")
             window.MHR.gotoPage("DisplayHcert", qrData)
             return true;
         }
 
         // Handle a normal QR code with a URL
         if (qrType === QR_URL) {
-            console.log("Going to ", this.displayPage)
+            mylog("Going to ", this.displayPage)
             window.MHR.gotoPage(this.displayPage, qrData)
             return true;
         }
 
         // We scanned a QR for VC Issuance (OIDC4VCI)
         if (qrType === QR_OIDC4VCI) {
-            console.log("Going to ", "LoadAndSaveQRVC")
+            mylog("Going to ", "LoadAndSaveQRVC")
             // Create a valid URL
             qrData = qrData.replace("openid-credential-offer://", "https://")
             window.MHR.gotoPage("LoadAndSaveQRVC", qrData)
@@ -325,6 +327,9 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
             // A SIOP OpenID for VC Issuance, URL-encoded
             return QR_OIDC4VCI;
 
+        } else if (qrData.includes("credential_offer_uri=")) {
+            return QR_OIDC4VCI
+            
         } else if (qrData.startsWith("VC1:")) {
             // A Verifiable Credential in raw format
             return QR_W3C_VC;
@@ -347,8 +352,6 @@ window.MHR.register("ScanQrPage", class ScanQrPage extends window.MHR.AbstractPa
     }
 
 })
-
-
 
 
 // This is the state object used by the background animation routine.
@@ -708,7 +711,7 @@ async function ReceiveQRtick() {
             mylog("Scanned HC1 QR");
 
             let plain = await CWT.decodeHC1QR(code.data);
-            console.log("CWT.decodeHC1QR", plain)
+            mylog("CWT.decodeHC1QR", plain)
 
             // Store in temporal storage so the page will retrieve it
             let currentCredential = {

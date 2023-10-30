@@ -22,23 +22,34 @@ window.MHR.register("ConfirmResetApp", class extends window.MHR.AbstractPage {
 
         // Display the title and message, with a button that goes to the home page
         let theHtml = html`
-        <div class="w3-container w3-padding-64">
-            <div class="w3-card-4 w3-center">
-        
-                <header class="w3-container w3-center color-error">
-                    <h3>${title}</h3>
-                </header>
-        
-                <div class="w3-container">
-                    <p>${msg}</p>
-                </div>
-                
-                <div class="w3-container w3-center w3-padding">
-                    <btn-danger @click=${()=> this.deleteALLVCs()}>${T("Delete")}</btn-danger>
-                </div>
 
-            </div>
+        <ion-card>
+
+        <ion-card-header>
+            <ion-card-title>${title}</ion-card-title>
+        </ion-card-header>
+
+
+        <ion-card-content class="ion-padding-bottom">
+
+            <div class="text-larger">${msg}</div>
+
+        </ion-card-content>
+
+        <div class="ion-margin-start ion-margin-bottom">
+
+            <ion-button @click=${()=> history.back()}>
+                <ion-icon slot="start" name="chevron-back"></ion-icon>
+                ${T("Cancel")}
+            </ion-button>
+
+            <ion-button color="danger" @click=${()=> this.resetApplication()}>
+                <ion-icon slot="start" name="trash"></ion-icon>
+                ${T("Reset application")}
+            </ion-button>
+
         </div>
+        </ion-card>
         `
         this.render(theHtml)
     }

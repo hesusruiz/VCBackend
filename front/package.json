@@ -1,23 +1,11 @@
 {
   "name": "walletng",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "scripts": {
-    "vitever": "vite --version",
-    "workbox": "workbox generateSW workbox-config.js",
-    "dev": "vite",
-    "build": "vite build && npm run workbox",
-    "serve": "vite preview",
-    "update": "npm run build && npm run srv",
-    "deploygh": "npm run build && bash pushGH.sh",
-    "srv": "python3 -m http.server --directory www/ 5000"
+    "workbox": "workbox generateSW workbox-config.js"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.1",
-    "postcss": "^8.4.5",
-    "rollup-plugin-graph": "^2.0.0",
-    "tailwindcss": "^3.0.8",
-    "vite": "^3.0.2",
-    "workbox-cli": "^6.5.2"
+    "workbox-cli": "^7.0.0"
   },
   "dependencies": {
     "@peculiar/x509": "^1.6.1",
@@ -30,6 +18,6 @@
     "pako": "^2.0.4",
     "pocketbase": "^0.18.0",
     "uhtml": "^3.0",
-    "workbox-window": "^6.5.2"
+    "workbox-window": "^7.0.0"
   }
 }
