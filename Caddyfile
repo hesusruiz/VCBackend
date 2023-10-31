@@ -9,3 +9,11 @@ verifier.mycredential.eu {
 wallet.mycredential.eu {
 	reverse_proxy 172.31.40.66:8090
 }
+
+verifiertest.mycredential.eu {
+	reverse_proxy 172.31.40.66:3000
+}
+
+wallettest.mycredential.eu {
+	reverse_proxy 172.31.40.66:8090
+}

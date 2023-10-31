@@ -62,7 +62,6 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         }
         
         if (document.URL.includes("code=")) {
-            alert("Redirect with code")
             console.log("************Redirected with code**************")
             gotoPage("LoadAndSaveQRVC", document.URL)
             return;
@@ -75,6 +74,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             return;
         }
 
+        // Check if we are authenticating
         if (request_uri !== null) {
             // Unescape the query parameter
             request_uri = decodeURIComponent(request_uri)
@@ -83,6 +83,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             return;
         }
 
+        // Check if we are in a credential issuance scenario
         if (credential_offer_uri) {
             await gotoPage("LoadAndSaveQRVC", document.location.href)
             return;

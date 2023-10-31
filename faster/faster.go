@@ -63,6 +63,12 @@ func BuildFront(configFile string) {
 	Build(cfg)
 }
 
+func WatchAndBuild(configFile string) {
+	// Read configuration file
+	cfg := readConfiguration(configFile)
+	watchAndBuild(cfg)
+}
+
 // Build performs a standard Build
 func Build(cfg *yaml.YAML) api.BuildResult {
 	// processTemplates(cfg)
@@ -590,11 +596,31 @@ func watchAndBuild(cfg *yaml.YAML) {
 	// Start listening for events.
 	go dedupLoop(w, cfg)
 
-	pageSources := path.Join(cfg.String("sourcedir"), cfg.String("pagedir"))
-
-	err = w.Add(pageSources)
+	watchDir := cfg.String("sourcedir")
+	err = w.Add(watchDir)
 	if err != nil {
-		fmt.Printf("%q: %s", pageSources, err)
+		fmt.Printf("%q: %s", watchDir, err)
+		os.Exit(1)
+	}
+
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("pagedir"))
+	err = w.Add(watchDir)
+	if err != nil {
+		fmt.Printf("%q: %s", watchDir, err)
+		os.Exit(1)
+	}
+
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("components"))
+	err = w.Add(watchDir)
+	if err != nil {
+		fmt.Printf("%q: %s", watchDir, err)
+		os.Exit(1)
+	}
+
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("public"))
+	err = w.Add(watchDir)
+	if err != nil {
+		fmt.Printf("%q: %s", watchDir, err)
 		os.Exit(1)
 	}
 

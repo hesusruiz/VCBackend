@@ -11,6 +11,7 @@ import (
 )
 
 func Start(cfg *yaml.YAML) {
+	listenAddress := cfg.String("listenAddress", "0.0.0.0:8090")
 
 	go func() {
 		app := pocketbase.New()
@@ -22,7 +23,7 @@ func Start(cfg *yaml.YAML) {
 		}
 
 		_, err := apis.Serve(app, apis.ServeConfig{
-			HttpAddr:        "0.0.0.0:8090",
+			HttpAddr:        listenAddress,
 			ShowStartBanner: true,
 		})
 

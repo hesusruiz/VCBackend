@@ -174,22 +174,23 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
     }
 
     async renderPreAuthorizedCodeFlow(user_pin) {
-        this.user_pin = user_pin
-        const jwtCredential = await performPreAuthorizedCodeFlow(
-            this.credentialOffer,
-            this.issuerMetaData,
-            this.authServerMetaData, user_pin)
-        
-        // Store in an instance variable
-        this.VC = jwtCredential
-        this.VCType = "EBSI"
+        try {
+            this.user_pin = user_pin
+            const jwtCredential = await performPreAuthorizedCodeFlow(
+                this.credentialOffer,
+                this.issuerMetaData,
+                this.authServerMetaData, user_pin)
 
-        // Decode and render the credencial
-        const decoded = decodeJWT(jwtCredential)
-        this.renderedVC = this.renderEBSICredential(decoded)
+            // Store in an instance variable
+            this.VC = jwtCredential
+            this.VCType = "EBSI"
 
-        // Ask the user if we should store the VC
-        let theHtml = html`
+            // Decode and render the credencial
+            const decoded = decodeJWT(jwtCredential)
+            this.renderedVC = this.renderEBSICredential(decoded)
+
+            // Ask the user if we should store the VC
+            let theHtml = html`
         <ion-card color="warning">
             <ion-card-content>
             <p><b>
@@ -200,7 +201,11 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
         ${this.renderedVC}
         `
-        this.render(theHtml)
+            this.render(theHtml)
+        } catch (error) {
+            debugger
+            this.showError(error.name, error.message)
+        }
 
     }
 
@@ -372,6 +377,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
 
 async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMetaData) {
+
 
     // Get the credential supported by issuer
     const credentialTypes = credentialOffer.credentials[0].types
@@ -878,7 +884,7 @@ async function generateEBSIProof(subjectDID, issuerID, nonce) {
 
 
 async function requestEBSICredential(proof, accessToken, credentialEndpoint, credentialTypes) {
-
+    debugger
     var credentialReq = {
         types: credentialTypes,
         format: 'jwt_vc',
@@ -907,7 +913,11 @@ async function requestEBSICredential(proof, accessToken, credentialEndpoint, cre
         mylog(credentialResponse)
         return credentialResponse
     } else {
-        throw new Error(response.statusText)
+        if (response.status == 400) {
+            throw new Error("Bad request 400 retrieving credential")
+        } else {
+            throw new Error(response.statusText)            
+        }
     }
 
 }

@@ -45,6 +45,7 @@ wallet:
   id: "hesusruiz"
   name: "Jesus Ruiz"
   password: ThePassword
+  listenAddress: "0.0.0.0:8090"
   store:
     driverName: "sqlite3"
     dataSourceName: "file:data/storage/wallet.sqlite?mode=rwc&cache=shared&_fk=1"
