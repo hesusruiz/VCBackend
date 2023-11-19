@@ -171,7 +171,9 @@ func main() {
 	wallet.Start(walletCfg)
 
 	// Start the watcher
-	go faster.WatchAndBuild(*buildConfigFile)
+	if args["autobuild"] {
+		go faster.WatchAndBuild(*buildConfigFile)
+	}
 
 	// Start the server
 	log.Fatal(s.Listen(cfg.String("server.listenAddress")))
