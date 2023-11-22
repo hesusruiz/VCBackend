@@ -100,7 +100,7 @@ func (m *PDP) ParseAndCompileFile() error {
 
 func (m PDP) isGlobalFunction(funcName string) (*starlark.Function, error) {
 
-	// Check that we have the 'authenticate' function
+	// Check that we have the function
 	f, ok := m.globals[funcName]
 	if !ok {
 		err := fmt.Errorf("missing definition of %s", funcName)
@@ -117,58 +117,6 @@ func (m PDP) isGlobalFunction(funcName string) (*starlark.Function, error) {
 	}
 
 	return starFunction, nil
-}
-
-func (m PDP) TakeAuthenticationDecision(cred string) bool {
-	var err error
-	debug := true
-
-	zlog.Info().Msg("Performing authentication control")
-
-	// In development, parse and compile the script on every request
-	if debug {
-		err := m.ParseAndCompileFile()
-		if err != nil {
-			zlog.Err(err).Msg("")
-			return false
-		}
-	}
-
-	// Create the input argument
-	credentialArgument := starlark.String(cred)
-	if err != nil {
-		zlog.Err(err).Msg("")
-		return false
-	}
-
-	// Build the arguments to the StarLark function
-	var args starlark.Tuple
-	args = append(args, credentialArgument)
-
-	// Call the 'authenticate' funcion
-	result, err := starlark.Call(m.thread, m.authenticateFunction, args, nil)
-	if err != nil {
-		zlog.Err(err).Msg("")
-		return false
-	}
-
-	// Check that the value returned is of the correct type (string)
-	resultType := result.Type()
-	if resultType != "string" {
-		err := fmt.Errorf("authenticate function returned wrong type: %v", resultType)
-		zlog.Err(err).Msg("")
-		return false
-	}
-
-	// Return the value
-	user := result.(starlark.String).GoString()
-
-	if len(user) > 0 {
-		return true
-	} else {
-		return false
-	}
-
 }
 
 func (m PDP) TakeAuthnDecision(function int, c *fiber.Ctx, cred string, protected string) bool {

@@ -12,7 +12,8 @@ issuer:
   password: ThePassword
   store:
     driverName: "sqlite3"
-    dataSourceName: "file:data/storage/issuer.sqlite?mode=rwc&cache=shared&_fk=1"
+    dataSourceName: "issuer.sqlite?mode=rwc&cache=shared&_fk=1"
+    dataSourceLocation: "storage"
   samedeviceWallet: "https://wallet.mycredential.eu"
   credentialTemplatesDir: "data/credential_templates"
   credentialInputDataFile: "data/example_data/employee_data.yaml"
@@ -23,7 +24,8 @@ verifier:
   password: ThePassword
   store:
     driverName: "sqlite3"
-    dataSourceName: "file:data/storage/verifier.sqlite?mode=rwc&cache=shared&_fk=1"
+    dataSourceName: "verifier.sqlite?mode=rwc&cache=shared&_fk=1"
+    dataSourceLocation: "storage"
   jwks_uri: "/.well-known/jwks_uri"
   authnPolicies: "data/config/authn_policies.py"
   protectedResource:
@@ -48,7 +50,8 @@ wallet:
   listenAddress: "0.0.0.0:8090"
   store:
     driverName: "sqlite3"
-    dataSourceName: "file:data/storage/wallet.sqlite?mode=rwc&cache=shared&_fk=1"
+    dataSourceName: "wallet.sqlite?mode=rwc&cache=shared&_fk=1"
+    dataSourceLocation: "storage"
   credentialTemplatesDir: "data/credential_templates"
 
 
@@ -57,5 +60,4 @@ verifiableregistry:
   store:
     driverName: "sqlite3"
     dataSourceName: "file:data/storage/verifiableregistry.sqlite?mode=rwc&cache=shared&_fk=1"
-
-
+    dataSourceLocation: "data/storage"

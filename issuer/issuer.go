@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/evidenceledger/vcdemo/back/handlers"
@@ -287,6 +289,27 @@ func (i *Issuer) IssuerPageCredentialDetails(c *fiber.Ctx) error {
 const defaultCredentialDataFile = "employee_data.yaml"
 
 func BatchGenerateCredentials(cfg *yaml.YAML) {
+
+	// Get the name of the SQLite database file
+	storeDataSourceName := cfg.String("store.dataSourceName")
+	parts := strings.Split(storeDataSourceName, "?")
+	if len(parts) == 0 {
+		panic("invalid Issuer storeDataSourceName")
+	}
+	storeDataSourceName = parts[0]
+	storeDataSourceLocation := cfg.String("store.dataSourceLocation")
+	storeDataSourceFullName := storeDataSourceLocation + "/" + storeDataSourceName
+
+	// We do nothing if the file already exists, or panic if an error happened
+	_, err := os.Stat(storeDataSourceFullName)
+	if err == nil {
+		zlog.Info().Str("name", storeDataSourceFullName).Msg("database already exists, doing nothing")
+		return
+	} else if !os.IsNotExist(err) {
+		panic("error checking existence of file")
+	}
+
+	// At this point, we know the file does not exist and we can create it and the credentials
 
 	// Connect to the Issuer vault
 	issuerVault := vault.Must(vault.New(cfg))

@@ -7,16 +7,11 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"text/template"
 
 	"github.com/evidenceledger/vcdemo/vault/ent"
-
-	// "github.com/evidenceledger/vcdemo/vault2/ent/user"
-	// "github.com/evidenceledger/vcdemo/internal/didkey"
-	// "github.com/evidenceledger/vcdemo/internal/jwk"
-	// "github.com/evidenceledger/vcdemo/internal/jwt"
-	// p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 
 	"github.com/hesusruiz/vcutils/yaml"
 
@@ -75,6 +70,11 @@ func New(cfg *yaml.YAML) (v *Vault, err error) {
 	mutexForNew.Lock()
 	defer mutexForNew.Unlock()
 
+	// Create the directory for the db file
+	if err := MakeDBDirectory(cfg); err != nil {
+		return nil, err
+	}
+
 	v = &Vault{}
 
 	// Our identity
@@ -90,15 +90,17 @@ func New(cfg *yaml.YAML) (v *Vault, err error) {
 	// Get the configured parameters for the database
 	storeDriverName := cfg.String("store.driverName")
 	storeDataSourceName := cfg.String("store.dataSourceName")
+	storeDataSourceLocation := cfg.String("store.dataSourceLocation")
+	storeDataSourceFullName := "file:" + storeDataSourceLocation + "/" + storeDataSourceName
 	workDir, err := os.Getwd()
 	if err != nil {
 		zlog.Err(err).Msg("failed getting current working directory")
 		return nil, err
 	}
-	zlog.Info().Str("cwd", workDir).Str("storeDriverName", storeDriverName).Str("storeDataSourceName", storeDataSourceName).Msg("opening vault")
+	zlog.Info().Str("cwd", workDir).Str("storeDriverName", storeDriverName).Str("storeDataSourceName", storeDataSourceFullName).Msg("opening vault")
 
 	// Open the database
-	v.db, err = ent.Open(storeDriverName, storeDataSourceName)
+	v.db, err = ent.Open(storeDriverName, storeDataSourceFullName)
 	if err != nil {
 		zlog.Err(err).Msg("failed opening database")
 		return nil, err
@@ -106,7 +108,7 @@ func New(cfg *yaml.YAML) (v *Vault, err error) {
 
 	// Run the auto migration tool.
 	if err := v.db.Schema.Create(context.Background()); err != nil {
-		zlog.Err(err).Str("dataSourceName", storeDataSourceName).Msg("failed creating schema resources")
+		zlog.Err(err).Str("dataSourceName", storeDataSourceFullName).Msg("failed creating schema resources")
 		return nil, err
 	}
 
@@ -124,6 +126,62 @@ func NewFromDBClient(entClient *ent.Client, cfg *yaml.YAML) (v *Vault) {
 	v.password = cfg.String("password")
 
 	return v
+}
+
+func MakeDBDirectory(cfg *yaml.YAML) error {
+
+	if cfg == nil {
+		return fmt.Errorf("no configuration received")
+	}
+
+	// Get the name of directory where the db should be created
+	storeDataSourceLocation := cfg.String("store.dataSourceLocation")
+
+	// Create the directory if it does not exists
+	err := os.MkdirAll(storeDataSourceLocation, 0775)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func Delete(cfg *yaml.YAML) error {
+
+	if cfg == nil {
+		return fmt.Errorf("no configuration received")
+	}
+
+	// Get the name of the SQLite database file
+	storeDataSourceName := cfg.String("store.dataSourceName")
+	parts := strings.Split(storeDataSourceName, "?")
+	if len(parts) == 0 {
+		panic("invalid Issuer storeDataSourceName")
+	}
+	storeDataSourceName = parts[0]
+	storeDataSourceLocation := cfg.String("store.dataSourceLocation")
+	storeDataSourceFullName := storeDataSourceLocation + "/" + storeDataSourceName
+
+	// Return if file does not exist
+	if _, err := os.Stat(storeDataSourceFullName); err != nil {
+		if os.IsNotExist(err) {
+			zlog.Info().Str("name", storeDataSourceFullName).Msg("database does not exist, doing nothing")
+			return nil
+		} else {
+			// Some error happened
+			return err
+		}
+	}
+
+	if err := os.Remove(storeDataSourceFullName); err != nil {
+		return err
+	} else {
+		zlog.Info().Str("name", storeDataSourceFullName).Msg("file deleted")
+	}
+
+	return nil
+
 }
 
 func (v *Vault) DB() *ent.Client {

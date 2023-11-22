@@ -3,21 +3,18 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/evidenceledger/vcdemo/back/handlers"
 	"github.com/evidenceledger/vcdemo/faster"
 	"github.com/evidenceledger/vcdemo/issuer"
+	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/evidenceledger/vcdemo/verifier"
-
 	"github.com/evidenceledger/vcdemo/wallet"
 	"github.com/hesusruiz/vcutils/yaml"
 
 	"flag"
 	"log"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -35,8 +32,8 @@ const defaultPassword = "ThePassword"
 
 var (
 	prod            = flag.Bool("prod", false, "Enable prefork in Production, for better performance")
-	buildConfigFile = flag.String("buildconfig", LookupEnvOrString("BUILD_CONFIG_FILE", defaultBuildConfigFile), "path to build config file")
-	configFile      = flag.String("config", LookupEnvOrString("CONFIG_FILE", defaultConfigFile), "path to configuration file")
+	buildConfigFile = flag.String("buildconfig", LookupEnvOrString("BUILD_CONFIG_FILE", defaultBuildConfigFile), "path to config file for building the front")
+	configFile      = flag.String("config", LookupEnvOrString("CONFIG_FILE", defaultConfigFile), "path to config file for the demo")
 	password        = flag.String("pass", LookupEnvOrString("PASSWORD", defaultPassword), "admin password for the server")
 )
 
@@ -52,20 +49,13 @@ func main() {
 	flag.Usage = func() {
 		fmt.Printf("Usage of vcdemo (v1.1)\n")
 		fmt.Println("  vcdemo            \tStart the server")
-		fmt.Println("  vcdemo credentials\tCreate in batch the default credentials")
 		fmt.Println("  vcdemo build      \tBuild the wallet front application")
 		fmt.Println("  vcdemo cleandb    \tErase the SQLite database files")
 		fmt.Println()
-		fmt.Println("vcdemo uses a configuration file named 'server.yaml' located in the current directory.")
+		fmt.Printf("vcdemo uses a configuration file named 'server.yaml' located by default in '%s'\n", defaultConfigFile)
 		fmt.Println()
 		fmt.Println("The server has the following flags:")
 		flag.PrintDefaults()
-	}
-
-	// Make the default directory for db files
-	err := os.MkdirAll("data/storage", 0775)
-	if err != nil {
-		panic(err)
 	}
 
 	// Parse command-line flags
@@ -84,7 +74,7 @@ func main() {
 		args[arg] = true
 	}
 
-	// Check that the configuration entries for Issuer and Verifier do exist
+	// Check that the configuration entries for Issuer, Verifier and Wallet do exist
 	icfg := cfg.Map("issuer")
 	if len(icfg) == 0 {
 		panic("no configuration for Issuer found")
@@ -103,12 +93,6 @@ func main() {
 	}
 	walletCfg := yaml.New(wcfg)
 
-	// Create default credentials
-	if args["credentials"] {
-		issuer.BatchGenerateCredentials(issuerCfg)
-		os.Exit(0)
-	}
-
 	// Build the front
 	if args["build"] {
 		faster.BuildFront(*buildConfigFile)
@@ -120,6 +104,9 @@ func main() {
 		deleteDatabase(cfg)
 		os.Exit(0)
 	}
+
+	// Create default credentials if not already created
+	issuer.BatchGenerateCredentials(issuerCfg)
 
 	// Create the template engine using the templates in the configured directory
 	templateDir := cfg.String("server.templateDir", defaultTemplateDir)
@@ -195,24 +182,37 @@ func readConfiguration(configFile string) *yaml.YAML {
 
 func deleteDatabase(cfg *yaml.YAML) {
 
-	storageDirectory := "data/storage"
+	icfg := cfg.Map("issuer")
+	if len(icfg) == 0 {
+		panic("no configuration for Issuer found")
+	}
+	issuerCfg := yaml.New(icfg)
 
-	// Delete the files inside 'config/storage' directory
-	files, err := os.ReadDir(storageDirectory)
-	if err != nil {
+	// Delete Issuer database
+	if err := vault.Delete(issuerCfg); err != nil {
 		panic(err)
 	}
 
-	for _, file := range files {
-		if !file.IsDir() {
-			fullPath := path.Join(storageDirectory, file.Name())
-			if err := os.Remove(fullPath); err != nil {
-				zlog.Warn().Str("error", err.Error()).Msg("")
-			} else {
-				zlog.Info().Str("name", file.Name()).Msg("file deleted")
-			}
-		} else {
-			zlog.Warn().Str("name", file.Name()).Msg("there is a directory inside config")
-		}
+	vcfg := cfg.Map("verifier")
+	if len(vcfg) == 0 {
+		panic("no configuration for Verifier found")
 	}
+	verifierCfg := yaml.New(vcfg)
+
+	// Delete Verifier database
+	if err := vault.Delete(verifierCfg); err != nil {
+		panic(err)
+	}
+
+	wcfg := cfg.Map("wallet")
+	if len(wcfg) == 0 {
+		panic("no configuration for Wallet found")
+	}
+	walletCfg := yaml.New(wcfg)
+
+	// Delete Wallet database
+	if err := vault.Delete(walletCfg); err != nil {
+		panic(err)
+	}
+
 }
