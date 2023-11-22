@@ -17,7 +17,8 @@ COPY . .
 RUN go generate ./ent
 
 # Build the application binary in the current directory. Its name is 'vcdemo'.
-RUN go build -v .
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    go build -v .
 
 # Stage for JavaScript code
 FROM node:18.18 as buildfront

@@ -167,7 +167,7 @@ func (m PDP) TakeAuthnDecision(function int, c *fiber.Ctx, cred string, protecte
 		return false
 	}
 
-	// Return the value
+	// Return the value as a boolean
 	return bool(result.(starlark.Bool).Truth())
 
 }
