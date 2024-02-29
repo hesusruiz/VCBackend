@@ -105,6 +105,13 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Create the LEAR Credential
+	if args["lear"] {
+		deleteDatabase(cfg)
+		issuer.BatchGenerateLEARCredentials(issuerCfg)
+		os.Exit(0)
+	}
+
 	// Create default credentials if not already created
 	issuer.BatchGenerateCredentials(issuerCfg)
 

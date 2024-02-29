@@ -288,16 +288,16 @@ func (i *Issuer) IssuerPageCredentialDetails(c *fiber.Ctx) error {
 
 const defaultCredentialDataFile = "employee_data.yaml"
 
-func BatchGenerateCredentials(cfg *yaml.YAML) {
+func BatchGenerateCredentials(issuerConfig *yaml.YAML) {
 
-	// Get the name of the SQLite database file
-	storeDataSourceName := cfg.String("store.dataSourceName")
+	// Get the name of the SQLite database file from the config URI, e.g: "issuer.sqlite?mode=rwc&cache=shared&_fk=1"
+	storeDataSourceName := issuerConfig.String("store.dataSourceName")
 	parts := strings.Split(storeDataSourceName, "?")
 	if len(parts) == 0 {
 		panic("invalid Issuer storeDataSourceName")
 	}
 	storeDataSourceName = parts[0]
-	storeDataSourceLocation := cfg.String("store.dataSourceLocation")
+	storeDataSourceLocation := issuerConfig.String("store.dataSourceLocation")
 	storeDataSourceFullName := storeDataSourceLocation + "/" + storeDataSourceName
 
 	// We do nothing if the file already exists, or panic if an error happened
@@ -312,10 +312,65 @@ func BatchGenerateCredentials(cfg *yaml.YAML) {
 	// At this point, we know the file does not exist and we can create it and the credentials
 
 	// Connect to the Issuer vault
-	issuerVault := vault.Must(vault.New(cfg))
+	issuerVault := vault.Must(vault.New(issuerConfig))
 
 	// Parse credential data
-	credentialDataFile := cfg.String("credentialInputDataFile", defaultCredentialDataFile)
+	credentialDataFile := issuerConfig.String("credentialInputDataFile", defaultCredentialDataFile)
+	data, err := yaml.ParseYamlFile(credentialDataFile)
+	if err != nil {
+		panic(err)
+	}
+
+	// Get the top-level list (the list of credentials)
+	creds := data.List("")
+	if len(creds) == 0 {
+		panic("no credentials found in config")
+	}
+
+	// Iterate through the list creating each credential which will use its own template
+	for _, item := range creds {
+
+		// Cast to a map so it can be passed to CreateCredentialFromMap
+		cred, _ := item.(map[string]any)
+		_, _, err := issuerVault.CreateCredentialJWTFromMap(cred)
+		if err != nil {
+			zlog.Err(err).Send()
+			continue
+		}
+
+	}
+
+}
+
+func BatchGenerateLEARCredentials(issuerConfig *yaml.YAML) {
+
+	// Get the name of the SQLite database file from the config URI, e.g: "issuer.sqlite?mode=rwc&cache=shared&_fk=1"
+	storeDataSourceName := issuerConfig.String("store.dataSourceName")
+	parts := strings.Split(storeDataSourceName, "?")
+	if len(parts) == 0 {
+		panic("invalid Issuer storeDataSourceName")
+	}
+	storeDataSourceName = parts[0]
+	storeDataSourceLocation := issuerConfig.String("store.dataSourceLocation")
+	storeDataSourceFullName := storeDataSourceLocation + "/" + storeDataSourceName
+
+	// We do nothing if the file already exists, or panic if an error happened
+	_, err := os.Stat(storeDataSourceFullName)
+	if err == nil {
+		zlog.Info().Str("name", storeDataSourceFullName).Msg("database already exists, doing nothing")
+		return
+	} else if !os.IsNotExist(err) {
+		panic("error checking existence of file")
+	}
+
+	// At this point, we know the file does not exist and we can create it and the credentials
+
+	// Connect to the Issuer vault
+	issuerVault := vault.Must(vault.New(issuerConfig))
+
+	// Parse credential data
+	credentialDataFile := "data/example_data/employee_data_lear.yaml"
+	// credentialDataFile := issuerConfig.String("credentialInputDataFile", defaultCredentialDataFile)
 	data, err := yaml.ParseYamlFile(credentialDataFile)
 	if err != nil {
 		panic(err)
