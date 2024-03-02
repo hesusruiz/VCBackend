@@ -209,7 +209,7 @@ func (s *WalletServer) SignToken(c echo.Context) error {
 	zlog.Info().Str("signedString", signedString).Msg("Signature performed")
 
 	// Verify that it is correct
-	_, err = s.vault.VerifyToken([]byte(signedString), sts.SubjectDID)
+	_, err = s.vault.VerifyJWTtoken([]byte(signedString), sts.SubjectDID)
 	if err != nil {
 		return err
 	}

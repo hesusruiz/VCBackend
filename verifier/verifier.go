@@ -342,7 +342,7 @@ func (v *Verifier) PageLoginCompleted(c *fiber.Ctx) error {
 		"credential": decoded,
 	}
 	// Create an access token from the credential
-	accessToken, err := v.vault.CreateToken(claims, v.did)
+	accessToken, err := v.vault.CreateJWTtoken(claims, v.did)
 	if err != nil {
 		return err
 	}
@@ -462,7 +462,7 @@ func (v *Verifier) PageAccessProtectedService(c *fiber.Ctx) error {
 	// Verify the format and the signature of the Access Token.
 	// No content verification is done here.
 	// The token should have been signed by ourselves.
-	token, err := v.vault.VerifyToken([]byte(accessToken), v.did)
+	token, err := v.vault.VerifyJWTtoken([]byte(accessToken), v.did)
 	if err != nil {
 		return err
 	}
@@ -797,7 +797,7 @@ func (v *Verifier) createJWTSecuredAuthenticationRequest(response_uri string, st
 		"nonce":            generateNonce(),
 	}
 
-	jar, err := v.vault.CreateToken(jarPlain, v.did)
+	jar, err := v.vault.CreateJWTtoken(jarPlain, v.did)
 	if err != nil {
 		return nil, err
 	}

@@ -77,7 +77,7 @@ func PubKeyToDIDKey(pubKeyJWK jwk.Key) (did string, err error) {
 
 func DIDKeyIdentifier(did string) (string, error) {
 	if !strings.HasPrefix(did, "did:key:") {
-		return "", ErrDIDKeyInvalid
+		return "", ErrDIDInvalid
 	}
 
 	identifier := strings.TrimPrefix(did, "did:key:")
@@ -88,7 +88,7 @@ func DIDKeyIdentifier(did string) (string, error) {
 func DIDKeyToPubKey(did string) (publicKey jwk.Key, err error) {
 
 	if !strings.HasPrefix(did, "did:key:") {
-		return nil, ErrDIDKeyInvalid
+		return nil, ErrDIDInvalid
 	}
 
 	identifier := strings.TrimPrefix(did, "did:key:")
@@ -174,7 +174,7 @@ func (v *Vault) GetDIDForUser(userid string) (string, error) {
 func (v *Vault) DIDKeyToPrivateKey(did string) (privateKey jwk.Key, err error) {
 
 	if !strings.HasPrefix(did, "did:key:") {
-		return nil, ErrDIDKeyInvalid
+		return nil, ErrDIDInvalid
 	}
 
 	entDID, err := v.db.DID.Get(context.Background(), did)
@@ -182,7 +182,7 @@ func (v *Vault) DIDKeyToPrivateKey(did string) (privateKey jwk.Key, err error) {
 		return nil, err
 	}
 
-	// Parse the key from the PEM
+	// Parse the key from the JWK
 	privateKey, err = jwk.ParseKey(entDID.Jwk)
 	if err != nil {
 		return nil, err
@@ -195,7 +195,7 @@ func (v *Vault) DIDKeyToPrivateKey(did string) (privateKey jwk.Key, err error) {
 func (v *Vault) DIDKeyToPublicKey(did string) (publicKey jwk.Key, err error) {
 
 	if !strings.HasPrefix(did, "did:key:") {
-		return nil, ErrDIDKeyInvalid
+		return nil, ErrDIDInvalid
 	}
 
 	entDID, err := v.db.DID.Get(context.Background(), did)

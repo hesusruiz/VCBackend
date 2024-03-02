@@ -5,9 +5,9 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-// CreateToken creates a JWT token from the given claims,
+// CreateJWTtoken creates a JWT token from the given claims,
 // signed with the first private key associated to the issuer DID
-func (v *Vault) CreateToken(credData map[string]any, issuerID string) ([]byte, error) {
+func (v *Vault) CreateJWTtoken(credData map[string]any, issuerID string) ([]byte, error) {
 
 	// Get the private key corresponding to the first (main) DID of the issuer of the token
 	privkey, err := v.DIDKeyToPrivateKey(issuerID)
@@ -15,11 +15,14 @@ func (v *Vault) CreateToken(credData map[string]any, issuerID string) ([]byte, e
 		return nil, err
 	}
 
+	// Create a new token structure with the claims
 	tok := jwt.New()
 	for k, v := range credData {
 		tok.Set(k, v)
 	}
 
+	// Serialize and sign the JWT. The result is a byte array with the JWT in compact form:
+	// header.payload.signature
 	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256, privkey))
 	if err != nil {
 		return nil, err
@@ -29,7 +32,7 @@ func (v *Vault) CreateToken(credData map[string]any, issuerID string) ([]byte, e
 
 }
 
-func (v *Vault) VerifyToken(token []byte, issuerDID string) (jwt.Token, error) {
+func (v *Vault) VerifyJWTtoken(token []byte, issuerDID string) (jwt.Token, error) {
 
 	// Get the private key corresponding to the first (main) DID of the issuer of the token
 	publicKey, err := DIDKeyToPubKey(issuerDID)

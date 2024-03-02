@@ -67,7 +67,7 @@ func TestVault_CreateToken(t *testing.T) {
 				return
 			}
 
-			got, err := v.CreateToken(tt.args.credData, did)
+			got, err := v.CreateJWTtoken(tt.args.credData, did)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Vault.CreateToken() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -110,14 +110,14 @@ func TestVault_SignAndVerifyToken(t *testing.T) {
 		}
 
 		// Create a token with that DID
-		rawtok, err := v.CreateToken(initialToken, gotDid)
+		rawtok, err := v.CreateJWTtoken(initialToken, gotDid)
 		if err != nil {
 			t.Errorf("CreateToken() error = %v", err)
 			return
 		}
 
 		// Verify the token
-		token, err := v.VerifyToken(rawtok, gotDid)
+		token, err := v.VerifyJWTtoken(rawtok, gotDid)
 		if err != nil {
 			t.Errorf("VerifyToken() error = %v", err)
 			return

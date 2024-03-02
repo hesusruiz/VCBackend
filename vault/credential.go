@@ -156,16 +156,17 @@ func (v *Vault) CreateLEARCredentialJWTFromMap(credmap map[string]any) (credID s
 		return "", nil, err
 	}
 
-	// If the credential does not specify an identifier, we generate one
 	credentialID := yaml.GetString(credmap, "jti")
 	if credentialID != "" {
 
-		// Check if the credential already exists
+		// The input data specifies a credentialID.
+		// We should check if the credential already exists
 		oldCred, err := v.db.Credential.Get(context.Background(), credentialID)
 		if err == nil {
 			zlog.Info().Str("id", credentialID).Msg("credential already exists")
 			return credentialID, oldCred.Raw, err
 		} else {
+			// If any error happened, except NotFound which is OK
 			if !ent.IsNotFound(err) {
 				return "", nil, err
 			}
@@ -173,7 +174,8 @@ func (v *Vault) CreateLEARCredentialJWTFromMap(credmap map[string]any) (credID s
 
 	} else {
 
-		// Generate the id as a UUID
+		// The input data does not specify the credential ID.
+		// We should create a new ID as a UUID
 		newID, err := uuid.NewRandom()
 		if err != nil {
 			return "", nil, err

@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"crypto/rand"
 
 	"github.com/evidenceledger/vcdemo/vault/ent"
 	"github.com/evidenceledger/vcdemo/vault/ent/user"
@@ -14,7 +13,7 @@ import (
 )
 
 // User represents the user model
-// It implements the webauthn.User interface
+// It also implements the webauthn.User interface
 type User struct {
 	db          *ent.Client
 	entuser     *ent.User
@@ -44,11 +43,14 @@ func NewUser(db *ent.Client, id string, name string) *User {
 	return u
 }
 
+// CreateOrGetUserWithDIDKey retrieves an existing User or creates a new one if it did not exist.
+// The user created is associated to a did:key
 func (v *Vault) CreateOrGetUserWithDIDKey(userid string, name string, usertype string, password string) (*User, error) {
 
+	// Create a new User in memory
 	u := NewUser(v.db, userid, name)
 
-	// Return the user and DID if they already exist.
+	// Return the user and DID from the storage if they already exist.
 	// It is an error if the DID does not exist for a user
 	usr, _ := v.db.User.Get(context.Background(), userid)
 	if usr != nil {
@@ -65,6 +67,66 @@ func (v *Vault) CreateOrGetUserWithDIDKey(userid string, name string, usertype s
 		u.did = did
 		return u, nil
 	}
+
+	// The user did not exist, we must create a new one
+
+	// Calculate the password to store
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 0)
+	if err != nil {
+		panic(err)
+	}
+
+	// Create new user of the specified type
+	usr, err = v.db.User.
+		Create().
+		SetID(userid).
+		SetName(name).
+		SetDisplayname(name).
+		SetType(usertype).
+		SetPassword(hashedPassword).
+		Save(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	u.entuser = usr
+
+	// Create a new did:key and add it to the user
+	u.did, _, err = v.NewDidKeyForUser(u)
+	if err != nil {
+		return nil, err
+	}
+
+	zlog.Info().Str("DID", u.did).Str("id", userid).Str("name", name).Str("type", usertype).Msg("user created")
+
+	return u, nil
+}
+
+// CreateOrGetUserWithDIDKey retrieves an existing User or creates a new one if it did not exist.
+// The user created is associated to a did:key
+func (v *Vault) CreateOrGetUserWithDIDelsi(userid string, name string, usertype string, password string) (*User, error) {
+
+	// Create a new User in memory
+	u := NewUser(v.db, userid, name)
+
+	// Return the user and DID from the storage if they already exist.
+	// It is an error if the DID does not exist for a user
+	usr, _ := v.db.User.Get(context.Background(), userid)
+	if usr != nil {
+		// User exists, retrieve the first did
+		did, err := v.GetDIDForUser(userid)
+
+		// Every user must have a did
+		if err != nil {
+			return nil, err
+		}
+
+		// Just return the existing user to the caller
+		u.entuser = usr
+		u.did = did
+		return u, nil
+	}
+
+	// The user did not exist, we must create a new one
 
 	// Calculate the password to store
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 0)
@@ -212,10 +274,4 @@ func (u *User) CredentialExcludeList() []protocol.CredentialDescriptor {
 	}
 
 	return credentialExcludeList
-}
-
-func randomString() string {
-	buf := make([]byte, 10)
-	rand.Read(buf)
-	return string(buf)
 }

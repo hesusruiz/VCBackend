@@ -105,6 +105,7 @@ require (
 	modernc.org/sqlite v1.25.0 // indirect
 	modernc.org/strutil v1.2.0 // indirect
 	modernc.org/token v1.1.0 // indirect
+	software.sslmate.com/src/go-pkcs12 v0.4.0 // indirect
 )
 
 require (
