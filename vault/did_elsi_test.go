@@ -6,41 +6,41 @@ import (
 	"testing"
 	"time"
 
+	"github.com/evidenceledger/vcdemo/vault/x509util"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestGenDIDelsi(t *testing.T) {
 	tests := []struct {
-		name       string
-		sub        ELSISubject
-		ed25519Key bool
-		ecdsaCurve string
-		rsaBits    int
-		isCA       bool
-		validFrom  string
-		validFor   time.Duration
-		wantErr    bool
+		name      string
+		sub       x509util.ELSIName
+		keyparams x509util.KeyParams
+		wantErr   bool
 	}{
 		{
 			name: "Roundtrip check",
-			sub: ELSISubject{
+			sub: x509util.ELSIName{
 				OrganizationIdentifier: "VATES-12345678",
 				CommonName:             "56565656V Beppe Cafiso",
+				GivenName:              "Beppe",
+				Surname:                "Cafiso",
+				EmailAddress:           "beppe@goodair.com",
 				SerialNumber:           "56565656V",
 				Organization:           "GoodAir",
 				Country:                "IT",
 			},
-			ed25519Key: true,
-			isCA:       true,
-			validFrom:  "Jan 1 15:04:05 2011",
-			validFor:   365 * 24 * time.Hour,
+			keyparams: x509util.KeyParams{
+				Ed25519Key: true,
+				ValidFrom:  "Jan 1 15:04:05 2011",
+				ValidFor:   365 * 24 * time.Hour,
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
 			// Generate a new did:elsi
-			gotDid, gotPrivateKey, pemBytes, err := GenDIDelsi(tt.sub, tt.ed25519Key, tt.ecdsaCurve, tt.rsaBits, tt.isCA, tt.validFrom, tt.validFor)
+			gotDid, gotPrivateKey, pemBytes, err := GenDIDelsi(tt.sub, tt.keyparams)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenDIDKey() error = %v, wantErr %v", err, tt.wantErr)
 				return

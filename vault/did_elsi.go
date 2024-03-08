@@ -3,24 +3,22 @@ package vault
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
-	"log"
-	"math/big"
 	"strings"
-	"time"
 
+	"github.com/evidenceledger/vcdemo/vault/x509util"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/multiformats/go-multibase"
 	"github.com/multiformats/go-multicodec"
@@ -40,150 +38,42 @@ func publicKey(priv any) any {
 	}
 }
 
-type ELSISubject struct {
-	OrganizationIdentifier string
-	CommonName             string
-	SerialNumber           string
-	Organization           string
-	Country                string
-}
-
 // GenDIDelsi generates a new 'did:elsi' DID by creating an EC key pair
-func GenDIDelsi(sub ELSISubject,
-	ed25519Key bool,
-	ecdsaCurve string,
-	rsaBits int,
-	isCA bool,
-	validFrom string,
-	validFor time.Duration) (did string, privateKey jwk.Key, pemBytes []byte, err error) {
+func GenDIDelsi(subject x509util.ELSIName, keyparams x509util.KeyParams) (did string, privateKey jwk.Key, cert x509util.PEMCert, err error) {
 
-	var priv any
-	switch ecdsaCurve {
-	case "":
-		if ed25519Key {
-			_, priv, err = ed25519.GenerateKey(rand.Reader)
-		} else {
-			priv, err = rsa.GenerateKey(rand.Reader, rsaBits)
-		}
-	case "P224":
-		priv, err = ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
-	case "P256":
-		priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	case "P384":
-		priv, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	case "P521":
-		priv, err = ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	default:
-		log.Fatalf("Unrecognized elliptic curve: %q", ecdsaCurve)
-	}
-	if err != nil {
-		log.Fatalf("Failed to generate private key: %v", err)
-	}
-
-	// ECDSA, ED25519 and RSA subject keys should have the DigitalSignature
-	// KeyUsage bits set in the x509.Certificate template
-	keyUsage := x509.KeyUsageDigitalSignature
-	// Only RSA subject keys should have the KeyEncipherment KeyUsage bits set. In
-	// the context of TLS this KeyUsage is particular to RSA key exchange and
-	// authentication.
-	if _, isRSA := priv.(*rsa.PrivateKey); isRSA {
-		keyUsage |= x509.KeyUsageKeyEncipherment
-	}
-
-	var notBefore time.Time
-	if len(validFrom) == 0 {
-		notBefore = time.Now()
-	} else {
-		notBefore, err = time.Parse("Jan 2 15:04:05 2006", validFrom)
-		if err != nil {
-			log.Fatalf("Failed to parse creation date: %v", err)
-		}
-	}
-
-	notAfter := notBefore.Add(validFor)
-
-	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-	if err != nil {
-		log.Fatalf("Failed to generate serial number: %v", err)
-	}
-
-	organizationIdentifier := pkix.AttributeTypeAndValue{
-		Type:  []int{2, 5, 4, 97},
-		Value: sub.OrganizationIdentifier,
-	}
-	extraNames := []pkix.AttributeTypeAndValue{organizationIdentifier}
-	subject := pkix.Name{
-		CommonName:   sub.CommonName,
-		SerialNumber: sub.SerialNumber,
-		Organization: []string{sub.Organization},
-		Country:      []string{sub.Country},
-		ExtraNames:   extraNames,
-	}
-
-	template := x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject:      subject,
-		NotBefore:    notBefore,
-		NotAfter:     notAfter,
-
-		KeyUsage:              keyUsage,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-	}
-
-	if isCA {
-		template.IsCA = true
-		template.KeyUsage |= x509.KeyUsageCertSign
-	}
-
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
-	if err != nil {
-		log.Fatalf("Failed to create certificate: %v", err)
-	}
-
-	var buf bytes.Buffer
-	if err := pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
-		log.Fatalf("Failed to encode in PEM the certificate: %v", err)
-	}
-	pemBytes = buf.Bytes()
-
-	//************************************************
-
-	// Create the JWK for the private and public pair
-	privKeyJWK, err := jwk.FromRaw(priv)
+	privateKey, cert, err = x509util.NewCACertificate(subject, keyparams)
 	if err != nil {
 		return "", nil, nil, err
 	}
 
 	// Create the 'did:elsi' associated to the OrganizationIdentifier
-	did = "did:elsi:" + sub.OrganizationIdentifier
+	did = "did:elsi:" + subject.OrganizationIdentifier
 
-	return did, privKeyJWK, pemBytes, nil
-
-}
-
-func PubKeyToDIDelsi(pubKeyJWK jwk.Key) (did string, err error) {
-
-	var buf [10]byte
-	n := binary.PutUvarint(buf[0:], uint64(multicodec.Jwk_jcsPub))
-	Jwk_jcsPub_Buf := buf[0:n]
-
-	serialized, err := json.Marshal(pubKeyJWK)
-	if err != nil {
-		return "", err
-	}
-
-	keyEncoded := append(Jwk_jcsPub_Buf, serialized...)
-
-	mb, err := multibase.Encode(multibase.Base58BTC, keyEncoded)
-	if err != nil {
-		return "", err
-	}
-
-	return "did:key:" + mb, nil
+	return did, privateKey, cert, nil
 
 }
+
+// func PubKeyToDIDelsi(pubKeyJWK jwk.Key) (did string, err error) {
+
+// 	var buf [10]byte
+// 	n := binary.PutUvarint(buf[0:], uint64(multicodec.Jwk_jcsPub))
+// 	Jwk_jcsPub_Buf := buf[0:n]
+
+// 	serialized, err := json.Marshal(pubKeyJWK)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	keyEncoded := append(Jwk_jcsPub_Buf, serialized...)
+
+// 	mb, err := multibase.Encode(multibase.Base58BTC, keyEncoded)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	return "did:key:" + mb, nil
+
+// }
 
 func DIDelsiIdentifier(did string) (string, error) {
 	if !strings.HasPrefix(did, "did:elsi:") {
@@ -228,15 +118,11 @@ func DIDelsiToPubKey(did string) (publicKey jwk.Key, err error) {
 }
 
 func (v *Vault) newDidelsiForUser(user *User,
-	sub ELSISubject,
-	ed25519Key bool,
-	ecdsaCurve string,
-	rsaBits int,
-	isCA bool,
-	validFrom string,
-	validFor time.Duration) (did string, privateKey jwk.Key, pemBytes []byte, err error) {
+	sub x509util.ELSIName,
+	kp x509util.KeyParams,
+) (did string, privateKey jwk.Key, pemBytes []byte, err error) {
 
-	did, privateKey, pemBytes, err = GenDIDelsi(sub, ed25519Key, ecdsaCurve, rsaBits, isCA, validFrom, validFor)
+	did, privateKey, pemBytes, err = GenDIDelsi(sub, kp)
 	if err != nil {
 		return "", nil, nil, err
 	}
@@ -268,16 +154,9 @@ func (v *Vault) newDidelsiForUser(user *User,
 	return did, privateKey, pemBytes, nil
 }
 
-func (v *Vault) NewDidelsiForUser(user *User,
-	sub ELSISubject,
-	ed25519Key bool,
-	ecdsaCurve string,
-	rsaBits int,
-	isCA bool,
-	validFrom string,
-	validFor time.Duration) (did string, privateKey jwk.Key, pemBytes []byte, err error) {
+func (v *Vault) NewDidelsiForUser(user *User, sub x509util.ELSIName, kp x509util.KeyParams) (did string, privateKey jwk.Key, pemBytes []byte, err error) {
 
-	return v.newDidelsiForUser(user, sub, ed25519Key, ecdsaCurve, rsaBits, isCA, validFrom, validFor)
+	return v.newDidelsiForUser(user, sub, kp)
 
 }
 
@@ -334,31 +213,49 @@ func (v *Vault) DIDelsiToPublicKey(did string) (publicKey jwk.Key, err error) {
 
 }
 
-func (v *Vault) SignWithDIDelsi(did string, stringToSign string) (signedString string, err error) {
+func (v *Vault) SignWithDIDelsi(did string, privateKey jwk.Key, cert x509util.PEMCert, stringToSign string) (signedString string, err error) {
 	zlog.Info().Str("stringToSign", stringToSign).Msg("")
 
-	// Get the private key corresponding to the DID of the signer
-	jwkPrivkey, err := v.DIDKeyToPrivateKey(did)
+	// Convert key from JWK to native raw format
+	var rawPrivateKey any
+	err = privateKey.Raw(&rawPrivateKey)
 	if err != nil {
 		return "", err
 	}
 
-	jsonbuf, err := json.Marshal(jwkPrivkey)
+	// Prepare for signing with the key
+	key, ok := rawPrivateKey.(crypto.Signer)
+	if !ok {
+		return "", errors.New("x509: certificate private key does not implement crypto.Signer")
+	}
+
+	// The input certificate is in PEM format. Decode it and convert to an in-memory representation
+	b, _ := pem.Decode(cert)
+	if b == nil {
+		err = fmt.Errorf("error decoding PEM bytes")
+		return "", err
+	}
+
+	// Get the certificate in native Go format
+	template, err := x509.ParseCertificate(b.Bytes)
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(string(jsonbuf))
 
-	privateKey := &ecdsa.PrivateKey{}
-	err = jwkPrivkey.Raw(privateKey)
-	if err != nil {
-		return "", err
+	// Check the serial number of the certificate
+	if template.SerialNumber == nil {
+		return "", errors.New("x509: no SerialNumber given")
+	}
+
+	if template.SerialNumber.Sign() == -1 {
+		return "", errors.New("x509: serial number must be positive")
 	}
 
 	// Sign the string with the private key
 	hash := sha256.Sum256([]byte(stringToSign))
 
-	sig, err := ecdsa.SignASN1(rand.Reader, privateKey, hash[:])
+	sig, err := key.Sign(rand.Reader, hash[:], nil)
+	//	sig, err := ecdsa.SignASN1(rand.Reader, privateKey, hash[:])
 	if err != nil {
 		panic(err)
 	}
