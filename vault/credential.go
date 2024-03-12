@@ -38,7 +38,7 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 
 	credData := yaml.New(credmap)
 
-	// It is an error if the credential
+	// It is an error if the credential does not have at least the email and name
 	email := yaml.GetString(credmap, "claims.email")
 	name := yaml.GetString(credmap, "claims.name")
 	if email == "" || name == "" {
@@ -148,9 +148,9 @@ func (v *Vault) CreateLEARCredentialJWTFromMap(credmap map[string]any) (credID s
 
 	credData := yaml.New(credmap)
 
-	// It is an error if the credential does not include the name and email of the employee
-	email := yaml.GetString(credmap, "claims.email")
-	name := yaml.GetString(credmap, "claims.name")
+	// It is an error if the credential does not include the name and email of the employee as the holder
+	email := yaml.GetString(credmap, "holder.email")
+	name := yaml.GetString(credmap, "holder.name")
 	if email == "" || name == "" {
 		err := fmt.Errorf("email or name not found")
 		return "", nil, err
@@ -195,15 +195,15 @@ func (v *Vault) CreateLEARCredentialJWTFromMap(credmap map[string]any) (credID s
 	// Set the issuer did in the credential source data
 	credmap["issuerDID"] = issuer.did
 
-	// Create or get the DID of the subject.
+	// Create or get the DID of the holder.
 	// We will use his email as the unique ID
-	subject, err := v.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
+	holder, err := v.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
 	if err != nil {
 		return "", nil, err
 	}
 
 	claims := credData.Map("claims")
-	claims["id"] = subject.did
+	claims["id"] = holder.did
 	credmap["claims"] = claims
 
 	// Generate the credential from the template

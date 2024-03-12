@@ -104,9 +104,9 @@ func TestVault_CreateLEARCredentialJWTFromMap(t *testing.T) {
 
 			// Cast to a map so it can be passed to CreateCredentialFromMap
 			cred, _ := item.(map[string]any)
-			_, _, err := v.CreateCredentialJWTFromMap(cred)
+			_, _, err := v.CreateLEARCredentialJWTFromMap(cred)
 			if err != nil {
-				t.Errorf("CreateCredentialJWTFromMap error = %v", err)
+				t.Errorf("CreateLEARCredentialJWTFromMap error = %v", err)
 				return
 			}
 

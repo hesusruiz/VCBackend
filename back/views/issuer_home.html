@@ -22,17 +22,12 @@
                     {{else}}
                     <img src="https://www.w3schools.com/w3css/img_avatar3.png" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
                     {{end}}
-                    <p class="w3-large">{{.credentialSubject.name}}</p>
+                    <p class="w3-large">{{.credentialSubject.mandate.mandatee.first_name}} {{.credentialSubject.mandate.mandatee.last_name}}</p>
                     <hr>
                 <div class="w3-row-padding">
 
-                    {{with .credentialSubject.position}}
-                    <p class="w3-margin-bottom5">{{.department}}</p>
-                    <p class="w3-margin-bottom5">{{.secretariat}}</p>
-                    <p class="w3-margin-bottom5">{{.directorate}}</p>
-                    <p class="w3-margin-bottom5">{{.subdirectorate}}</p>
-                    <p class="w3-margin-bottom5">{{.service}}</p>
-                    <p class="w3-margin-bottom5">{{.section}}</p>
+                    {{range .credentialSubject.mandate.power}}
+                    <p class="w3-margin-bottom5">{{.tmf_domain}} {{.tmf_action}} {{.tmf_function}}</p>
                     {{end}}
 
                 </div>

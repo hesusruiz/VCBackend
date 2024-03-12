@@ -6,7 +6,7 @@
         "https://www.evidenceledger.eu/2022/credentials/employee/v1"
     ],
     "id": "{{.jti}}",
-    "type": ["VerifiableCredential", "LEARCredentialEmpoyee"],
+    "type": ["VerifiableCredential", "LEARCredentialEmployee"],
     "issuer": {
         "id": "{{.issuerDID}}"
     },

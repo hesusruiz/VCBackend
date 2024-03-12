@@ -343,6 +343,7 @@ func BatchGenerateCredentials(issuerConfig *yaml.YAML) {
 }
 
 func BatchGenerateLEARCredentials(issuerConfig *yaml.YAML) {
+	zlog.Info().Msg("creating LEAR Credentials")
 
 	// Get the name of the SQLite database file from the config URI, e.g: "issuer.sqlite?mode=rwc&cache=shared&_fk=1"
 	storeDataSourceName := issuerConfig.String("store.dataSourceName")
@@ -387,7 +388,7 @@ func BatchGenerateLEARCredentials(issuerConfig *yaml.YAML) {
 
 		// Cast to a map so it can be passed to CreateCredentialFromMap
 		cred, _ := item.(map[string]any)
-		_, _, err := issuerVault.CreateCredentialJWTFromMap(cred)
+		_, _, err := issuerVault.CreateLEARCredentialJWTFromMap(cred)
 		if err != nil {
 			zlog.Err(err).Send()
 			continue
