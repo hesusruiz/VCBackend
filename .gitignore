@@ -17,6 +17,8 @@
 node_modules/
 jspm_packages/
 
+# Pocketbase data directory
+pb_data/
 
 # SQLite databases
 *.sqlite
