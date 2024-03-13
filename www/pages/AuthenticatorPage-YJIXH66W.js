@@ -28,7 +28,7 @@ window.MHR.register("AuthenticatorPage", class extends window.MHR.AbstractPage {
             <div class="ion-margin-start ion-margin-bottom">
                 <ion-button expand="block" @click=${() => webAuthn(authType, origin, email, state)}>
                     <ion-icon size="large" slot="start" name="finger-print"></ion-icon>
-                    ${T("Use biometric authentication")}
+                    ${T("Click to use biometric authentication")}
                 </ion-button>
             </div>
 

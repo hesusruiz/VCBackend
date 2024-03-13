@@ -1,5 +1,7 @@
 import PocketBase from '../components/pocketbase.es.mjs'
 
+import { renderLEARCredential } from '../components/renderLEAR'
+
 console.log("Wallet served from:", window.location.origin)
 const pb = new PocketBase(window.location.origin)
 
@@ -120,55 +122,30 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             }
 
             // We use the hash of the credential as its unique ID
-            const currentId = vcraw.hash
+            const currentId = vcraw.hash 
 
             // Get the unencoded payload
             const vc = JSON.parse(vcraw.encoded)
-            const vcs = vc.credentialSubject
-            const pos = vcs.position
-            var avatar = photo_man
-            if (vcs.gender == "f") {
-                avatar = photo_woman
-            }
 
+            // Render the credential
             const div = html`
-                <ion-card>
+            <ion-card>
+                ${renderLEARCredential(vc)}
+    
+                <div class="ion-margin-start ion-margin-bottom">
+                    <ion-button @click=${() => gotoPage("DisplayVC", currentId)}>
+                        <ion-icon slot="start" name="construct"></ion-icon>
+                        ${T("Details")}
+                    </ion-button>
+    
+                    <ion-button color="danger" @click=${() => this.presentActionSheet(currentId)}>
+                        <ion-icon slot="start" name="trash"></ion-icon>
+                        ${T("Delete")}
+                    </ion-button>
+                </div>
+            </ion-card>
+            `
 
-                    <ion-card-header>
-                        <ion-card-title>${vcs.name}</ion-card-title>
-                        <ion-card-subtitle>Employee</ion-card-subtitle>
-                    </ion-card-header>
-
-                    <ion-card-content class="ion-padding-bottom">
-
-                        <ion-avatar>
-                            <img alt="Avatar" src=${avatar} />
-                        </ion-avatar>
-
-                        <div>
-                            <p>${pos.department}</p>
-                            <p>${pos.secretariat}</p>
-                            <p>${pos.directorate}</p>
-                            <p>${pos.subdirectorate}</p>
-                            <p>${pos.service}</p>
-                            <p>${pos.section}</p>
-                        </div>
-
-                    </ion-card-content>
-
-                    <div class="ion-margin-start ion-margin-bottom">
-                        <ion-button @click=${() => gotoPage("DisplayVC", currentId)}>
-                            <ion-icon slot="start" name="construct"></ion-icon>
-                            ${T("Details")}
-                        </ion-button>
-
-                        <ion-button color="danger" @click=${() => this.presentActionSheet(currentId)}>
-                            <ion-icon slot="start" name="trash"></ion-icon>
-                            ${T("Delete")}
-                        </ion-button>
-                    </div>
-                </ion-card>
-                `
             theDivs.push(div)
 
         }

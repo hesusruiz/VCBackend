@@ -2,9 +2,10 @@ import {
   decodeJWT
 } from "../chunks/chunk-6S4HU4KK.js";
 import {
-  photo_man_default,
-  photo_woman_default
-} from "../chunks/chunk-EMILS377.js";
+  renderLEARCredential
+} from "../chunks/chunk-CVXK7JXO.js";
+import "../chunks/chunk-BFXLU5VG.js";
+import "../chunks/chunk-U2D4LOFI.js";
 import "../chunks/chunk-66PNVI35.js";
 
 // front/node_modules/js-base64/base64.mjs
@@ -246,7 +247,6 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
       if (vctype.includes(scope)) {
         console.log("found", cc.encoded);
         credentials.push(vc);
-        break;
       }
     }
     if (credentials.length == 0) {
@@ -266,8 +266,9 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             </ion-card-content>
             
         </ion-card>
+
+        ${credentials.map((cred) => html2`${vcToHtml(cred, response_uri, state, this.WebAuthnSupported)}`)}
         
-        ${vcToHtml(credentials[0], response_uri, state, this.WebAuthnSupported)}
         `;
     this.render(theHtml);
   }
@@ -275,37 +276,9 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
 function vcToHtml(vc, response_uri, state, webAuthnSupported) {
   const holder = vc.credentialSubject.id;
   var credentials = [vc];
-  const vcs = vc.credentialSubject;
-  const pos = vcs.position;
-  var avatar = photo_man_default;
-  if (vcs.gender == "f") {
-    avatar = photo_woman_default;
-  }
   const div = html`
     <ion-card>
-
-        <ion-card-header>
-            <ion-card-title>${vcs.name}</ion-card-title>
-            <ion-card-subtitle>Employee</ion-card-subtitle>
-        </ion-card-header>
-
-
-        <ion-card-content class="ion-padding-bottom">
-
-            <ion-avatar>
-                <img alt="Avatar" src=${avatar} />
-            </ion-avatar>
-
-            <div>
-                <p>${pos.department}</p>
-                <p>${pos.secretariat}</p>
-                <p>${pos.directorate}</p>
-                <p>${pos.subdirectorate}</p>
-                <p>${pos.service}</p>
-                <p>${pos.section}</p>
-            </div>
-
-        </ion-card-content>
+        ${renderLEARCredential(vc)}
 
         <div class="ion-margin-start ion-margin-bottom">
             <ion-button @click=${() => MHR.cleanReload()}>
@@ -368,6 +341,9 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
         res2["state"] = state;
         log.log("Authenticator required");
         gotoPage("AuthenticatorPage", res2);
+        return;
+      } else {
+        gotoPage("AuthenticatorSuccessPage");
         return;
       }
     }

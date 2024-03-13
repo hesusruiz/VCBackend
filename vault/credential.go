@@ -9,6 +9,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/evidenceledger/vcdemo/vault/ent"
+	"github.com/evidenceledger/vcdemo/vault/x509util"
 	"github.com/google/uuid"
 	"github.com/hesusruiz/vcutils/yaml"
 	zlog "github.com/rs/zerolog/log"
@@ -144,7 +145,7 @@ func (v *Vault) CreateCredentialJWTFromMap(credmap map[string]any) (credID strin
 
 // CreateLEARCredentialJWTFromMap receives a map with the hierarchical data of the credential and returns
 // the id of a new credential and the raw JWT string representing the credential
-func (v *Vault) CreateLEARCredentialJWTFromMap(credmap map[string]any) (credID string, rawJSONCred json.RawMessage, err error) {
+func (v *Vault) CreateLEARCredentialJWTFromMap(credmap map[string]any, elsiName x509util.ELSIName) (credID string, rawJSONCred json.RawMessage, err error) {
 
 	credData := yaml.New(credmap)
 
@@ -187,7 +188,7 @@ func (v *Vault) CreateLEARCredentialJWTFromMap(credmap map[string]any) (credID s
 	}
 
 	// Create or get the DID of the issuer.
-	issuer, err := v.CreateOrGetUserWithDIDKey(v.id, v.name, "legalperson", v.password)
+	issuer, err := v.CreateOrGetUserWithDIDelsi(v.id, v.name, elsiName, "legalperson", v.password)
 	if err != nil {
 		return "", nil, err
 	}

@@ -443,7 +443,7 @@ func (v *Verifier) PageAccessProtectedService(c *fiber.Ctx) error {
 	// Try to get the access token from the cookie (for interactive HTML pages)
 	accessToken := c.Cookies("dsbamvf")
 
-	// Otherwise, try to teh the token from the Authorization HTTP Request header
+	// Otherwise, try to get the token from the Authorization HTTP Request header
 	if len(accessToken) == 0 {
 		auth := strings.Split(c.Get("authorization"), " ")
 		if len(auth) > 1 {
@@ -452,7 +452,7 @@ func (v *Verifier) PageAccessProtectedService(c *fiber.Ctx) error {
 		}
 	}
 
-	// It is an error to receive a request withou Access Token
+	// It is an error to receive a request without Access Token
 	if len(accessToken) == 0 {
 		zlog.Error().Str("token", accessToken).Msg("no Access Token received")
 		return fiber.NewError(fiber.StatusUnauthorized, "no Access Token received")
@@ -714,6 +714,35 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 
 	} else {
 
+		if !v.cfg.Bool("authenticatorRequired", false) {
+
+			// Set the credential in storage, and wait for the polling from client
+			newState := handlers.NewState()
+			newState.SetStatus(handlers.StateCompleted)
+			newState.SetContent(serialCredential)
+			newStateString := newState.String()
+
+			err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
+			if err != nil {
+				zlog.Err(err).Send()
+				return err
+			}
+
+			zlog.Info().
+				Str("state", newStateString).
+				Str("email", email).
+				Msg("AuthenticationResponse success, not requiring webAuthn")
+
+			resp := map[string]string{
+				"authenticatorRequired": "no",
+				"type":                  "login",
+				"email":                 email,
+			}
+
+			return c.JSON(resp)
+
+		}
+
 		if userNotRegistered {
 			// The user does not have WebAuthn credentials, so we require initial registration of the Authenticator
 
@@ -787,7 +816,7 @@ func (v *Verifier) createJWTSecuredAuthenticationRequest(response_uri string, st
 		"iss":              verifierDID,
 		"aud":              "self-issued",
 		"max_age":          600,
-		"scope":            "dsba.credentials.presentation.Employee",
+		"scope":            "LEARCredentialEmployee",
 		"response_type":    "vp_token",
 		"response_mode":    "direct_post",
 		"client_id":        verifierDID,

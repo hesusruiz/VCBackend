@@ -1,10 +1,10 @@
 import {
-  photo_man_default,
-  photo_woman_default
-} from "../chunks/chunk-EMILS377.js";
+  renderLEARCredential
+} from "../chunks/chunk-CVXK7JXO.js";
 import {
   log
 } from "../chunks/chunk-BFXLU5VG.js";
+import "../chunks/chunk-U2D4LOFI.js";
 import "../chunks/chunk-66PNVI35.js";
 
 // front/src/components/pocketbase.es.mjs
@@ -1020,50 +1020,23 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
       }
       const currentId = vcraw.hash;
       const vc = JSON.parse(vcraw.encoded);
-      const vcs = vc.credentialSubject;
-      const pos = vcs.position;
-      var avatar = photo_man_default;
-      if (vcs.gender == "f") {
-        avatar = photo_woman_default;
-      }
       const div = html`
-                <ion-card>
-
-                    <ion-card-header>
-                        <ion-card-title>${vcs.name}</ion-card-title>
-                        <ion-card-subtitle>Employee</ion-card-subtitle>
-                    </ion-card-header>
-
-                    <ion-card-content class="ion-padding-bottom">
-
-                        <ion-avatar>
-                            <img alt="Avatar" src=${avatar} />
-                        </ion-avatar>
-
-                        <div>
-                            <p>${pos.department}</p>
-                            <p>${pos.secretariat}</p>
-                            <p>${pos.directorate}</p>
-                            <p>${pos.subdirectorate}</p>
-                            <p>${pos.service}</p>
-                            <p>${pos.section}</p>
-                        </div>
-
-                    </ion-card-content>
-
-                    <div class="ion-margin-start ion-margin-bottom">
-                        <ion-button @click=${() => gotoPage("DisplayVC", currentId)}>
-                            <ion-icon slot="start" name="construct"></ion-icon>
-                            ${T("Details")}
-                        </ion-button>
-
-                        <ion-button color="danger" @click=${() => this.presentActionSheet(currentId)}>
-                            <ion-icon slot="start" name="trash"></ion-icon>
-                            ${T("Delete")}
-                        </ion-button>
-                    </div>
-                </ion-card>
-                `;
+            <ion-card>
+                ${renderLEARCredential(vc)}
+    
+                <div class="ion-margin-start ion-margin-bottom">
+                    <ion-button @click=${() => gotoPage("DisplayVC", currentId)}>
+                        <ion-icon slot="start" name="construct"></ion-icon>
+                        ${T("Details")}
+                    </ion-button>
+    
+                    <ion-button color="danger" @click=${() => this.presentActionSheet(currentId)}>
+                        <ion-icon slot="start" name="trash"></ion-icon>
+                        ${T("Delete")}
+                    </ion-button>
+                </div>
+            </ion-card>
+            `;
       theDivs.push(div);
     }
     var theHtml;

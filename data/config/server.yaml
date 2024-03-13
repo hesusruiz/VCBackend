@@ -10,6 +10,17 @@ issuer:
   id: HappyPets
   name: HappyPets
   password: ThePassword
+  x509:
+    ELSIName:
+      OrganizationIdentifier: "VATES-12345678"
+      CommonName:             "56565656V Beppe Cafiso"
+      GivenName:              "Beppe"
+      Surname:                "Cafiso"
+      EmailAddress:           "beppe@goodair.com"
+      SerialNumber:           "56565656V"
+      Organization:           "GoodAir"
+      Country:                "IT"
+
   store:
     driverName: "sqlite3"
     dataSourceName: "issuer.sqlite?mode=rwc&cache=shared&_fk=1"
@@ -28,6 +39,7 @@ verifier:
     dataSourceLocation: "storage"
   jwks_uri: "/.well-known/jwks_uri"
   authnPolicies: "data/config/authn_policies.py"
+  authenticatorRequired: false
   protectedResource:
     url: "https://www.google.com"
   samedeviceWallet: "https://wallet.mycredential.eu"

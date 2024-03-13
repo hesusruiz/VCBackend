@@ -2,15 +2,15 @@ import {
   decodeJWT
 } from "../chunks/chunk-6S4HU4KK.js";
 import {
-  photo_man_default,
-  photo_woman_default
-} from "../chunks/chunk-EMILS377.js";
+  renderLEARCredential
+} from "../chunks/chunk-CVXK7JXO.js";
 import {
   credentialsSave
 } from "../chunks/chunk-DKTTY2U7.js";
 import {
   log
 } from "../chunks/chunk-BFXLU5VG.js";
+import "../chunks/chunk-U2D4LOFI.js";
 import "../chunks/chunk-66PNVI35.js";
 
 // front/src/pages/LoadAndSaveQRVC.js
@@ -264,36 +264,9 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
   renderEmployeeCredential(vcencoded) {
     let html2 = this.html;
     const vc = JSON.parse(vcencoded);
-    const vcs = vc.credentialSubject;
-    const pos = vcs.position;
-    var avatar = photo_man_default;
-    if (vcs.gender == "f") {
-      avatar = photo_woman_default;
-    }
     const div = html2`
         <ion-card>
-
-            <ion-card-header>
-                <ion-card-title>${vcs.name}</ion-card-title>
-                <ion-card-subtitle>Employee</ion-card-subtitle>
-            </ion-card-header>
-
-            <ion-card-content class="ion-padding-bottom">
-
-                <ion-avatar>
-                    <img alt="Avatar" src=${avatar} />
-                </ion-avatar>
-
-                <div>
-                    <p>${pos.department}</p>
-                    <p>${pos.secretariat}</p>
-                    <p>${pos.directorate}</p>
-                    <p>${pos.subdirectorate}</p>
-                    <p>${pos.service}</p>
-                    <p>${pos.section}</p>
-                </div>
-
-            </ion-card-content>
+            ${renderLEARCredential(vc)}
 
             <div class="ion-margin-start ion-margin-bottom">
                 <ion-button @click=${() => this.cleanReload()}>

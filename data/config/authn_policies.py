@@ -1,7 +1,8 @@
 # The module should define two functions: 'authenticate' and 'authorize'.
-# 'authenticate' is called when performing authentication, and 'authorize' when
-# actually accessing a protected resource.
-# The function should determine if the request is allowed and reply
+# * 'authenticate' is called when performing authentication, and
+# * 'authorize' is called when actually accessing a protected resource.
+#
+# Each of those functions should determine if the request is allowed and reply
 # True (allowed) or False (denied).
 #
 # The 'authenticate' and 'authorize' functions receive three objects: 'request', 'rawcred' and 'protected_resource'
@@ -24,15 +25,24 @@ def authenticate(request, rawcred, protected_resource):
     print("Inside authenticate")
     credential = json.decode(rawcred)
 
-    # Get the email inside the credentialSubject object
-    subject = credential["credentialSubject"]
-    email = subject["email"]
-    print(email)
+    ## Get the MANDATEE information from the credential
+    mandatee = credential["credentialSubject"]["mandate"]["mandatee"]
+    email = mandatee["email"]
+    first_name = mandatee["first_name"]
+    last_name = mandatee["last_name"]
+    print(first_name, last_name, email)
+
+    # Get the MANDATOR information from the credential
+    mandator = credential["credentialSubject"]["mandate"]["mandator"]
+    mandatorID = mandator["OrganizationIdentifier"]
+    mandatorOrgName = mandator["Organization"]
+    mandatorRepresentative = mandator["CommonName"]
+    print("organizationIdentifier:", mandatorID, "Org Name:", mandatorOrgName, "Legal Representative:", mandatorRepresentative)
 
     # Only Anna is allowed to access the resource
-    if email != "anna.smith@gmaily.com":
-        print("invalid email:", email)
-        return False
+    if email != "anna.smith@goodair.com":
+        print("email not allowed:", email)
+        return True
 
     # If all checks have passed, allow the request
     return True
@@ -41,15 +51,24 @@ def authorize(request, rawcred, protected_resource):
     print("Inside Authorize")
     credential = json.decode(rawcred)
 
-    # Get the email inside the credentialSubject object
-    subject = credential["credentialSubject"]
-    email = subject["email"]
-    print(email)
+    ## Get the MANDATEE information from the credential
+    mandatee = credential["credentialSubject"]["mandate"]["mandatee"]
+    email = mandatee["email"]
+    first_name = mandatee["first_name"]
+    last_name = mandatee["last_name"]
+    print(first_name, last_name, email)
+
+    # Get the MANDATOR information from the credential
+    mandator = credential["credentialSubject"]["mandate"]["mandator"]
+    mandatorID = mandator["OrganizationIdentifier"]
+    mandatorOrgName = mandator["Organization"]
+    mandatorRepresentative = mandator["CommonName"]
+    print("organizationIdentifier:", mandatorID, "Org Name:", mandatorOrgName, "Legal Representative:", mandatorRepresentative)
 
     # Only Anna is allowed to access the resource
-    if email != "anna.smith@gmaily.com":
+    if email != "anna.smith@goodair.com":
         print("invalid email:", email)
-        return False
+        return True
 
     # But even Anna can only access Google
     if protected_resource != "https://www.google.com":

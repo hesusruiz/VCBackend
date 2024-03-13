@@ -113,7 +113,7 @@ func main() {
 	}
 
 	// Create default credentials if not already created
-	issuer.BatchGenerateCredentials(issuerCfg)
+	issuer.BatchGenerateLEARCredentials(issuerCfg)
 
 	// Create the template engine using the templates in the configured directory
 	templateDir := cfg.String("server.templateDir", defaultTemplateDir)

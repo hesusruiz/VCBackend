@@ -27,7 +27,7 @@
                 <div class="w3-row-padding">
 
                     {{range .credentialSubject.mandate.power}}
-                    <p class="w3-margin-bottom5">{{.tmf_domain}} {{.tmf_action}} {{.tmf_function}}</p>
+                    <li class="w3-margin-bottom5">{{index .tmf_domain 0}} {{.tmf_function}} {{.tmf_action}}</li>
                     {{end}}
 
                 </div>

@@ -2,9 +2,11 @@ package vault
 
 import (
 	"context"
+	"time"
 
 	"github.com/evidenceledger/vcdemo/vault/ent"
 	"github.com/evidenceledger/vcdemo/vault/ent/user"
+	"github.com/evidenceledger/vcdemo/vault/x509util"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/duo-labs/webauthn/protocol"
@@ -103,7 +105,7 @@ func (v *Vault) CreateOrGetUserWithDIDKey(userid string, name string, usertype s
 
 // CreateOrGetUserWithDIDKey retrieves an existing User or creates a new one if it did not exist.
 // The user created is associated to a did:key
-func (v *Vault) CreateOrGetUserWithDIDelsi(userid string, name string, usertype string, password string) (*User, error) {
+func (v *Vault) CreateOrGetUserWithDIDelsi(userid string, name string, elsiName x509util.ELSIName, usertype string, password string) (*User, error) {
 
 	// Create a new User in memory
 	u := NewUser(v.db, userid, name)
@@ -148,8 +150,14 @@ func (v *Vault) CreateOrGetUserWithDIDelsi(userid string, name string, usertype 
 	}
 	u.entuser = usr
 
+	keyparams := x509util.KeyParams{
+		Ed25519Key: true,
+		ValidFrom:  "Jan 1 15:04:05 2024",
+		ValidFor:   365 * 24 * time.Hour,
+	}
+
 	// Create a new did:key and add it to the user
-	u.did, _, err = v.NewDidKeyForUser(u)
+	u.did, _, _, err = v.NewDidelsiForUser(u, elsiName, keyparams)
 	if err != nil {
 		return nil, err
 	}

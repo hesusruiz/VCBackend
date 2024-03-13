@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/evidenceledger/vcdemo/vault/ent"
+	"github.com/evidenceledger/vcdemo/vault/x509util"
 	"github.com/hesusruiz/vcutils/yaml"
 )
 
@@ -81,10 +82,10 @@ func TestVault_CreateLEARCredentialJWTFromMap(t *testing.T) {
 		id:   "HappyPets",
 		name: "HappyPets",
 	}
-	v.InitCredentialTemplates("./templates/*tpl")
+	v.InitCredentialTemplates("./testdata/*tpl")
 
 	// Parse credential data
-	data, err := yaml.ParseYamlFile("./testdata/lear_credential_data.yaml")
+	data, err := yaml.ParseYamlFile("./testdata/employee_data_lear.yaml")
 	if err != nil {
 		t.Errorf("ParseYamlFile error = %v", err)
 		return
@@ -97,6 +98,17 @@ func TestVault_CreateLEARCredentialJWTFromMap(t *testing.T) {
 		return
 	}
 
+	elsiName := x509util.ELSIName{
+		OrganizationIdentifier: "VATES-12345678",
+		CommonName:             "56565656V Beppe Cafiso",
+		GivenName:              "Beppe",
+		Surname:                "Cafiso",
+		EmailAddress:           "beppe@goodair.com",
+		SerialNumber:           "56565656V",
+		Organization:           "GoodAir",
+		Country:                "IT",
+	}
+
 	t.Run("Employee Credentials", func(t *testing.T) {
 
 		// Iterate through the list creating each credential which will use its own template
@@ -104,7 +116,7 @@ func TestVault_CreateLEARCredentialJWTFromMap(t *testing.T) {
 
 			// Cast to a map so it can be passed to CreateCredentialFromMap
 			cred, _ := item.(map[string]any)
-			_, _, err := v.CreateLEARCredentialJWTFromMap(cred)
+			_, _, err := v.CreateLEARCredentialJWTFromMap(cred, elsiName)
 			if err != nil {
 				t.Errorf("CreateLEARCredentialJWTFromMap error = %v", err)
 				return

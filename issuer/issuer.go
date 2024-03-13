@@ -12,6 +12,7 @@ import (
 	"github.com/evidenceledger/vcdemo/back/handlers"
 	"github.com/evidenceledger/vcdemo/internal/util"
 	"github.com/evidenceledger/vcdemo/vault"
+	"github.com/evidenceledger/vcdemo/vault/x509util"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
@@ -52,9 +53,22 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 		panic(err)
 	}
 
+	e := cfg.Map("x509.ELSIName")
+	elsiName := x509util.ELSIName{
+		OrganizationIdentifier: (e["OrganizationIdentifier"]).(string),
+		CommonName:             (e["CommonName"]).(string),
+		GivenName:              (e["GivenName"]).(string),
+		Surname:                (e["Surname"]).(string),
+		EmailAddress:           (e["EmailAddress"]).(string),
+		SerialNumber:           (e["SerialNumber"]).(string),
+		Organization:           (e["Organization"]).(string),
+		Country:                (e["Country"]).(string),
+	}
+
 	// Create the issuer user
 	// TODO: the password is only for testing
-	user, err := issuer.vault.CreateOrGetUserWithDIDKey(issuer.id, issuer.name, "legalperson", cfg.String("issuer.password", defaultPassword))
+	// user, err := issuer.vault.CreateOrGetUserWithDIDKey(issuer.id, issuer.name, "legalperson", cfg.String("issuer.password", defaultPassword))
+	user, err := issuer.vault.CreateOrGetUserWithDIDelsi(issuer.id, issuer.name, elsiName, "legalperson", cfg.String("issuer.password", defaultPassword))
 	if err != nil {
 		panic(err)
 	}
@@ -345,6 +359,18 @@ func BatchGenerateCredentials(issuerConfig *yaml.YAML) {
 func BatchGenerateLEARCredentials(issuerConfig *yaml.YAML) {
 	zlog.Info().Msg("creating LEAR Credentials")
 
+	e := issuerConfig.Map("x509.ELSIName")
+	elsiName := x509util.ELSIName{
+		OrganizationIdentifier: (e["OrganizationIdentifier"]).(string),
+		CommonName:             (e["CommonName"]).(string),
+		GivenName:              (e["GivenName"]).(string),
+		Surname:                (e["Surname"]).(string),
+		EmailAddress:           (e["EmailAddress"]).(string),
+		SerialNumber:           (e["SerialNumber"]).(string),
+		Organization:           (e["Organization"]).(string),
+		Country:                (e["Country"]).(string),
+	}
+
 	// Get the name of the SQLite database file from the config URI, e.g: "issuer.sqlite?mode=rwc&cache=shared&_fk=1"
 	storeDataSourceName := issuerConfig.String("store.dataSourceName")
 	parts := strings.Split(storeDataSourceName, "?")
@@ -388,7 +414,7 @@ func BatchGenerateLEARCredentials(issuerConfig *yaml.YAML) {
 
 		// Cast to a map so it can be passed to CreateCredentialFromMap
 		cred, _ := item.(map[string]any)
-		_, _, err := issuerVault.CreateLEARCredentialJWTFromMap(cred)
+		_, _, err := issuerVault.CreateLEARCredentialJWTFromMap(cred, elsiName)
 		if err != nil {
 			zlog.Err(err).Send()
 			continue

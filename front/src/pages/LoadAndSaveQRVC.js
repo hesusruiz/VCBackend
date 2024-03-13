@@ -1,9 +1,9 @@
 import { credentialsSave } from '../components/db';
 import { decodeJWT } from '../components/jwt';
 
-import photo_man from '../img/photo_man.png'
-import photo_woman from '../img/photo_woman.png'
 import { log } from '../log';
+
+import { renderLEARCredential } from '../components/renderLEAR';
 
 // Setup some local variables for convenience
 let gotoPage = window.MHR.gotoPage
@@ -22,6 +22,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
     }
 
     async enter(qrData) {
+
         let html = this.html
         log.log("LoadAndSaveQRVC received:", qrData)
 
@@ -324,37 +325,9 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         let html = this.html
 
         const vc = JSON.parse(vcencoded)
-        const vcs = vc.credentialSubject
-        const pos = vcs.position
-        var avatar = photo_man
-        if (vcs.gender == "f") {
-            avatar = photo_woman
-        }
-
         const div = html`
         <ion-card>
-
-            <ion-card-header>
-                <ion-card-title>${vcs.name}</ion-card-title>
-                <ion-card-subtitle>Employee</ion-card-subtitle>
-            </ion-card-header>
-
-            <ion-card-content class="ion-padding-bottom">
-
-                <ion-avatar>
-                    <img alt="Avatar" src=${avatar} />
-                </ion-avatar>
-
-                <div>
-                    <p>${pos.department}</p>
-                    <p>${pos.secretariat}</p>
-                    <p>${pos.directorate}</p>
-                    <p>${pos.subdirectorate}</p>
-                    <p>${pos.service}</p>
-                    <p>${pos.section}</p>
-                </div>
-
-            </ion-card-content>
+            ${renderLEARCredential(vc)}
 
             <div class="ion-margin-start ion-margin-bottom">
                 <ion-button @click=${() => this.cleanReload()}>
