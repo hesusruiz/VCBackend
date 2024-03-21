@@ -682,23 +682,23 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 	}
 
 	// Get the email of the user
-	email := theCredential.String("credentialSubject.email")
-	name := theCredential.String("credentialSubject.name")
-	zlog.Info().Str("email", email).Msg("data in vp_token")
+	email := theCredential.String("credentialSubject.mandate.mandatee.email")
+	// name := theCredential.String("credentialSubject.name")
+	// zlog.Info().Str("email", email).Msg("data in vp_token")
 
-	// Get user from Database
-	usr, err := v.vault.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
-	if err != nil {
-		zlog.Err(err).Msg("CreateOrGetUserWithDIDKey error")
-		return err
-	}
+	// // Get user from Database
+	// usr, err := v.vault.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
+	// if err != nil {
+	// 	zlog.Err(err).Msg("CreateOrGetUserWithDIDKey error")
+	// 	return err
+	// }
 
-	// Check if the user has a registered WebAuthn credential
+	// // Check if the user has a registered WebAuthn credential
 	var userNotRegistered bool
-	if len(usr.WebAuthnCredentials()) == 0 {
-		userNotRegistered = true
-		zlog.Info().Msg("user does not have a registered WebAuthn credential")
-	}
+	// if len(usr.WebAuthnCredentials()) == 0 {
+	// 	userNotRegistered = true
+	// 	zlog.Info().Msg("user does not have a registered WebAuthn credential")
+	// }
 
 	if isEnterpriseWallet {
 

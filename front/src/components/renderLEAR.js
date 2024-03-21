@@ -8,6 +8,8 @@ import { html } from 'uhtml';
 
 export function renderLEARCredential(vc) {
 
+    console.log("renderLEARCredential with:", vc)
+
     const vcs = vc.credentialSubject
     const first_name = vc.credentialSubject.mandate.mandatee.first_name
     const last_name = vc.credentialSubject.mandate.mandatee.last_name

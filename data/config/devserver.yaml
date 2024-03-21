@@ -11,6 +11,7 @@ cleantarget: true
 # Name is relative to the 'sourcedir'
 htmlfiles:
   - index.html
+  - issuer.html
 
 # The JavaScript files which are the entrypoints (normally included in the HTML files)
 # Name is relative to the 'sourcedir'

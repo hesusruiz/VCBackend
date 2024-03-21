@@ -29,6 +29,35 @@ issuer:
   credentialTemplatesDir: "data/credential_templates"
   credentialInputDataFile: "data/example_data/employee_data.yaml"
 
+
+issuernew:
+  id: HappyPets
+  name: HappyPets
+  password: ThePassword
+  x509:
+    ELSIName:
+      OrganizationIdentifier: "VATES-12345678"
+      CommonName:             "56565656V Beppe Cafiso"
+      GivenName:              "Beppe"
+      Surname:                "Cafiso"
+      EmailAddress:           "beppe@goodair.com"
+      SerialNumber:           "56565656V"
+      Organization:           "GoodAir"
+      Country:                "IT"
+
+  SMTP:
+    Enabled: true
+    Host: "smtp.serviciodecorreo.es"
+    Port: "465"
+    Tls: true
+    Username: "admin@mycredential.eu"
+    Password: "Lornac1100"
+
+
+  samedeviceWallet: "https://wallet.mycredential.eu"
+  credentialTemplatesDir: "data/credential_templates"
+  credentialInputDataFile: "data/example_data/employee_data.yaml"
+
 verifier:
   id: PacketDelivery
   name: PacketDelivery
@@ -38,7 +67,7 @@ verifier:
     dataSourceName: "verifier.sqlite?mode=rwc&cache=shared&_fk=1"
     dataSourceLocation: "storage"
   jwks_uri: "/.well-known/jwks_uri"
-  authnPolicies: "data/config/authn_policies.py"
+  authnPolicies: "data/config/authn_policies.star"
   authenticatorRequired: false
   protectedResource:
     url: "https://www.google.com"

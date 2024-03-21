@@ -49,6 +49,8 @@ if (basePath.length > 1) {
 // in the HTML page importing us in the window.homePage variable.
 // @ts-ignore
 var homePage = window.homePage
+// @ts-ignore
+var myAppTitle = window.myAppTitle
 if (!homePage) {
     throw "No homePage was set."
 }
@@ -399,14 +401,14 @@ function HeaderBar(backButton = true) {
                 Back
             </ion-button>
         </ion-buttons>
-        <ion-title>Privacy Wallet</ion-title>
+        <ion-title>${myAppTitle}</ion-title>
         ${menuB}
         </ion-toolbar>
         `;
     } else {
         return html`
         <ion-toolbar color="primary">
-        <ion-title>Privacy Wallet</ion-title>
+        <ion-title>${myAppTitle}</ion-title>
         ${menuB}
         </ion-toolbar>
     `;
@@ -445,6 +447,8 @@ function ErrorPanel(title, message) {
 
     return theHtml
 }
+
+
 
 // *****************************************************
 // AbstractPage is the superclass of all pages in the application
@@ -566,7 +570,7 @@ register("ErrorPage", class extends AbstractPage {
     }
 
     /**
-     * @param {{ title: string; msg: string; }} pageData
+     * @param {{title: string;msg: string;back:boolean}} pageData
      */
     enter(pageData) {
         let html = this.html
@@ -598,14 +602,17 @@ register("ErrorPage", class extends AbstractPage {
 
             <ion-card-content class="ion-padding-bottom">
                 <div class="text-larger">${msg}</div>
-                <div>${T("Please click Accept to refresh the page.")}</div>
+                ${pageData && (pageData.back == true) ? null : html`<div>${T("Please click Accept to refresh the page.")}</div>`}
             </ion-card-content>
 
             <div class="ion-margin-start ion-margin-bottom">
 
-                <ion-button color="danger" @click=${()=> cleanReload()}>
-                    ${T("Accept")}
-                </ion-button>
+                ${pageData && (pageData.back == true) ? html`
+                <ion-button @click=${()=> history.back()}>
+                    <ion-icon slot="start" name="chevron-back"></ion-icon>${T("Back")}
+                </ion-button>` : html`
+                <ion-button color="danger" @click=${()=> cleanReload()}>${T("Accept")}
+                </ion-button>`}
 
             </div>
         </ion-card>
@@ -613,6 +620,8 @@ register("ErrorPage", class extends AbstractPage {
         this.render(theHtml)
     }
 })
+
+
 
 
 /**

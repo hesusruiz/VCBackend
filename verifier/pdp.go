@@ -10,7 +10,6 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/hesusruiz/vcutils/yaml"
 	zlog "github.com/rs/zerolog/log"
 	starjson "go.starlark.net/lib/json"
 	"go.starlark.net/lib/math"
@@ -20,8 +19,19 @@ import (
 	"go.starlark.net/starlarkstruct"
 )
 
-const Authenticate int = 1
-const Authorize int = 2
+// Decision can be Authenticate or Authorize
+type Decision int
+
+const Authenticate Decision = 1
+const Authorize Decision = 2
+
+func (d Decision) String() string {
+	if d == Authenticate {
+		return "Authenticate"
+	} else {
+		return "Authorize"
+	}
+}
 
 // PDP implements a simple Policy Decision Point in Starlark
 type PDP struct {
@@ -62,10 +72,15 @@ func NewPDP(fileName string) (*PDP, error) {
 	return p, nil
 }
 
+// ParseAndCompileFile reads a file with Starlark code and compiles it, storing the resulting global
+// dictionary for later usage. In particular, the compiled module should define two functions,
+// one for athentication and the second for athorisation.
+// ParseAndCompileFile can be called several times and will perform a new compilation every time,
+// creating a new Thread and so the old ones will never be called again and eventually will be disposed.
 func (m *PDP) ParseAndCompileFile() error {
 	var err error
 
-	// The compiled program context will be stored in a Starlark thread
+	// The compiled program context will be stored in a new Starlark thread for each invocation
 	m.thread = &starlark.Thread{
 		Load:  repl.MakeLoad(),
 		Print: func(_ *starlark.Thread, msg string) { fmt.Println(msg) },
@@ -82,14 +97,14 @@ func (m *PDP) ParseAndCompileFile() error {
 		return err
 	}
 
-	// There may be two functions: 'authenticate' and 'authorize', called at the proper moments
+	// There should be two functions: 'authenticate' and 'authorize', called at the proper moments
 
-	m.authenticateFunction, err = m.isGlobalFunction("authenticate")
+	m.authenticateFunction, err = m.getGlobalFunction("authenticate")
 	if err != nil {
 		return err
 	}
 
-	m.authorizeFunction, err = m.isGlobalFunction("authorize")
+	m.authorizeFunction, err = m.getGlobalFunction("authorize")
 	if err != nil {
 		return err
 	}
@@ -98,7 +113,8 @@ func (m *PDP) ParseAndCompileFile() error {
 
 }
 
-func (m PDP) isGlobalFunction(funcName string) (*starlark.Function, error) {
+// getGlobalFunction retrieves a global with the specified name, requiring it to be a Callable
+func (m PDP) getGlobalFunction(funcName string) (*starlark.Function, error) {
 
 	// Check that we have the function
 	f, ok := m.globals[funcName]
@@ -119,11 +135,16 @@ func (m PDP) isGlobalFunction(funcName string) (*starlark.Function, error) {
 	return starFunction, nil
 }
 
-func (m PDP) TakeAuthnDecision(function int, c *fiber.Ctx, cred string, protected string) bool {
+// TakeAuthnDecision is called when a decision should be taken for either Athentication or Authorization.
+// The type of decision to evaluate is passed in the Decision argument. The rest of the arguments contain the information required
+// for the decision. They are:
+// - the Verifiable Credential with the information from the caller needed for the decision
+// - the protected resource that the caller identified in the Credential wants to access
+func (m PDP) TakeAuthnDecision(decision Decision, c *fiber.Ctx, credential string, protectedResource string) bool {
 	var err error
 	debug := true
 
-	zlog.Info().Msg("Performing access control")
+	zlog.Info().Str("decision", decision.String()).Msg("TakeAuthnDecision")
 
 	// In development, parse and compile the script on every request
 	if debug {
@@ -134,10 +155,10 @@ func (m PDP) TakeAuthnDecision(function int, c *fiber.Ctx, cred string, protecte
 		}
 	}
 
-	// Create the input argument
+	// Create the input arguments
 	httpRequest := StarDictFromFiberRequest(c)
-	credentialArgument := starlark.String(cred)
-	protectedArgument := starlark.String(protected)
+	credentialArgument := starlark.String(credential)
+	protectedArgument := starlark.String(protectedResource)
 
 	// Build the arguments to the StarLark function
 	var args starlark.Tuple
@@ -145,8 +166,9 @@ func (m PDP) TakeAuthnDecision(function int, c *fiber.Ctx, cred string, protecte
 	args = append(args, credentialArgument)
 	args = append(args, protectedArgument)
 
+	// Call the corresponding function in the Starlark Thread
 	var result starlark.Value
-	if function == Authenticate {
+	if decision == Authenticate {
 		// Call the 'authenticate' funcion
 		result, err = starlark.Call(m.thread, m.authenticateFunction, args, nil)
 	} else {
@@ -159,7 +181,7 @@ func (m PDP) TakeAuthnDecision(function int, c *fiber.Ctx, cred string, protecte
 		return false
 	}
 
-	// Check that the value returned is of the correct type (string)
+	// Check that the value returned is of the correct type (boolean)
 	resultType := result.Type()
 	if resultType != "bool" {
 		err := fmt.Errorf("function returned wrong type: %v", resultType)
@@ -167,7 +189,7 @@ func (m PDP) TakeAuthnDecision(function int, c *fiber.Ctx, cred string, protecte
 		return false
 	}
 
-	// Return the value as a boolean
+	// Return the value as a Go boolean
 	return bool(result.(starlark.Bool).Truth())
 
 }
@@ -354,17 +376,4 @@ func StarDictFromFiberRequest(c *fiber.Ctx) *starlark.Dict {
 	dd.SetKey(starlark.String("queryparams"), starQueries)
 
 	return dd
-}
-
-func StarDictFromCredential(cred *yaml.YAML) (*starlark.Dict, error) {
-
-	dd := &starlark.Dict{}
-
-	email := cred.String("credentialSubject.email")
-	dd.SetKey(starlark.String("email"), starlark.String(email))
-
-	section := cred.String("credentialSubject.position.section")
-	dd.SetKey(starlark.String("section"), starlark.String(section))
-
-	return dd, nil
 }

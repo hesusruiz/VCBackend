@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/duo-labs/webauthn/protocol"
 	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/evidenceledger/vcdemo/internal/cache"
 	"github.com/evidenceledger/vcdemo/vault"
+	"github.com/evidenceledger/vcdemo/vault/x509util"
 	"github.com/labstack/echo/v5"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -20,6 +22,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/template"
 
 	"github.com/hesusruiz/vcutils/yaml"
 
@@ -40,6 +43,7 @@ type WalletServer struct {
 	webAuthnSession *session.Store
 	cfg             *yaml.YAML
 	password        string
+	treg            *template.Registry
 	id              string
 	name            string
 	did             string
@@ -66,6 +70,9 @@ func NewWebAuthnHandlerPB(app *pocketbase.PocketBase, cfg *yaml.YAML) *WalletSer
 	s.id = cfg.String("id")
 	s.name = cfg.String("name")
 	s.password = cfg.String("password")
+
+	s.treg = template.NewRegistry()
+	s.treg.AddFuncs(sprig.FuncMap())
 
 	// Connect to the vault
 	if s.vault, err = vault.New(cfg); err != nil {
@@ -112,15 +119,43 @@ func NewWebAuthnHandlerPB(app *pocketbase.PocketBase, cfg *yaml.YAML) *WalletSer
 
 }
 
+func checkeIDASCert(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		// Get the clientCertDer value before processing the request
+		clientCertDer := c.Request().Header.Get("Tls-Client-Certificate")
+		if clientCertDer == "" {
+			zlog.Error().Msg("Client certificate not provided")
+			return apis.NewBadRequestError("Invalid request", nil)
+		}
+
+		_, issuer, subject, err := x509util.ParseEIDASCertB64Der(clientCertDer)
+		if err != nil {
+			zlog.Err(err).Msg("")
+			return err
+		}
+
+		c.Set("elsiUser", subject)
+
+		zlog.Info().Msgf("Subject: %s, Issuer: %s\n", subject.SerialNumber, issuer.Organization)
+		return next(c) // proceed with the request chain
+	}
+}
+
 func (s *WalletServer) AddRoutesPB(app *pocketbase.PocketBase) {
 
-	// Serves static files from the provided public dir (if exists)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+
+		// Serves static files from the provided public dir (if exists)
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./www"), false))
 
 		e.Router.POST("/createnaturalperson", s.CreateNaturalPerson)
 		e.Router.POST("/signtoken", s.SignToken)
 
+		// Add Issuer routes
+		iss := e.Router.Group("/issuerapi", checkeIDASCert)
+		iss.GET("/home", s.IssuerHome)
+
+		// The WebAuthn routes for biometric authentication
 		e.Router.GET("/webauthn/register/begin/:username", s.BeginRegistrationPB)
 		e.Router.POST("/webauthn/register/finish/:username", s.FinishRegistrationPB)
 		e.Router.GET("/webauthn/login/begin/:username", s.BeginLoginPB)
@@ -129,6 +164,24 @@ func (s *WalletServer) AddRoutesPB(app *pocketbase.PocketBase) {
 		return nil
 	})
 
+}
+
+func (s *WalletServer) IssuerHome(c echo.Context) error {
+	name := c.PathParam("name")
+
+	html, err := s.treg.LoadFiles(
+		"views/layouts/layout.html",
+		"views/pages/issuer_home.html",
+	).Render(map[string]any{
+		"name": name,
+	})
+
+	if err != nil {
+		// or redirect to a dedicated 404 HTML page
+		return apis.NewNotFoundError("", err)
+	}
+
+	return c.HTML(http.StatusOK, html)
 }
 
 type SignTokenRequest struct {

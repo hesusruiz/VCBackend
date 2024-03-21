@@ -27,7 +27,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         let html = this.html
 
         // Create our DID in the server
-        const newUser = await createUser()
+        //const newUser = await createUser()
 
         // const record = await pb.collection('users').create(data);
         // console.log(record)
@@ -93,6 +93,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
 
         // The URL specifies a command
         if (command !== null) {
+            
             switch (command) {
                 case "getvc":
                     var vc_id = params.get("vcid")

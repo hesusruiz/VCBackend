@@ -156,7 +156,7 @@ func (v *Vault) CreateOrGetUserWithDIDelsi(userid string, name string, elsiName 
 		ValidFor:   365 * 24 * time.Hour,
 	}
 
-	// Create a new did:key and add it to the user
+	// Create a new did:elsi and add it to the user
 	u.did, _, _, err = v.NewDidelsiForUser(u, elsiName, keyparams)
 	if err != nil {
 		return nil, err

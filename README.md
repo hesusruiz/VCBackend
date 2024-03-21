@@ -142,7 +142,7 @@ verifier:
     driverName: "sqlite3"
     dataSourceName: "file:data/storage/verifier.sqlite?mode=rwc&cache=shared&_fk=1"
   jwks_uri: "/.well-known/jwks_uri"
-  authnPolicies: "data/config/authn_policies.py"
+  authnPolicies: "data/config/authn_policies.star"
   protectedResource:
     url: "https://www.google.com"
   samedeviceWallet: "https://wallet.mycredential.eu"

@@ -1,5 +1,6 @@
 import { credentialsSave } from '../components/db';
 import { decodeJWT } from '../components/jwt';
+import PocketBase from '../components/pocketbase.es.mjs'
 
 import { log } from '../log';
 
@@ -322,6 +323,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
     }
     
     renderEmployeeCredential(vcencoded) {
+        
         let html = this.html
 
         const vc = JSON.parse(vcencoded)
@@ -997,6 +999,8 @@ async function getAuthServerMetadata(authServerAddress) {
 
 
 async function getVerifiableCredentialLD(backEndpoint) {
+
+
     try {
         let response = await fetch(backEndpoint, {
             mode: "cors"

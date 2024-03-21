@@ -24,6 +24,7 @@ import (
 )
 
 const defaultPassword = "ThePassword"
+const defaultStaticDir = "back/www"
 
 const issuerAPIPrefix = "/issuer/api/v1"
 
@@ -53,6 +54,7 @@ func Setup(s *handlers.Server, cfg *yaml.YAML) {
 		panic(err)
 	}
 
+	// Read the configured x509 certificate generation
 	e := cfg.Map("x509.ELSIName")
 	elsiName := x509util.ELSIName{
 		OrganizationIdentifier: (e["OrganizationIdentifier"]).(string),

@@ -22,5 +22,4 @@ build:
 	go run cmd/faster/faster.go
 
 serve:
-	go run cmd/faster/faster.go
-	go run .
+	go run . autobuild serve
