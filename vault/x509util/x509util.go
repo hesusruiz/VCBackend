@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"log"
@@ -457,6 +458,14 @@ type ELSIName struct {
 	Surname                string `json:"surname,omitempty"`
 	OrganizationIdentifier string `json:"organization_identifier,omitempty"`
 	EmailAddress           string `json:"email_address,omitempty"`
+}
+
+func (e ELSIName) String() string {
+	jsonRaw, err := json.MarshalIndent(e, "", "  ")
+	if err != nil {
+		return "<error>"
+	}
+	return string(jsonRaw)
 }
 
 func ParseEIDASNameFromATVSequence(rdn []pkix.AttributeTypeAndValue) *ELSIName {
