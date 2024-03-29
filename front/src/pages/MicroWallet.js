@@ -1,14 +1,8 @@
 import PocketBase from '../components/pocketbase.es.mjs'
+import { renderLEARCredentialCard } from '../components/renderLEAR'
+import { getOrCreateDidKey } from '../components/crypto'
 
-import { renderLEARCredential } from '../components/renderLEAR'
-
-console.log("Wallet served from:", window.location.origin)
 const pb = new PocketBase(window.location.origin)
-
-// The logo in the header
-import photo_man from '../img/photo_man.png'
-import photo_woman from '../img/photo_woman.png'
-import { log } from '../log'
 
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
@@ -24,18 +18,10 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
 
     async enter() {
 
+        // Create a new did:key (ECDSA/P-256) if it was not already created
+        await getOrCreateDidKey()
+
         let html = this.html
-
-        // Create our DID in the server
-        //const newUser = await createUser()
-
-        // const record = await pb.collection('users').create(data);
-        // console.log(record)
-
-        // console.log("Requesting verification")
-        // const result =await pb.collection('users').requestVerification('jesus@alastria.io')
-        // console.log("After requesting verification:", result)
-
 
         // We can receive QRs via the URL or scanning with the camera
 
@@ -45,15 +31,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         // If URL is clean (initially or after reloading)
         //     retrieve the QR from local storage and display it
 
-        // Check if we received a certificate via the URL
-        // The URL should be: https://host:port/?eudcc=QRCodeInBase64Encoding
-        // The QRCodeInBase64Encoding is the long string representing each QR code
         let params = new URL(document.location).searchParams
-        let scope = params.get("scope")
-        let command = params.get("command")
-        let request_uri = params.get("request_uri")
-        let credential_offer_uri = params.get("credential_offer_uri")
-
         console.log(document.location)
 
         // Check for redirect during the authentication flow
@@ -71,12 +49,14 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         
 
         // QR code found in URL. Process and display it
+        let scope = params.get("scope")
         if (scope !== null) {
             gotoPage("SIOPSelectCredential", document.URL)
             return;
         }
 
         // Check if we are authenticating
+        let request_uri = params.get("request_uri")
         if (request_uri !== null) {
             // Unescape the query parameter
             request_uri = decodeURIComponent(request_uri)
@@ -86,12 +66,14 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         }
 
         // Check if we are in a credential issuance scenario
+        let credential_offer_uri = params.get("credential_offer_uri")
         if (credential_offer_uri) {
             await gotoPage("LoadAndSaveQRVC", document.location.href)
             return;
         }
 
         // The URL specifies a command
+        let command = params.get("command")
         if (command !== null) {
             
             switch (command) {
@@ -107,6 +89,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
 
         // Retrieve all recent credentials from storage
         var credentials = await storage.credentialsGetAllRecent()
+        
         if (!credentials) {
             gotoPage("ErrorPage", { "title": "Error", "msg": "Error getting recent credentials" })
             return
@@ -117,28 +100,35 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
 
         for (const vcraw of credentials) {
 
-            if (vcraw.type !== "w3cvc") {
-                console.log("skipping unknown credential type")
-                continue
-            }
+            if (vcraw.type == "jwt_vc") {
 
-            // We use the hash of the credential as its unique ID
-            const currentId = vcraw.hash 
+                // We use the hash of the credential as its unique ID
+                const currentId = vcraw.hash
 
-            // Get the unencoded payload
-            const vc = JSON.parse(vcraw.encoded)
+                // Get the unencoded payload
+                const vc = vcraw.decoded
 
-            // Render the credential
-            const div = html`
+                const status = vcraw.status
+
+                // Render the credential
+                const div = html`
             <ion-card>
-                ${renderLEARCredential(vc)}
+            
+                ${renderLEARCredentialCard(vc, vcraw.status)}
     
                 <div class="ion-margin-start ion-margin-bottom">
-                    <ion-button @click=${() => gotoPage("DisplayVC", currentId)}>
+                    <ion-button @click=${() => gotoPage("DisplayVC", vcraw)}>
                         <ion-icon slot="start" name="construct"></ion-icon>
                         ${T("Details")}
                     </ion-button>
-    
+
+                    ${(status == "signed") ? null : html`
+                    <ion-button @click=${() => gotoPage("DisplayVC", vcraw)}>
+                        <ion-icon slot="start" name="construct"></ion-icon>
+                        ${T("Submit for signature")}
+                    </ion-button>`
+                    }
+
                     <ion-button color="danger" @click=${() => this.presentActionSheet(currentId)}>
                         <ion-icon slot="start" name="trash"></ion-icon>
                         ${T("Delete")}
@@ -147,7 +137,9 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             </ion-card>
             `
 
-            theDivs.push(div)
+                theDivs.push(div)
+            }
+
 
         }
 
@@ -178,6 +170,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             `
 
         } else {
+            mylog("No credentials")
 
             // We do not have a QR in the local storage
             theHtml = html`
@@ -237,7 +230,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             if (ev.detail.data.action == "delete") {
                 // Get the credential to delete
                 const currentId = this.credentialIdToDelete
-                log.log("deleting credential", currentId)
+                mylog("deleting credential", currentId)
                 await storage.credentialsDelete(currentId)
                 goHome()
                 return
@@ -265,7 +258,7 @@ async function createUser() {
     });
     if (response.ok) {
         const jres = await response.json();
-        log.log(jres)
+        mylog(jres)
         await window.MHR.storage.didSave(jres)
         return jres
     } else {

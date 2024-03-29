@@ -6,10 +6,8 @@
     }
 }
 
-
-
 issuer.mycredential.eu {
-	reverse_proxy 172.31.40.66:3000
+	reverse_proxy 172.31.40.66:8090
 }
 
 verifier.mycredential.eu {

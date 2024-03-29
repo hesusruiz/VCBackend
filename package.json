@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@cef-ebsi/key-did-resolver": "^2.0.1"
+  }
+}

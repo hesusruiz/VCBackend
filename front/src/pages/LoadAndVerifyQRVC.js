@@ -1,4 +1,5 @@
-import { log } from '../log'
+let myerror = window.MHR.storage.myerror
+let mylog = window.MHR.storage.mylog
 
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
@@ -85,16 +86,16 @@ window.MHR.register("LoadAndVerifyQRVC", class LoadAndVerifyQRVC extends window.
     saveVC() {
         console.log("Save VC " + JSON.stringify(this.VC))
         // Store it in local storage
-        log.log("Store " + this.VC)
+        mylog("Store " + this.VC)
         let total = 0;
         if(!!window.localStorage.getItem("W3C_VC_LD_TOTAL")) {
           total = parseInt(window.localStorage.getItem("W3C_VC_LD_TOTAL"))
-          log.log("Total " + total)
+          mylog("Total " + total)
         }
         const id = "W3C_VC_LD_"+total
         window.localStorage.setItem(id, this.VC)
         total = total + 1;
-        log.log(total + " credentials in storage.")
+        mylog(total + " credentials in storage.")
         window.localStorage.setItem("W3C_VC_LD_TOTAL", total)
         // Reload the application with a clean URL
         gotoPage("DisplayVC", id)
@@ -129,13 +130,13 @@ async function getCredentialOIDC4VCI(credentialEndpoint, accessToken, format, cr
           return "Error 403";
         }
         var error = await response.text();
-        log.error(error);
+        myerror(error);
         window.MHR.goHome();
         alert(error);
         return null;
       }
     } catch (error2) {
-      log.error(error2);
+      myerror(error2);
       alert(error2);
       return null;
     }
@@ -176,13 +177,13 @@ async function getCredentialOIDC4VCI(credentialEndpoint, accessToken, format, cr
           return "Error 403";
         }
         var error = await response.text();
-        log.error(error);
+        myerror(error);
         window.MHR.goHome();
         alert(error);
         return null;
       }
     } catch (error2) {
-      log.error(error2);
+      myerror(error2);
       alert(error2);
       return null;
     }
@@ -207,13 +208,13 @@ async function getCredentialOIDC4VCI(credentialEndpoint, accessToken, format, cr
           return "Error 403";
         }
         var error = await response.text();
-        log.error(error);
+        myerror(error);
         window.MHR.goHome();
         alert(error);
         return null;
       }
     } catch (error2) {
-      log.error(error2);
+      myerror(error2);
       alert(error2);
       return null;
     }
@@ -236,13 +237,13 @@ async function getVerifiableCredentialLD(backEndpoint) {
                 return "Error 403";
             }
             var error = await response.text();
-            log.error(error);
+            myerror(error);
             window.MHR.goHome();
             alert(error);
             return null;
         }
     } catch (error) {
-        log.error(error);
+        myerror(error);
         alert(error);
         return null;
     }
@@ -270,13 +271,13 @@ async function getCredentialOffer(url) {
                 return "Error 403";
             }
             var error = await response.text();
-            log.error(error);
+            myerror(error);
             window.MHR.goHome();
             alert(error);
             return null;
         }
     } catch (error2) {
-        log.error(error2);
+        myerror(error2);
         alert(error2);
         return null;
     }

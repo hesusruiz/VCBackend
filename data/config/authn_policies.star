@@ -46,12 +46,10 @@ def authenticate(request, rawcred, protected_resource):
     # Get the MANDATOR information from the credential
     mandator = credential["credentialSubject"]["mandate"]["mandator"]
     mandator_id = mandator["organizationIdentifier"]
-    mandator_org_name = mandator["Organization"]
+    mandator_org_name = mandator["organization"]
     mandator_representative = mandator["commonName"]
     print("organizationIdentifier:", mandator_id, "Org Name:", mandator_org_name, "Legal Representative:", mandator_representative)
 
-    # Get the POWERS information from the credential
-    powers = credential["credentialSubject"]["mandate"]["power"]
 
     ###############################################################################
     # This is where the real action comes. You can specify the rules that you need
@@ -94,7 +92,7 @@ def credentialIncludesPower(credential, action, function, domain):
     # Check all possible powers in the mandate
     for power in powers:
         # Approve if the power includes the required one
-        if (power["tmf_function"] == function) and (domain in powers["tmf_domain"]) and (action in power["tmf_action"]):
+        if (power["tmf_function"] == function) and (domain in power["tmf_domain"]) and (action in power["tmf_action"]):
             return True
 
     # We did not find any complying power, so Deny

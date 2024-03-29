@@ -145,6 +145,7 @@ func (m PDP) TakeAuthnDecision(decision Decision, c *fiber.Ctx, credential strin
 	debug := true
 
 	zlog.Info().Str("decision", decision.String()).Msg("TakeAuthnDecision")
+	fmt.Println("Credential", credential)
 
 	// In development, parse and compile the script on every request
 	if debug {

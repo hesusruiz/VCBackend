@@ -1,7 +1,7 @@
 import { Base64 } from 'js-base64';
 
 import { decodeJWT } from '../components/jwt'
-import { renderLEARCredential } from '../components/renderLEAR';
+import { renderLEARCredentialCard } from '../components/renderLEAR';
 
 // @ts-ignore
 const MHR = window.MHR
@@ -10,7 +10,8 @@ const MHR = window.MHR
 let gotoPage = MHR.gotoPage
 let goHome = MHR.goHome
 let storage = MHR.storage
-let log = MHR.log
+let myerror = window.MHR.storage.myerror
+let mylog = window.MHR.storage.mylog
 let html = MHR.html
 
 // We will perform SIOP/OpenID4VP Authentication flow
@@ -29,9 +30,9 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         // openIdUrl is the url for a SIOP/OpenID4VP Authentication Request
         let html = this.html
 
-        log.log("Inside SIOPSelectCredential:", openIdUrl)
+        mylog("Inside SIOPSelectCredential:", openIdUrl)
         if (openIdUrl == null) {
-            log.error("No URL has been specified")
+            myerror("No URL has been specified")
             this.showError("Error", "No URL has been specified")
             return
         }
@@ -50,7 +51,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         // Derive from the received URL a simple one ready for parsing
         openIdUrl = openIdUrl.replace("openid://?", "")
 
-        // Convert the input string to am URL object
+        // Convert the input string to a URL object
         const inputURL = new URL(openIdUrl)
 
         // The URL can have two formats:
@@ -69,10 +70,10 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         var scope = params.get("scope")
         var jar = params.get("jar")
 
-        log.log("state", state)
-        log.log("response_uri", response_uri)
-        log.log("scope", scope)
-        log.log("jar", jar)
+        mylog("state", state)
+        mylog("response_uri", response_uri)
+        mylog("scope", scope)
+        mylog("jar", jar)
 
         if (jar == "yes") {
             const authRequestJWT = await getAuthRequest(openIdUrl)
@@ -92,7 +93,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         // Get the last segment of the credential type in 'scope'
         const scopeParts = scope.split(".")
         if (scopeParts.length == 0) {
-            log.error("Invalid scope specified")
+            myerror("Invalid scope specified")
             this.showError("Error", "Invalid scope specified")
             return
         }
@@ -103,7 +104,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         var rpURL = new URL(response_uri)
         var rpDomain = rpURL.hostname 
 
-        // Retrieve all credentials from storage
+        // Retrieve all credentials from storage, to process them in memory
         var credStructs = await storage.credentialsGetAllRecent()
         if (!credStructs) {
             let theHtml = html`
@@ -116,7 +117,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             return
         }
 
-        // Select credentials of the requested type, specified in "scope"
+        // Select all credentials of the requested type, specified in "scope"
         var credentials = []
         for (const cc of credStructs) {
             const vc = cc.decoded
@@ -157,7 +158,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
 
 })
 
-// Render a credential in HTML
+// Render the credential with buttons so the user can select it for authentication
 function vcToHtml(vc, response_uri, state, webAuthnSupported) {
 
     // TODO: retrieve the holder and its private key from DB
@@ -169,7 +170,7 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
 
     const div = html`
     <ion-card>
-        ${renderLEARCredential(vc)}
+        ${renderLEARCredentialCard(vc)}
 
         <div class="ion-margin-start ion-margin-bottom">
             <ion-button @click=${()=> MHR.cleanReload()}>
@@ -197,8 +198,7 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
     const endpointURL  = new URL(backEndpoint)
     const origin = endpointURL.origin
 
-    log.log("sending AUthenticationResponse to:", backEndpoint + "?state=" + state)
-    log.log("The credentials: " + credentials)
+    mylog("sending AuthenticationResponse to:", backEndpoint + "?state=" + state)
 
     const uuid = self.crypto.randomUUID()
 
@@ -210,7 +210,7 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
         verifiableCredential: credentials,
         holder: holder
     }
-    log.log("The encoded credential ", Base64.encodeURI(JSON.stringify(vpToken)))
+    mylog("The encoded credential ", Base64.encodeURI(JSON.stringify(vpToken)))
 
     // Create the top-level structure for the Authentication Response
     var formAttributes = {
@@ -228,7 +228,7 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
 
     // Encode in JSON to put it in the body of the POST
     var formBody = JSON.stringify(formAttributes)
-    log.log("The body: " + formBody)
+    mylog("The body: " + formBody)
 
     // Send the Authentication Response
     try {
@@ -252,7 +252,7 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
 
         if (response.status == 200) {
             const res = await response.json()
-            log.log(res)
+            mylog(res)
 
             // Check if the server requires the authenticator to be used
             if (res.authenticatorRequired == "yes") {
@@ -260,7 +260,7 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
                 res["origin"] = origin
                 res["state"] = state
 
-                log.log("Authenticator required")
+                mylog("Authenticator required")
                 // The credential has been sent
                 gotoPage("AuthenticatorPage", res);
                 return
@@ -271,9 +271,9 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
         }
 
         // There was an error, present it
-        log.error("error sending credential", response.status)
+        myerror("error sending credential", response.status)
         const res = await response.text()
-        log.log("response:", res)
+        mylog("response:", res)
 
         gotoPage("ErrorPage", {
             title: "Error",
@@ -283,7 +283,7 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
 
     } catch (error) {
         // There was an error, present it
-        log.error(error)
+        myerror(error)
         gotoPage("ErrorPage", {
             title: "Error",
             msg: "Error sending the credential"
@@ -309,7 +309,7 @@ async function registerUser(origin, username, state) {
             })
         if (!response.ok) {
             var errorText = await response.text()
-            log.log(errorText)
+            mylog(errorText)
             return "error"
         }
         var responseJSON = await response.json()
@@ -319,8 +319,8 @@ async function registerUser(origin, username, state) {
         // so the server can match the reply with the request
         var session = responseJSON.session
         
-        log.log("Received CredentialCreationOptions", credentialCreationOptions)
-        log.log("Session:", session)
+        mylog("Received CredentialCreationOptions", credentialCreationOptions)
+        mylog("Session:", session)
 
 
         // Decode the fields that are b64Url encoded for transmission
@@ -337,17 +337,17 @@ async function registerUser(origin, username, state) {
         }
 
         // Make the Authenticator create the credential
-        log.log("creating new Authenticator credential")
+        mylog("creating new Authenticator credential")
         try {
             var credential = await navigator.credentials.create({
                 publicKey: credentialCreationOptions.publicKey
             })
         } catch (error) {
-            log.error(error)
+            myerror(error)
             return error
         }
 
-        log.log("Authenticator created Credential", credential)
+        mylog("Authenticator created Credential", credential)
 
         // Get the fields that we should encode for transmission to the server
         let attestationObject = credential.response.attestationObject;
@@ -371,7 +371,7 @@ async function registerUser(origin, username, state) {
         }
 
         // Perform a POST to the server
-        log.log("sending Authenticator credential to server")
+        mylog("sending Authenticator credential to server")
         var response = await fetch(origin + apiPrefix + '/register/finish/' + username + "?state=" + state, {
             method: 'POST',
             headers: {
@@ -383,16 +383,16 @@ async function registerUser(origin, username, state) {
         });
         if (!response.ok) {
             var errorText = await response.text()
-            log.log(errorText)
+            mylog(errorText)
             return "error"
         }
 
-        log.log("Authenticator credential sent successfully to server")
+        mylog("Authenticator credential sent successfully to server")
         return
 
 
     } catch (error) {
-        log.error(error)
+        myerror(error)
         return error
     }
 
@@ -409,7 +409,7 @@ async function loginUser(origin, username, state) {
                 mode: "cors"
             })
         if (!response.ok) {
-            log.error("error requesting CredentialRequestOptions", response.status)
+            myerror("error requesting CredentialRequestOptions", response.status)
             return "error"
         }
 
@@ -417,7 +417,7 @@ async function loginUser(origin, username, state) {
         var credentialRequestOptions = responseJSON.options
         var session = responseJSON.session
 
-        log.log("Received CredentialRequestOptions", credentialRequestOptions)
+        mylog("Received CredentialRequestOptions", credentialRequestOptions)
 
         // Decode the challenge from the server
         credentialRequestOptions.publicKey.challenge = bufferDecode(credentialRequestOptions.publicKey.challenge)
@@ -433,16 +433,16 @@ async function loginUser(origin, username, state) {
                 publicKey: credentialRequestOptions.publicKey
             })
             if (assertion == null) {
-                log.error("null assertion received from authenticator device")
+                myerror("null assertion received from authenticator device")
                 return "error"
             }
         } catch (error) {
             // Log and present the error page
-            log.error(error)
+            myerror(error)
             return error
         }
 
-        log.log("Authenticator created Assertion", assertion)
+        mylog("Authenticator created Assertion", assertion)
 
         // Get the fields that we should encode for transmission to the server
         let authData = assertion.response.authenticatorData
@@ -485,7 +485,7 @@ async function loginUser(origin, username, state) {
 
             if (!response.ok) {
                 var errorText = await response.text()
-                log.log(errorText)
+                mylog(errorText)
                 return "error"
             }
 
@@ -493,12 +493,12 @@ async function loginUser(origin, username, state) {
     
 
         } catch (error) {
-            log.error(error)
+            myerror(error)
             return error        
         }
 
     } catch (error) {
-        log.error(error)
+        myerror(error)
         return error
     }
 
@@ -541,7 +541,7 @@ async function getAuthRequest(uri) {
         })
     if (!response.ok) {
         var errorText = await response.text()
-        log.log(errorText)
+        mylog(errorText)
         return "error"
     }
     var responseText = await response.text()

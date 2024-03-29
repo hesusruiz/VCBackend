@@ -1,9 +1,7 @@
 import PocketBase from '../components/pocketbase.es.mjs'
+import { decodeJWT } from '../components/jwt'
 
-console.log("Wallet served from:", window.location.origin)
 const pb = new PocketBase(window.location.origin)
-
-import { log } from '../log'
 
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
@@ -12,7 +10,8 @@ let myerror = window.MHR.storage.myerror
 let mylog = window.MHR.storage.mylog
 let html = window.MHR.html
 
-window.MHR.register("ListOfferingsPage", class extends window.MHR.AbstractPage {
+var pageName = "ListOfferingsPage"
+window.MHR.register(pageName, class extends window.MHR.AbstractPage {
 
     constructor(id) {
         super(id)
@@ -24,6 +23,7 @@ window.MHR.register("ListOfferingsPage", class extends window.MHR.AbstractPage {
         console.log(pb.authStore.model)
 
         if (!pb.authStore.isValid || !pb.authStore.model.verified) {
+            myerror(`${pageName}: user not verified`)
             gotoPage("ErrorPage", {title: "User not verified"})
             return
         }
@@ -39,7 +39,6 @@ window.MHR.register("ListOfferingsPage", class extends window.MHR.AbstractPage {
 
     }
 
-
 })
 
 
@@ -54,23 +53,35 @@ function listCredentialOffers(records) {
     <ion-card-content>
 
         ${records.length == 0 ? html`<h1>No records</h1>` : html`
-            
-            <ion-list>
 
-                ${records.map((cred) => {console.log(cred.email); return html`
-                <ion-item>
-                    <ion-button slot="start" @click=${()=> gotoPage("DisplayOfferingQRCode", cred.id)}> View </ion-button>
-                    <ion-label>
-                        ${cred.id}
-                    </ion-col>
-    
-                    <ion-note>
-                        ${cred.email}
-                    </ionnote>
-                </ion-item>`
+        <div class="w3-responsive">
+
+            <table class="w3-table w3-table-all">
+
+                <tr>
+                    <th> </th>
+                    <th>Created</th>
+                    <th>Status</th>
+                    <th>Holder</th>
+                    <th>Creator</th>
+                    <th>Signer</th>
+                </tr>
+
+
+                ${records.map((cred) => {return html`
+                <tr>
+                    <td><ion-button size="small" @click=${()=> gotoPage("DisplayOfferingQRCode", cred)}> View </ion-button></td>
+                    <td>${cred.created}</td>
+                    <td>${cred.status}</td>
+                    <td>${cred.email}</td>
+                    <td>${cred.creator_email}</td>
+                    <td>${cred.signer_email}</td>
+                </tr>`
                 })}
-            </ion-list>
-                
+
+            </table>
+        </div>
+
         `}
 
     </ion-card-content>
@@ -83,6 +94,7 @@ function listCredentialOffers(records) {
 
 
 </ion-card>
+
 `
 
 }
@@ -94,79 +106,197 @@ window.MHR.register("DisplayOfferingQRCode", class extends window.MHR.AbstractPa
         super(id)
     }
 
-    async enter(id) {
+    async enter(cred) {
 
-        try {
-            var record = await pb.send('/eidasapi/createqrcode/'+id)
-            console.log(record)            
-        } catch (error) {
-            gotoPage("ErrorPage", {title: "Error retrieving credential "+id, msg: error.message})
-            return
-        }
-
-        // https://wallet.mycredential.eu?command=getvc&vcid=https://issuer.mycredential.eu/issuer/api/v1/credential/fd34b1c1-96cb-49c5-92bc-b52c5b96f6f1
-        
-        var credentialHref = "https://wallet.mycredential.eu/?command=getvc&vcid=https://issuersec.mycredential.eu/eidasapi/retrievecredential/" + id
-        var linkToCredential = "https://issuersec.mycredential.eu/eidasapi/retrievecredential/" + id
-    
-        const theHtml = html`
-<ion-card>
-    <ion-card-header>
-        <ion-card-title>Scan this QR code to load credential in wallet</ion-card-title>
-    </ion-card-header>
-
-    <ion-card-content>
-
-        <img src="${record.image}" alt="QR code">
-
-        <h1><a href=${credentialHref} target="_blank">Or click here to use same-device wallet</a></h1>
-        <h2><a href=${linkToCredential} target="_blank">Direct link to credential</a></h2>
-
-    </ion-card-content>
-
-    <div class="ion-margin-start ion-margin-bottom">
-        <ion-button @click=${()=> window.MHR.cleanReload()}>
-            ${T("Home")}
-        </ion-button>
-    </div>
-
-</ion-card>
-
-        `
-
+        const theHtml = renderMandateReadOnly(cred)
+      
         this.render(theHtml, false)
-
-        // Re-run the highlighter for the VC display
-        Prism.highlightAll()
-
 
     }
 
-
 })
 
-async function storeOfferingInServer(record) {
-    const userEmail = record.credentialSubject.mandate.mandatee.email
-    const learcred = JSON.stringify(record)
 
-    var model = pb.authStore.model
-
-    const data = {
-        status: "tobesigned",
-        email: userEmail,
-        type: "jwt_vc",
-        raw: learcred,
-        creator_email: model.email
-    };
-
+async function sendReminder(id) {
     try {
-        const record = await pb.collection('credentials').create(data);
+        var record = await pb.send('/apiadmin/sendreminder/'+id)
+        console.log(record)            
+    } catch (error) {
+        gotoPage("ErrorPage", {title: "Error retrieving credential "+id, msg: error.message})
+        return
+    }
+
+    alert("Reminder sent")
+
+}
+
+async function signCredentialOfferingInServer(credRecord) {
+
+    // Store the signed credential with the status "signed"
+    try {
+        console.log("Storing signed credential in Record", credRecord.id)
+        const record = await pb.collection('credentials').update(credRecord.id, credRecord);
         console.log(record)            
     } catch (error) {
         gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
         return
     }
 
-    alert("Credential saved!!")
+    alert("Credential signed!!")
+
+    goHome()
+
+}
+
+
+function renderMandateReadOnly(cred) {
+
+    console.log("Status", cred.status)
+
+    var decoded = decodeJWT(cred.raw)
+    const mandate = decoded.body.credentialSubject.mandate
+    const mandator = mandate.mandator
+    console.log(mandator)
+    const mandatee = mandate.mandatee
+    console.log(mandatee)
+    const powers = mandate.power
+    console.log(powers)
+
+    var theHtml =  html`
+<ion-card>
+    <ion-card-header>
+        <ion-card-title>Credential Offer</ion-card-title>
+    </ion-card-header>
+
+    <ion-card-content>
+
+        <ion-grid>
+            <ion-row>
+                <ion-col size="12" size-md="6">
+
+                    <ion-item-group>
+
+                        <ion-item-divider>
+                            <ion-label> Mandator (Signer) </ion-label>
+                        </ion-item-divider>
+
+                        <ion-item>
+                            <ion-input id="OrganizationIdentifier" label="OrganizationIdentifier:" label-placement="stacked"
+                            value="${mandator.organizationIdentifier}" readonly></ion-input>
+                        </ion-item>
+                        <ion-item>
+                            <ion-input id="Organization" label="Organization:" label-placement="stacked"
+                            value="${mandator.organization}" readonly></ion-input>
+                        </ion-item>
+                        <ion-item>
+                            <ion-input id="CommonName" label="CommonName:" label-placement="stacked"
+                            value="${mandator.commonName}" readonly></ion-input>
+                        </ion-item>
+                        <ion-item>
+                            <ion-input id="EmailAddress" label="EmailAddress:" label-placement="stacked"
+                            value="${mandator.emailAddress}" readonly></ion-input>
+                        </ion-item>
+                        <ion-item>
+                            <ion-input id="SerialNumber" label="SerialNumber:" label-placement="stacked"
+                            value="${mandator.serialNumber}" readonly></ion-input>
+                        </ion-item>
+                        <ion-item>
+                            <ion-input id="Country" label="Country:" label-placement="stacked"
+                            value="${mandator.country}" readonly></ion-input>
+                        </ion-item>
+
+                    </ion-item-group>
+
+                </ion-col>
+
+                <ion-col size="12" size-md="6">
+
+
+                    <ion-item-group>
+
+                        <ion-item-divider>
+                            <ion-label> Mandatee (Holder and Subject) </ion-label>
+                        </ion-item-divider>
+
+                        <ion-item>
+                            <ion-input id="first_name" label="First name:" label-placement="stacked"
+                            value="${mandatee.first_name}" readonly></ion-input>
+                        </ion-item>
+                        <ion-item>
+                            <ion-input id="last_name" label="Last name:" label-placement="stacked"
+                            value="${mandatee.last_name}" readonly></ion-input>
+                        </ion-item>
+                        <ion-item>
+                            <ion-input id="gender" label="Gender:" label-placement="stacked"
+                            value="${mandatee.gender}" readonly></ion-input>
+                        </ion-item>
+                        <ion-item>
+                            <ion-input id="email" label="Email:" label-placement="stacked"
+                            value="${mandatee.email}" readonly></ion-input>
+                        </ion-item>
+                        <ion-item>
+                            <ion-input id="mobile_phone" label="Mobile phone:" label-placement="stacked"
+                            value="${mandatee.mobile_phone}" readonly></ion-input>
+                        </ion-item>
+
+                    </ion-item-group>
+
+                </ion-col>
+            </ion-row>
+
+            <ion-row>
+                ${powers.map((pow, index) => {return html`
+                    <ion-col size="12" size-md="6">
+
+                        <ion-item-group>
+    
+                            <ion-item-divider>
+                                <ion-label> Powers (${index+1} of ${powers.length}) </ion-label>
+                            </ion-item-divider>
+    
+                            <ion-item>
+                                <ion-input label="Domain:" label-placement="stacked" value="DOME" readonly="true"></ion-input>
+                            </ion-item>
+    
+                            <ion-item>
+                                <ion-input label="Function:" label-placement="stacked"
+                                value="${pow.tmf_function}" readonly></ion-input>
+                            </ion-item>
+    
+                            <ion-item>
+                                <ion-input label="Allowed actions::" label-placement="stacked"
+                                value="${pow.tmf_action}" readonly></ion-input>
+                            </ion-item>
+    
+                        </ion-item-group>
+                    </ion-col>    
+
+                `
+                })}
+
+            </ion-row>
+
+        </ion-grid>
+
+    </ion-card-content>
+
+    <div class="ion-margin-start ion-margin-bottom">
+        <ion-button @click=${()=> history.back()}>
+            ${T("Back")}
+        </ion-button>
+        <ion-button @click=${()=> signCredentialOfferingInServer(cred)}>
+            ${T("Sign Credential")}
+        </ion-button>
+        <ion-button @click=${()=> sendReminder(cred.id)}>
+            ${T("Send reminder")}
+        </ion-button>
+    
+    </div>
+
+
+</ion-card>
+`
+
+return theHtml
 
 }

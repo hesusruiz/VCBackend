@@ -41,7 +41,6 @@ var (
 	prod       = flag.Bool("prod", false, "Enable prefork in Production, for better performance")
 	configFile = LookupEnvOrString("CONFIG_FILE", defaultConfigFile)
 	// Path to config file for building the front
-	buildConfigFile = LookupEnvOrString("BUILD_CONFIG_FILE", defaultBuildConfigFile)
 )
 
 func LookupEnvOrString(key string, defaultVal string) string {
@@ -102,6 +101,9 @@ func main() {
 	// Customize the root command
 	app.RootCmd.Short = "VCDemo CLI"
 
+	buildConfigFile := cfg.String("server.buildFront.buildConfigFile", defaultBuildConfigFile)
+	buildConfigFile = LookupEnvOrString("BUILD_CONFIG_FILE", buildConfigFile)
+
 	// Add our commands
 	app.RootCmd.AddCommand(&cobra.Command{
 		Use:   "build",
@@ -135,11 +137,16 @@ func main() {
 	StartServices(app, cfg)
 
 	// Start the new Issuer and block
-	issuernew.Start(app, issuerCfgNew)
+	if err := issuernew.Start(app, issuerCfgNew); err != nil {
+		panic(err)
+	}
 
 }
 
 func StartServices(app *pocketbase.PocketBase, cfg *yaml.YAML) {
+
+	buildConfigFile := cfg.String("server.buildFront.buildConfigFile", defaultBuildConfigFile)
+	buildConfigFile = LookupEnvOrString("BUILD_CONFIG_FILE", buildConfigFile)
 
 	// Check that the configuration entries for Issuer, Verifier and Wallet do exist
 	icfg := cfg.Map("issuer")
@@ -160,7 +167,6 @@ func StartServices(app *pocketbase.PocketBase, cfg *yaml.YAML) {
 	// }
 	// walletCfg := yaml.New(wcfg)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
-		log.Println(e.App)
 
 		// Create the HTTP server
 		s := handlers.NewServer(cfg)

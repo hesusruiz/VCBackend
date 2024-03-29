@@ -4,9 +4,6 @@
 // This module starts executing as soon as parsing of the HTML has finished
 // We will bootstrap the app and start the loading process for all components
 
-// Logging support
-import { log } from "./log";
-
 // For rendering the HTML in the pages
 import { render, html, svg } from 'uhtml';
 
@@ -19,6 +16,8 @@ import logo_img from './img/logo.png'
 
 // The database operations
 import { storage } from "./components/db"
+let myerror = storage.myerror
+let mylog = storage.mylog
 
 // Prepare for lazy-loading the pages
 // @ts-ignore
@@ -94,7 +93,7 @@ async function goHome() {
  * @param {any} pageData
  */
 async function gotoPage(pageName, pageData) {
-    log.log("Inside gotoPage:", pageName)
+    mylog("Inside gotoPage:", pageName)
     // if (pageName == "EBSIRedirect") {
     //     debugger
     // }
@@ -112,7 +111,7 @@ async function gotoPage(pageName, pageData) {
             // If pageName still does not exist, go to the 404 error page
             // passing the target page as pageData
             if (!pageNameToClass.get(pageName)) {
-                log.error("Target page does not exist: ", pageName);
+                myerror("Target page does not exist: ", pageName);
                 pageData = pageName
                 pageName = name404
             }
@@ -130,7 +129,7 @@ async function gotoPage(pageName, pageData) {
         
     } catch (error) {
 
-        log.error(error)
+        myerror(error)
         // Show an error
         await processPageEntered(pageNameToClass, "ErrorPage", {title: error.name, msg: error.message}, false);
         
@@ -159,7 +158,7 @@ async function processPageEntered(pageNameToClass, pageName, pageData, historyDa
                 await classInstance.exit()
             } catch (error) {
                 // We just log the error and continue the loop
-                log.error(`error calling exit() on ${name}: ${error.name}`);
+                myerror(`error calling exit() on ${name}: ${error.name}`);
             }            
         }
     }
@@ -212,7 +211,7 @@ window.addEventListener("popstate", async function (event) {
     try {
         await processPageEntered(pageNameToClass, pageName, pageData, true);        
     } catch (error) {
-        log.error(error)
+        myerror(error)
         // Show an error
         await processPageEntered(pageNameToClass, "ErrorPage", {title: error.name, msg: error.message}, false);
     }
@@ -659,7 +658,7 @@ function atobUrl(input) {
 // we do not pollute the global namespace with our functions and variables
 // @ts-ignore
 window.MHR = {
-    log: log,
+    mylog: storage.mylog,
     storage: storage,
     route: route,
     goHome: goHome,

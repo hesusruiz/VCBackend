@@ -1,9 +1,9 @@
 import { html } from 'uhtml'
-import { log } from '../log'
 import { getPreferredVideoDevice, getPlatformOS } from '../components/camerainfo'
 
 let myerror = window.MHR.storage.myerror
 let mylog = window.MHR.storage.mylog
+
 
 // This is to facilitate debugging of certificates
 var testQRdata = "HC1:NC"
@@ -20,9 +20,9 @@ const QR_UNKNOWN = 0
 const QR_URL = 1
 const QR_MULTI = 2
 const QR_HC1 = 3
-const QR_SIOP_URL = 4
-const QR_W3C_VC = 5
-const QR_OIDC4VCI = 6
+const QR_SIOP_URL = "QR_SIOP_URL"
+const QR_W3C_VC = "QR_W3C_VC"
+const QR_OIDC4VCI = "QR_OIDC4VCI"
 
 
 window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
@@ -247,6 +247,8 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
 
         }
 
+        mylog(`QRTYPE: ${qrType}`)
+
         // If no QR code recognized, keep trying
         if (qrType === QR_UNKNOWN) {
             setTimeout(() => this.detectCode(), this.detectionInterval)
@@ -255,7 +257,7 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
 
         // Handle a SIOP AuthenticationRequest QR
         if (qrType === QR_SIOP_URL) {
-            log.log("Going to ", "SIOPSelectCredential", qrData)
+            mylog("Going to ", "SIOPSelectCredential", qrData)
             window.MHR.gotoPage("SIOPSelectCredential", qrData)
             return true;
         }

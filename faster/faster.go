@@ -599,28 +599,28 @@ func watchAndBuild(cfg *yaml.YAML) {
 	// Start listening for events.
 	go dedupLoop(w, cfg)
 
-	watchDir := cfg.String("sourcedir")
+	watchDir := cfg.String("sourcedir", "src")
 	err = w.Add(watchDir)
 	if err != nil {
 		fmt.Printf("%q: %s", watchDir, err)
 		os.Exit(1)
 	}
 
-	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("pagedir"))
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("pagedir", "pages"))
 	err = w.Add(watchDir)
 	if err != nil {
 		fmt.Printf("%q: %s", watchDir, err)
 		os.Exit(1)
 	}
 
-	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("components"))
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("components", "components"))
 	err = w.Add(watchDir)
 	if err != nil {
 		fmt.Printf("%q: %s", watchDir, err)
 		os.Exit(1)
 	}
 
-	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("public"))
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("public", "public"))
 	err = w.Add(watchDir)
 	if err != nil {
 		fmt.Printf("%q: %s", watchDir, err)

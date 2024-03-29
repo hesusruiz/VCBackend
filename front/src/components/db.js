@@ -27,19 +27,27 @@ db.version(0.7).stores({
 // The _credential object has the following structure:
 //    _credential = {
 //        type: the type of credential: "w3cvc", "eHealth", "ukimmigration", etc
+//        status: the status in the lifecycle of the credential: offered, tobesigned, signed
 //        encoded: the credential encoded in JWT, COSE or any other suitable format
 //        decoded: the credential in plain format as a Javascript object
 //    }
-async function credentialsSave(_credential) {
+// If 'replace' is true, the new record replaces an existing one with the same primary key.
+// Otherwise, the new record is not saved and an error page displayed
+async function credentialsSave(_credential, replace) {
 
     log.log("CredentialSave", _credential)
 
-    // Calculate the hash of the encoded credential to avoid duplicates
-    var data = new TextEncoder().encode(_credential.encoded);
-    var hash = await crypto.subtle.digest('SHA-256', data)
-    var hashArray = Array.from(new Uint8Array(hash));   // convert buffer to byte array
-    var hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    
+    var hashHex
+    if (_credential.id) {
+        hashHex = _credential.id
+    } else {
+        // Calculate the hash of the encoded credential to avoid duplicates
+        var data = new TextEncoder().encode(_credential.encoded);
+        var hash = await crypto.subtle.digest('SHA-256', data)
+        var hashArray = Array.from(new Uint8Array(hash));   // convert buffer to byte array
+        hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     console.log("hashHex", hashHex)
 
     // Create the object to store
@@ -47,26 +55,44 @@ async function credentialsSave(_credential) {
         hash: hashHex,
         timestamp: Date.now(),
         type: _credential.type,
+        status: _credential.status,
         encoded: _credential.encoded,
         decoded: _credential.decoded
     }
 
-    // Check if the credential is already in the database
-    var oldCred = await credentialsGet(hashHex)
-    if (oldCred != undefined) {
-        log.error("Credential already exists", oldCred, hashHex)
-        window.MHR.gotoPage("ErrorPage", {"title": "Credential already exists", "msg": "Can not save credential: already exists"})
-        // Return an error
-        return;
+    if (replace) {
+        // Store the object, catching the exception if duplicated, but not displayng any error to the user
+        try {
+            await db.credentials.put(credential_to_store)
+        } catch (error) {
+            window.MHR.gotoPage("ErrorPage", {"title": "Error saving credential", "msg": error.message})
+            log.error("Error saving credential", error)
+            return;
+        }
+    } else {
+        // Store the object, catching the exception if duplicated, but not displayng any error to the user
+        try {
+            await db.credentials.add(credential_to_store)
+        } catch (error) {
+            if (error.name == "ConstraintError") {
+                window.MHR.gotoPage("ErrorPage", {"title": "Credential already exists", "msg": "Can not save credential: already exists"})
+            } else {
+                window.MHR.gotoPage("ErrorPage", {"title": "Error saving credential", "msg": error.message})
+            }
+            log.error("Error saving credential", error)
+            return;
+        }
     }
 
-    // Store the object, catching the exception if duplicated, but not displayng any error to the user
-    try {
-        await db.credentials.add(credential_to_store)
-    } catch (error) {
-        log.error("Error saving credential", error)
-        return;
-    }
+    // // Check if the credential is already in the database
+    // var oldCred = await credentialsGet(hashHex)
+    // if (oldCred != undefined) {
+    //     log.error("Credential already exists", oldCred, hashHex)
+    //     window.MHR.gotoPage("ErrorPage", {"title": "Credential already exists", "msg": "Can not save credential: already exists"})
+    //     // Return an error
+    //     return;
+    // }
+
 
     // Successful save, return the credential stored
     return credential_to_store;
@@ -74,14 +100,15 @@ async function credentialsSave(_credential) {
 }
 
 
+// The _credential object has the following structure:
+//    _credential = {
+//        type: the type of credential: "w3cvc", "eHealth", "ukimmigration", etc
+//        status: the status in the lifecycle of the credential: offered, tobesigned, signed
+//        encoded: the credential encoded in JWT, COSE or any other suitable format
+//        decoded: the credential in plain format as a Javascript object
+//    }
 async function credentialsDeleteCred(_credential) {
 
-    // The _credential object has the following structure:
-    //    _credential = {
-    //        type: the type of credential: "w3cvc", "eHealth", "ukimmigration", etc
-    //        encoded: the credential encoded in JWT, COSE or any other suitable format
-    //        decoded: the credential in plain format as a Javascript object
-    //    }
 
     log.log("credentialsDeleteCred", _credential)
 
@@ -227,30 +254,48 @@ async function mylog_entry(_level, _desc, _item) {
 
 }
 
-async function mylog(_desc) {
+// async function mylog(_desc) {
+//     if (LOG_ALL) {
+//         var args = Array.prototype.slice.call(arguments, 1);
+//         if (args.length > 0) {
+//             console.log(_desc, args)
+//             mylog_entry("N", _desc, args)    
+//         } else {
+//             console.log(_desc)
+//             mylog_entry("N", _desc)    
+//         }
+//     }
+// }
+
+async function mylog(_desc, ...additional) {
+    console.log(_desc, ...additional)
     if (LOG_ALL) {
-        var args = Array.prototype.slice.call(arguments, 1);
-        if (args.length > 0) {
-            console.log(_desc, args)
-            mylog_entry("N", _desc, args)    
-        } else {
-            console.log(_desc)
-            mylog_entry("N", _desc)    
-        }
+        mylog_entry("N", _desc, ...additional)
     }
+
 }
 
-async function myerror(_desc) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    if (args.length > 0) {
-        console.log(_desc, args)
-        mylog_entry("E", _desc, args)    
-    } else {
-        console.log(_desc)
-        mylog_entry("E", _desc)    
-    }
-}
+// async function myerror(_desc) {
+//     var args = Array.prototype.slice.call(arguments, 1);
+//     if (args.length > 0) {
+//         console.log(_desc, args)
+//         mylog_entry("E", _desc, args)    
+//     } else {
+//         console.log(_desc)
+//         mylog_entry("E", _desc)    
+//     }
+// }
 
+async function myerror(_desc, ...additional) {
+    let msg = _desc
+    // Get the stack trace if available
+    try {
+        let e = new Error(_desc)
+        msg = e.stack
+    } catch {}
+    console.error(msg, ...additional)
+    mylog_entry("E", msg, _desc, ...additional)
+}
 
 
 // The following are simple wrappers to insulate from future changes in the db

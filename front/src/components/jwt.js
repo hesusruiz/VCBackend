@@ -8,7 +8,8 @@ export function decodeJWT(jwt) {
     let decoded = {
         error: false,
         header: undefined,
-        body: undefined
+        body: undefined,
+        signature: undefined
     }
 
     let components = ""
@@ -24,7 +25,7 @@ export function decodeJWT(jwt) {
     }    
 
     if (components.length != 3) {
-        decoded.error = "Malformed certificate, not enough components: " + components.length
+        decoded.error = "Malformed JWT, not enough components: " + components.length
         log.error(decoded.error);
         return decoded;
     }
@@ -32,7 +33,8 @@ export function decodeJWT(jwt) {
     // Decode the header and the body into JSON objects
     try {
         decoded.header = JSON.parse(atobUrl(components[0]))
-        decoded.body = JSON.parse(atobUrl(components[1]))       
+        decoded.body = JSON.parse(atobUrl(components[1]))
+        decoded.signature = components[2]
     } catch (error) {
         decoded.error = "Error parsing header or body"
         log.error(decoded.error)

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -39,4 +41,17 @@ func main() {
 	subject := x509util.ParseEIDASNameFromATVSequence(certificate.Subject.Names)
 	fmt.Println(subject)
 
+	tp := &http.Transport{}
+	tp.TLSClientConfig = &tls.Config{
+		GetClientCertificate: certRequested,
+	}
+
+	client := &http.Client{Transport: tp}
+	client.Get("https://issuersec.mycredential.eu/issuer.html")
+
+}
+
+func certRequested(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	fmt.Println("Hola, me estan pidiendo un certificado")
+	return nil, fmt.Errorf("no tengo ningun certificado")
 }

@@ -1,6 +1,5 @@
 import PocketBase from '../components/pocketbase.es.mjs'
 
-console.log("Wallet served from:", window.location.origin)
 const pb = new PocketBase(window.location.origin)
 
 import { log } from '../log'
@@ -12,7 +11,8 @@ let myerror = window.MHR.storage.myerror
 let mylog = window.MHR.storage.mylog
 let html = window.MHR.html
 
-window.MHR.register("CreateOfferingPage", class extends window.MHR.AbstractPage {
+var pageName = "CreateOfferingPage"
+window.MHR.register(pageName, class extends window.MHR.AbstractPage {
 
     constructor(id) {
         super(id)
@@ -24,12 +24,13 @@ window.MHR.register("CreateOfferingPage", class extends window.MHR.AbstractPage 
         console.log(pb.authStore.model)
 
         if (!pb.authStore.isValid || !pb.authStore.model.verified) {
+            myerror(`${pageName}: user not verified`)
             gotoPage("ErrorPage", {title: "User not verified"})
             return
         }
 
         var theHtml
-        theHtml = createOfferingScreen()
+        theHtml = mandateForm()
         this.render(theHtml, false)
 
     }
@@ -37,15 +38,16 @@ window.MHR.register("CreateOfferingPage", class extends window.MHR.AbstractPage 
 
 })
 
+// mandateForm presents the form for the Mandate
+function mandateForm() {
 
-function createOfferingScreen() {
-
+    // Retrieve the user information from the local AuthStore
     var model = pb.authStore.model
 
     return html`
 <ion-card>
     <ion-card-header>
-        <ion-card-title>Create a Credential Offer</ion-card-title>
+        <ion-card-title>Create a Mandate as a Verifiable Credential</ion-card-title>
     </ion-card-header>
 
     <ion-card-content>
@@ -90,7 +92,6 @@ function createOfferingScreen() {
                 </ion-col>
 
                 <ion-col size="12" size-md="6">
-
 
                     <ion-item-group>
 
@@ -185,7 +186,7 @@ function createOfferingScreen() {
     </ion-card-content>
 
     <div class="ion-margin-start ion-margin-bottom">
-        <ion-button @click=${()=> createCredential()}>
+        <ion-button @click=${()=> createCredentialOffer()}>
             ${T("Create")}
         </ion-button>
         <ion-button @click=${()=> window.MHR.cleanReload()}>
@@ -199,7 +200,7 @@ function createOfferingScreen() {
 
 }
 
-async function createCredential() {
+async function createCredentialOffer() {
 
     const mandator = {
         OrganizationIdentifier: document.getElementById("OrganizationIdentifier").value,
@@ -218,46 +219,46 @@ async function createCredential() {
         mobile_phone: document.getElementById("mobile_phone").value,
     }
 
-    var act1 = []
+    var action1 = []
     if (document.getElementById("Execute1").checked) {
-        act1.push("Execute")
+        action1.push("Execute")
     }
     if (document.getElementById("Create1").checked) {
-        act1.push("Create")
+        action1.push("Create")
     }
     if (document.getElementById("Update1").checked) {
-        act1.push("Update")
+        action1.push("Update")
     }
     if (document.getElementById("Delete1").checked) {
-        act1.push("Delete")
+        action1.push("Delete")
     }
 
     const power1 = {
         tmf_type: "Domain",
         tmf_domain: [document.getElementById("tmf_domain1").value],
         tmf_function: document.getElementById("tmf_function1").value,
-        tmf_action: act1
+        tmf_action: action1
     }
 
-    var act2 = []
+    var action2 = []
     if (document.getElementById("Execute2").checked) {
-        act2.push("Execute")
+        action2.push("Execute")
     }
     if (document.getElementById("Create2").checked) {
-        act2.push("Create")
+        action2.push("Create")
     }
     if (document.getElementById("Update2").checked) {
-        act2.push("Update")
+        action2.push("Update")
     }
     if (document.getElementById("Delete2").checked) {
-        act2.push("Delete")
+        action2.push("Delete")
     }
 
     const power2 = {
         tmf_type: "Domain",
         tmf_domain: [document.getElementById("tmf_domain2").value],
         tmf_function: document.getElementById("tmf_function2").value,
-        tmf_action: act2
+        tmf_action: action2
     }
 
     var powers = []
@@ -273,7 +274,7 @@ async function createCredential() {
     if (!document.getElementById("email").value) {
         errorMessages.push(html`The email field of the Mandatee can not be empty.<br>`)
     }
-    if (!power1.tmf_function || act1.length == 0) {
+    if (!power1.tmf_function || action1.length == 0) {
         errorMessages.push(html`At least one power should be specified.`)
     }
 
@@ -289,8 +290,9 @@ async function createCredential() {
     }
         
 
+    // Create the credential but do not store anything yet in the server
     try {
-        var record = await pb.send('/eidasapi/createcredential', 
+        var tempCredential = await pb.send('/apiadmin/createcredential', 
         {
             method: "POST",
             body: JSON.stringify(data),
@@ -298,13 +300,13 @@ async function createCredential() {
                 "Content-Type": "application/json",
             },
         })
-        console.log(record)            
+        console.log(tempCredential)            
     } catch (error) {
         gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
         return
     }
 
-    gotoPage("DisplayOfferingPage", record)
+    gotoPage("DisplayOfferingPage", tempCredential)
 
 
     // window.MHR.cleanReload()
@@ -316,9 +318,9 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
         super(id)
     }
 
-    async enter(record) {
+    async enter(tempCredential) {
 
-        const learcred = JSON.stringify(record, null, "  ")
+        const learcred = JSON.stringify(tempCredential, null, "  ")
 
         console.log("AuthStore is valid:", pb.authStore.isValid)
         console.log(pb.authStore.model)
@@ -337,7 +339,7 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
         </div>
         
         <div class="ion-margin-start ion-margin-bottom">
-            <ion-button @click=${()=> storeOfferingInServer(record)}>
+            <ion-button @click=${()=> storeOfferingInServer(tempCredential)}>
                 <ion-icon slot="start" name="home"></ion-icon>
                 ${T("Save Credential Offer")}
             </ion-button>
@@ -359,30 +361,108 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
 
 })
 
-async function storeOfferingInServer(record) {
-    const userEmail = record.credentialSubject.mandate.mandatee.email
-    const learcred = JSON.stringify(record)
+async function storeOfferingInServer(tempCredential) {
+    const userEmail = tempCredential.credentialSubject.mandate.mandatee.email
+    const learcred = JSON.stringify(tempCredential)
 
     var model = pb.authStore.model
 
-    const data = {
-        status: "tobesigned",
+
+    // Sign the credential in the server with the x509 certificate
+    try {
+        var result = await pb.send('/apiadmin/signcredential', 
+        {
+            method: "POST",
+            body: learcred,
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+        var signedCredential = result.signed
+        console.log(signedCredential)            
+    } catch (error) {
+        gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
+        return
+    }
+
+    // Create the record in "tobesigned" status
+    var data = {
+        status: "offered",
         email: userEmail,
         type: "jwt_vc",
-        raw: learcred,
-        creator_email: model.email
+        raw: signedCredential,
+        creator_email: model.email,
+        signer_email: model.email
     };
 
     try {
-        const record = await pb.collection('credentials').create(data);
-        console.log(record)            
+        var tobesignedRecord = await pb.collection('credentials').create(data);
+        console.log(tobesignedRecord)            
     } catch (error) {
         gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
         return
     }
+
+
+
+    // // Create the record in "tobesigned" status
+    // var data = {
+    //     status: "tobesigned",
+    //     email: userEmail,
+    //     type: "jwt_vc",
+    //     raw: learcred,
+    //     creator_email: model.email
+    // };
+
+    // try {
+    //     var tobesignedRecord = await pb.collection('credentials').create(data);
+    //     console.log(tobesignedRecord)            
+    // } catch (error) {
+    //     gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
+    //     return
+    // }
+
+
+    // // Sign the credential in the server with the x509 certificate
+    // try {
+    //     var result = await pb.send('/apiadmin/signcredential', 
+    //     {
+    //         method: "POST",
+    //         body: learcred,
+    //         headers: {
+    //             "Content-Type": "application/json",
+    //         },
+    //     })
+    //     var signedCredential = result.signed
+    //     console.log(signedCredential)            
+    // } catch (error) {
+    //     gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
+    //     return
+    // }
+
+
+    // // Store the signed credential with the status "signed"
+    // data = {
+    //     status: "signed",
+    //     email: userEmail,
+    //     type: "jwt_vc",
+    //     raw: signedCredential,
+    //     signer_email: model.email
+    // };
+
+    // try {
+    //     console.log("Storing signed credential in Record", tobesignedRecord.id)
+    //     const record = await pb.collection('credentials').update(tobesignedRecord.id, data);
+    //     console.log(record)            
+    // } catch (error) {
+    //     gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
+    //     return
+    // }
 
     alert("Credential saved!!")
 
     goHome()
 
 }
+
+

@@ -1,68 +1,95 @@
 package issuernew
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/evidenceledger/vcdemo/vault/x509util"
 	"github.com/google/uuid"
-	"github.com/hesusruiz/vcutils/yaml"
 	my "github.com/hesusruiz/vcutils/yaml"
 	"github.com/labstack/echo/v5"
 	"github.com/lestrrat-go/jwx/v2/jwk"
+
 	"github.com/multiformats/go-multibase"
 	"github.com/multiformats/go-multicodec"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models"
+	"github.com/pocketbase/pocketbase/tools/security"
+	pbtemplate "github.com/pocketbase/pocketbase/tools/template"
 	"github.com/skip2/go-qrcode"
-	"github.com/valyala/fasttemplate"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 const defaultCredentialTemplatesDir = "vault/templates"
+const adminApiGroupPrefix = "/apiadmin"
+const userApiGroupPrefix = "/apiuser"
 
 var credTemplate *template.Template
 
-func InitCredentialTemplates(credentialTemplatesPath string) {
+var treg *pbtemplate.Registry
+
+func initCredentialTemplates(credentialTemplatesPath string) {
 
 	credTemplate = template.Must(template.New("base").Funcs(sprig.TxtFuncMap()).ParseGlob(credentialTemplatesPath))
 
 }
 
+// LookupEnvOrString gets a value from the environment or returns the specified default value
+func LookupEnvOrString(key string, defaultVal string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	return defaultVal
+}
+
+// Start initializes the Issuer hooks and adds routes and spawns the server to handle them
 func Start(app *pocketbase.PocketBase, cfg *my.YAML) error {
+
+	// Check that we can access to the certificate
+	if _, err := getConfigPrivateKey(); err != nil {
+		return err
+	}
+
+	treg = pbtemplate.NewRegistry()
+	treg.AddFuncs(sprig.FuncMap())
 
 	// Initialize the templates for credential creation
 	credentialTemplatesDir := cfg.String("credentialTemplatesDir", defaultCredentialTemplatesDir)
 	credentialTemplatesPath := path.Join(credentialTemplatesDir, "*.tpl")
-	InitCredentialTemplates(credentialTemplatesPath)
+	initCredentialTemplates(credentialTemplatesPath)
 
+	// Perform initialization of Pocketbase before serving requests
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 
 		dao := e.App.Dao()
 
-		e.Server.Addr = ":8090"
+		// The configured TCP address for the server to listen
+		e.Server.Addr = cfg.String("listenAddress", ":8090")
 
 		// The default Settings
 		settings, _ := dao.FindSettings()
-		settings.Meta.AppName = "DOME Issuer"
-		settings.Meta.AppUrl = "wallettest.mycredential.eu"
+		settings.Meta.AppName = cfg.String("Meta.appName", "DOME Issuer")
+		settings.Meta.AppUrl = cfg.String("Meta.appUrl", "issuer.mycredential.eu")
 		settings.Logs.MaxDays = 2
 
-		settings.Meta.SenderName = "Support"
-		settings.Meta.SenderAddress = "admin@mycredential.eu"
+		settings.Meta.SenderName = cfg.String("Meta.senderName", "Support")
+		settings.Meta.SenderAddress = cfg.String("Meta.senderAddress", "admin@mycredential.eu")
 
 		settings.Smtp.Enabled = cfg.Bool("SMTP.Enabled", true)
 		settings.Smtp.Host = cfg.String("SMTP.Host", "example.com")
@@ -71,13 +98,14 @@ func Start(app *pocketbase.PocketBase, cfg *my.YAML) error {
 		settings.Smtp.Username = cfg.String("SMTP.Username", "admin@mycredential.eu")
 		settings.Smtp.Password = cfg.String("SMTP.Password")
 
+		// Write the settings to the database
 		err := dao.SaveSettings(settings)
 		if err != nil {
 			return err
 		}
-		log.Println("Settings updated!!!!")
+		log.Println("Running as", settings.Meta.AppName, "in", settings.Meta.AppUrl)
 
-		// The default admin
+		// Create the default admin
 		admin := &models.Admin{}
 		admin.Email = "jesus@alastria.io"
 		admin.SetPassword("1234567890")
@@ -92,48 +120,37 @@ func Start(app *pocketbase.PocketBase, cfg *my.YAML) error {
 			log.Println("Default Admin already existed!!!!")
 		}
 
+		// Middleware to select the home page depending on the type of user (signers or holders)
+		e.Router.Use(selectHomePage)
+
 		// Serves static files from the provided public dir (if exists)
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./www"), false))
 
-		// Add Issuer routes
-		iss := e.Router.Group("/eidasapi")
-		iss.GET("/getcertinfo", func(c echo.Context) error {
-			_, subject, err := getX509UserFromHeader(c.Request())
-			if err != nil {
-				return err
-			}
-			log.Println(subject)
+		// Add routes for Signers
+		addAdminRoutes(app, e)
 
-			return c.JSON(http.StatusOK, subject)
-		})
-		iss.POST("/createcredential", func(c echo.Context) error {
-			return createCredential(app, c)
-		})
-		iss.GET("/createqrcode/:credid", func(c echo.Context) error {
-			return createQRCode(app, c)
-		})
-		iss.GET("/retrievecredential/:credid", func(c echo.Context) error {
-			return retrieveCredential(app, c)
-		})
+		// Add routes for Holders
+		addUserRoutes(app, e)
 
 		return nil
 	})
 
+	// Hook to add certificate information when creating a user which can sign credentials
 	app.OnRecordBeforeCreateRequest("signers").Add(func(e *core.RecordCreateEvent) error {
-		log.Println(e.HttpContext)
-		log.Println(e.Record)
-		log.Println(e.UploadedFiles)
 
+		// The request must have information about the x509 certificate used for client auth
 		_, subject, err := getX509UserFromHeader(e.HttpContext.Request())
 		if err != nil {
 			return err
 		}
 		log.Println(subject)
 
+		// Enrich the incoming Record with the subject info in the certificate
 		e.Record.Set("commonName", subject.CommonName)
 		e.Record.Set("serialNumber", subject.SerialNumber)
 		e.Record.Set("country", subject.Country)
 
+		// If it is a personal certificate, fill the Organization info with the personal one
 		if len(subject.Organization) > 0 {
 			e.Record.Set("organization", subject.Organization)
 		} else {
@@ -153,7 +170,7 @@ func Start(app *pocketbase.PocketBase, cfg *my.YAML) error {
 			ValidFor:   365 * 24 * time.Hour,
 		}
 
-		// Create a CA Certificate
+		// Create a CA Certificate based on the info in the incoming certificate
 		privateKey, cert, err := x509util.NewCACertificate(*subject, keyparams)
 		if err != nil {
 			return err
@@ -165,6 +182,7 @@ func Start(app *pocketbase.PocketBase, cfg *my.YAML) error {
 			return err
 		}
 
+		// Enrich the Record with the new CA certificate, which will be used to sign
 		log.Println("NewCertificate", string(cert))
 		log.Println("NewKey", serializedPrivateKey)
 		e.Record.Set("certificatePem", string(cert))
@@ -173,7 +191,7 @@ func Start(app *pocketbase.PocketBase, cfg *my.YAML) error {
 		return nil
 	})
 
-	// Fires only for "signers" auth collection
+	// Hook to ensure that authorization for "signers" requires a client x509 certificate
 	app.OnRecordBeforeAuthWithPasswordRequest("signers").Add(func(e *core.RecordAuthWithPasswordEvent) error {
 
 		_, subject, err := getX509UserFromHeader(e.HttpContext.Request())
@@ -185,8 +203,129 @@ func Start(app *pocketbase.PocketBase, cfg *my.YAML) error {
 		return nil
 	})
 
+	// Hook to ensure that creation of credentials requires a client x509 certificate
 	app.OnRecordBeforeCreateRequest("credentials").Add(func(e *core.RecordCreateEvent) error {
 		log.Println("OnRecordBeforeCreateRequest(credentials)")
+
+		_, subject, err := getX509UserFromHeader(e.HttpContext.Request())
+		if err != nil {
+			return err
+		}
+		log.Println(subject)
+
+		return nil
+	})
+
+	app.OnRecordAfterCreateRequest("credentials").Add(func(e *core.RecordCreateEvent) error {
+		log.Println("OnRecordAfterCreateRequest(credentials)")
+
+		status := e.Record.GetString("status")
+		switch status {
+		case "offered":
+			log.Println("Status is OFFERED")
+		case "tobesigned":
+			log.Println("Status is TOBESIGNED")
+		case "signed":
+			log.Println("Status is SIGNED")
+		}
+
+		// // Check if the user already exists, to create a new one if needed
+		// user, err := app.Dao().FindAuthRecordByEmail("users", e.Record.Email())
+
+		// pass := security.RandomString(10)
+
+		// if err == sql.ErrNoRows {
+		// 	// The user does not exist, must create it
+		// 	collection, err := app.Dao().FindCollectionByNameOrId("users")
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// 	user = models.NewRecord(collection)
+
+		// 	user.SetPassword(pass)
+		// 	user.SetEmail(e.Record.Email())
+		// 	user.SetUsername(pass)
+
+		// 	// TODO: we will later require verification process
+		// 	user.SetVerified(true)
+
+		// 	tokenKey := user.TokenKey()
+		// 	log.Println("Token key", tokenKey)
+
+		// 	if err := app.Dao().SaveRecord(user); err != nil {
+		// 		return err
+		// 	}
+
+		// } else if err != nil {
+		// 	// An error occurred (different from sql.ErrNoRows)
+		// 	return err
+		// }
+
+		// log.Println(user.Email())
+
+		// if status == "offered" {
+
+		// 	// Send an email to the user
+		// 	return sendEmailReminder(app, e.Record.Id)
+
+		// }
+
+		return nil
+	})
+
+	app.OnRecordAfterUpdateRequest("credentials").Add(func(e *core.RecordUpdateEvent) error {
+		log.Println("OnRecordAfterUpdateRequest(credentials)")
+
+		status := e.Record.GetString("status")
+		switch status {
+		case "offered":
+			log.Println("Status is OFFERED")
+		case "tobesigned":
+			log.Println("Status is TOBESIGNED")
+		case "signed":
+			log.Println("Status is SIGNED")
+		}
+
+		// Check if the user already exists, to create a new one if needed
+		user, err := app.Dao().FindAuthRecordByEmail("users", e.Record.Email())
+
+		pass := security.RandomString(10)
+
+		if err == sql.ErrNoRows {
+			// The user does not exist, must create it
+			collection, err := app.Dao().FindCollectionByNameOrId("users")
+			if err != nil {
+				return err
+			}
+			user = models.NewRecord(collection)
+
+			user.SetPassword(pass)
+			user.SetEmail(e.Record.Email())
+			user.SetUsername(pass)
+
+			// TODO: we will later require verification process
+			user.SetVerified(true)
+
+			tokenKey := user.TokenKey()
+			log.Println("Token key", tokenKey)
+
+			if err := app.Dao().SaveRecord(user); err != nil {
+				return err
+			}
+
+		} else if err != nil {
+			// An error occurred (different from sql.ErrNoRows)
+			return err
+		}
+
+		log.Println(user.Email())
+
+		if status == "signed" {
+
+			// Send an email to the user
+			return sendEmailReminder(app, e.Record.Id)
+
+		}
 
 		return nil
 	})
@@ -198,9 +337,30 @@ func Start(app *pocketbase.PocketBase, cfg *my.YAML) error {
 	return err
 }
 
+// selectHomePage determines the HTML file to serve for the root path, depending on wether the server requires client certificate
+// authorization or not.
+func selectHomePage(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		if c.Request().URL.Path == "/" {
+			log.Println("My host is", c.Request().Host)
+			clientCertDer := c.Request().Header.Get("Tls-Client-Certificate")
+			if clientCertDer == "" {
+				return c.File("www/indexEmployee.html")
+			} else {
+				return c.File("www/indexSigner.html")
+			}
+		}
+
+		return next(c) // proceed with the request chain
+	}
+}
+
+// getX509UserFromHeader retrieves the 'issuer' and 'subject' information from the
+// incoming x509 client certificate
 func getX509UserFromHeader(r *http.Request) (issuer *x509util.ELSIName, subject *x509util.ELSIName, err error) {
 
 	// Get the clientCertDer value before processing the request
+	// This HTTP request header has been set by the reverse proxy in front of the application
 	clientCertDer := r.Header.Get("Tls-Client-Certificate")
 	if clientCertDer == "" {
 		log.Println("Client certificate not provided")
@@ -217,223 +377,59 @@ func getX509UserFromHeader(r *http.Request) (issuer *x509util.ELSIName, subject 
 
 }
 
-type Mandate struct {
-	Id       string `json:"id,omitempty"`
-	Mandator struct {
-		OrganizationIdentifier string `json:"organizationIdentifier,omitempty"` // OID 2.5.4.97
-		CommonName             string `json:"commonName,omitempty"`             // OID 2.5.4.3
-		GivenName              string `json:"givenName,omitempty"`
-		Surname                string `json:"surname,omitempty"`
-		EmailAddress           string `json:"emailAddress,omitempty"`
-		SerialNumber           string `json:"SerialNumber,omitempty"`
-		Organization           string `json:"Organization,omitempty"`
-		Country                string `json:"Country,omitempty"`
-	} `json:"mandator,omitempty"`
-	Mandatee struct {
-		Id           string `json:"id,omitempty"`
-		First_name   string `json:"first_name,omitempty"`
-		Last_name    string `json:"last_name,omitempty"`
-		Gender       string `json:"gender,omitempty"`
-		Email        string `json:"email,omitempty"`
-		Mobile_phone string `json:"mobile_phone,omitempty"`
-	} `json:"mandatee,omitempty"`
-	Power []struct {
-		Id           string   `json:"id,omitempty"`
-		Tmf_type     string   `json:"tmf_type,omitempty"`
-		Tmf_domain   []string `json:"tmf_domain,omitempty"`
-		Tmf_function string   `json:"tmf_function,omitempty"`
-		Tmf_action   []string `json:"tmf_action,omitempty"`
-	} `json:"power,omitempty"`
-	LifeSpan struct {
-		StartDateTime string `json:"start_date_time,omitempty"`
-		EndDateTime   string `json:"end_date_time,omitempty"`
-	} `json:"life_span,omitempty"`
+// RequireAdminOrX509Auth middleware requires a request to have
+// a valid admin Authorization header or x509 client certification set.
+func RequireAdminOrX509Auth() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			admin, _ := c.Get(apis.ContextAdminKey).(*models.Admin)
+			if admin != nil {
+				return next(c)
+			}
+			_, _, err := getX509UserFromHeader(c.Request())
+			if err != nil {
+				return apis.NewUnauthorizedError("The request requires admin or x509 authorization token to be set.", nil)
+			}
+
+			return next(c)
+		}
+	}
 }
 
-type LEARCredentialEmployee struct {
-	Context        []string `json:"@context,omitempty"`
-	Id             string   `json:"id,omitempty"`
-	TypeCredential []string `json:"type,omitempty"`
-	Issuer         struct {
-		Id string `json:"id,omitempty"`
-	} `json:"issuer,omitempty"`
-	IssuanceDate      string `json:"issuanceDate,omitempty"`
-	ValidFrom         string `json:"validFrom,omitempty"`
-	ExpirationDate    string `json:"expirationDate,omitempty"`
-	CredentialSubject struct {
-		Mandate Mandate `json:"mandate,omitempty"`
-	} `json:"credentialSubject,omitempty"`
-}
+func getConfigPrivateKey() (any, error) {
 
-func createCredential(app *pocketbase.PocketBase, c echo.Context) error {
-
-	info := apis.RequestInfo(c)
-
-	// We received the body data in form of a map[string]any
-	data := info.Data
-	log.Println("data", data)
-
-	// Serialize to JSON
-	raw, err := json.Marshal(data)
+	userHome, err := os.UserHomeDir()
 	if err != nil {
-		return err
+		panic(err)
 	}
-	log.Println("RAW", string(raw))
 
-	// Create the Mandate struct from the serialized JSON data
-	mandate := Mandate{}
-	err = json.Unmarshal(raw, &mandate)
+	certFilePath := LookupEnvOrString("CERT_FILE_PATH", filepath.Join(userHome, ".certs", "testcert.pfx"))
+	password := LookupEnvOrString("CERT_PASSWORD", "")
+	if len(password) == 0 {
+		passwordFilePath := LookupEnvOrString("CERT_PASSWORD_FILE", filepath.Join(userHome, ".certs", "pass.txt"))
+		passwordBytes, err := os.ReadFile(passwordFilePath)
+		if err != nil {
+			return nil, err
+		}
+		password = string(bytes.TrimSpace(passwordBytes))
+	}
+
+	certBinary, err := os.ReadFile(certFilePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Generate the dates for the Mandate
-	now := time.Now()
-	nowPlusOneYear := now.AddDate(1, 0, 0)
-	nowUTC := now.UTC().String()
-	nowPlusOneYearUTC := nowPlusOneYear.UTC().String()
-
-	mandate.Id = newRandomString()
-	for i := range mandate.Power {
-		mandate.Power[i].Id = newRandomString()
-	}
-
-	mandate.LifeSpan.StartDateTime = nowUTC
-	mandate.LifeSpan.EndDateTime = nowPlusOneYearUTC
-
-	didkey, _, err := GenDIDKey()
+	privateKey, _, _, err := pkcs12.DecodeChain(certBinary, password)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	mandate.Mandatee.Id = didkey
 
-	// Print the Mandate struct to check it is OK
-	raw, err = json.MarshalIndent(mandate, "", "  ")
-	if err != nil {
-		return err
-	}
-	log.Println("===== Mandate struct Marshalled")
-	log.Println(string(raw))
-
-	// Create the LEARCredential struct
-	lc := LEARCredentialEmployee{}
-	lc.CredentialSubject.Mandate = mandate
-
-	// Complete the LEARCredential
-	lc.Context = []string{"https://www.w3.org/ns/credentials/v2", "https://www.evidenceledger.eu/2022/credentials/employee/v1"}
-	lc.Id = newRandomString()
-	lc.TypeCredential = []string{"VerifiableCredential", "LEARCredentialEmployee"}
-	lc.Issuer.Id = "did:elsi:" + mandate.Mandator.OrganizationIdentifier
-
-	lc.IssuanceDate = nowUTC
-	lc.ExpirationDate = nowPlusOneYearUTC
-
-	raw, err = json.MarshalIndent(lc, "", "  ")
-	if err != nil {
-		return err
-	}
-	log.Println("===== LEARCredential struct Marshalled")
-	log.Println(string(raw))
-
-	return c.JSON(http.StatusOK, lc)
+	return privateKey, nil
 }
 
 func newRandomString() string {
 	newID, _ := uuid.NewRandom()
 	return newID.String()
-}
-
-// CreateLEARCredentialJWTFromMap receives a map with the hierarchical data of the credential and returns
-// the id of a new credential and the raw JWT string representing the credential
-func CreateLEARCredentialJWTFromMap(app *pocketbase.PocketBase, e *core.RecordCreateEvent, credmap map[string]any, elsiName x509util.ELSIName) (credID string, rawJSONCred json.RawMessage, err error) {
-
-	_ = yaml.New(credmap)
-
-	// It is an error if the credential does not include the name and email of the employee as the holder
-	email := yaml.GetString(credmap, "holder.email")
-	name := yaml.GetString(credmap, "holder.name")
-	if email == "" || name == "" {
-		err := fmt.Errorf("email or name not found")
-		return "", nil, err
-	}
-
-	// The input data does not specify the credential ID.
-	// We should create a new ID as a UUID
-	newID, err := uuid.NewRandom()
-	if err != nil {
-		return "", nil, err
-	}
-	credentialID := newID.String()
-
-	// Set the unique id in the credential
-	credmap["jti"] = credentialID
-
-	// // Create or get the DID of the issuer.
-	// issuer, err := v.CreateOrGetUserWithDIDelsi(v.id, v.name, elsiName, "legalperson", v.password)
-	// if err != nil {
-	// 	return "", nil, err
-	// }
-
-	// // Set the issuer did in the credential source data
-	// credmap["issuerDID"] = issuer.did
-
-	// // Create or get the DID of the holder.
-	// // We will use his email as the unique ID
-	// holder, err := v.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
-	// if err != nil {
-	// 	return "", nil, err
-	// }
-
-	// claims := credData.Map("claims")
-	// claims["id"] = holder.did
-	// credmap["claims"] = claims
-
-	// // Generate the credential from the template
-	// var b bytes.Buffer
-	// err = v.credTemplate.ExecuteTemplate(&b, credData.String("credName"), credmap)
-	// if err != nil {
-	// 	zlog.Logger.Error().Err(err).Send()
-	// 	return "", nil, err
-	// }
-
-	// // The serialized credential
-	// rawJSONCred = b.Bytes()
-
-	// // Compact the serialized representation by Unmarshall and Marshall
-	// var temporal any
-	// err = json.Unmarshal(rawJSONCred, &temporal)
-	// if err != nil {
-	// 	zlog.Logger.Error().Err(err).Send()
-	// 	return "", nil, err
-	// }
-	// rawJSONCred, err = json.Marshal(temporal)
-	// if err != nil {
-	// 	zlog.Logger.Error().Err(err).Send()
-	// 	return "", nil, err
-	// }
-	// prettyJSONCred, err := json.MarshalIndent(temporal, "", "   ")
-	// if err != nil {
-	// 	zlog.Logger.Error().Err(err).Send()
-	// 	return "", nil, err
-	// }
-
-	// // Store credential
-	// _, err = v.db.Credential.Create().
-	// 	SetID(credentialID).
-	// 	SetRaw([]uint8(rawJSONCred)).
-	// 	Save(context.Background())
-	// if err != nil {
-	// 	zlog.Logger.Error().Err(err).Send()
-	// 	return "", nil, err
-	// }
-
-	// zlog.Info().Str("id", credentialID).Msg("credential created")
-	// fmt.Println("**** Serialized Credential ****")
-	// fmt.Printf("%v\n", string(prettyJSONCred))
-	// fmt.Println("**** End Credential ****")
-
-	return credentialID, rawJSONCred, nil
-
 }
 
 // GenDIDKey generates a new 'did:key' DID by creating an EC key pair
@@ -490,83 +486,16 @@ func PubKeyToDIDKey(pubKeyJWK jwk.Key) (did string, err error) {
 
 }
 
-func createQRCode(app *pocketbase.PocketBase, c echo.Context) error {
-
-	id := c.PathParam("credid")
-
-	// QR code for cross-device SIOP
-	template := "openid-credential-offer://{{hostname}}{{prefix}}/credential/{{id}}"
-	t := fasttemplate.New(template, "{{", "}}")
-	issuerCredentialURI := t.ExecuteString(map[string]interface{}{
-		"protocol": c.Scheme(),
-		"hostname": c.Request().Host,
-		"prefix":   "/eidasapi",
-		"id":       id,
-	})
-
-	// Create the QR
-	png, err := qrcode.Encode(issuerCredentialURI, qrcode.Medium, 256)
+func qrcodeFromUrl(url string) (string, error) {
+	// Create the QR code
+	png, err := qrcode.Encode(url, qrcode.Medium, 256)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	// Convert to a dataURL
-	base64Img := base64.StdEncoding.EncodeToString(png)
-	base64Img = "data:image/png;base64," + base64Img
+	// Convert the image data to a dataURL
+	imgDataUrl := base64.StdEncoding.EncodeToString(png)
+	imgDataUrl = "data:image/png;base64," + imgDataUrl
 
-	return c.JSON(http.StatusOK, map[string]any{"image": base64Img})
-
+	return imgDataUrl, nil
 }
-
-func retrieveCredential(app *pocketbase.PocketBase, c echo.Context) error {
-
-	id := c.PathParam("credid")
-
-	record, err := app.Dao().FindRecordById("credentials", id)
-	if err != nil {
-		return err
-	}
-
-	credential := record.GetString("raw")
-
-	// return c.JSON(http.StatusOK, map[string]any{"credential": credential})
-	return c.String(http.StatusOK, credential)
-
-}
-
-type CreateNaturalPersonRequest struct {
-	Email string `json:"email"`
-	Name  string `json:"name"`
-}
-
-// func CreateNaturalPerson(c echo.Context) error {
-
-// 	sts := &CreateNaturalPersonRequest{}
-// 	if err := c.Bind(sts); err != nil {
-// 		return err
-// 	}
-// 	log.Printf("CreateNaturalPerson name: %s, email: %s")
-
-// 	// Get user from the Storage. The user is automatically created if it does not exist
-// 	user, err := s.vault.CreateOrGetUserWithDIDKey(sts.Email, sts.Name, "naturalperson", "ThePassword")
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	zlog.Info().Str("username", user.WebAuthnName()).Str("DID", user.DID()).Msg("User retrieved or created")
-
-// 	privKey, err := s.vault.DIDKeyToPrivateKey(user.DID())
-// 	if err != nil {
-// 		return err
-// 	}
-// 	jsonbuf, err := json.Marshal(privKey)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return c.JSON(http.StatusOK, Map{
-// 		"did":        user.DID(),
-// 		"privateKey": string(jsonbuf),
-// 	})
-
-// }

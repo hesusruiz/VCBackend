@@ -1,10 +1,10 @@
 import { credentialsSave } from '../components/db';
 import { decodeJWT } from '../components/jwt';
+import { getOrCreateDidKey } from '../components/crypto'
 import PocketBase from '../components/pocketbase.es.mjs'
+const pb = new PocketBase("https://issuer.mycredential.eu")
 
-import { log } from '../log';
-
-import { renderLEARCredential } from '../components/renderLEAR';
+import { renderLEARCredentialCard } from '../components/renderLEAR';
 
 // Setup some local variables for convenience
 let gotoPage = window.MHR.gotoPage
@@ -20,12 +20,17 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
     constructor(id) {
         super(id)
+        this.VC = ""
+        this.VCType = ""
+        this.VCStatus = ""
     }
 
     async enter(qrData) {
 
+        mylog(`LoadAndSaveQRVC: ${qrData}`)
+
         let html = this.html
-        log.log("LoadAndSaveQRVC received:", qrData)
+        mylog("LoadAndSaveQRVC received:", qrData)
 
         // We should have received a URL that was scanned as a QR code or as a redirection
         // Perform some sanity checks on the parameter
@@ -52,8 +57,8 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             return
         }
         
-
-        // The QR points to an an OpenIDVCI credential issuance offer
+        mylog(qrData)
+        // The QR points to an an OpenID4VCI credential issuance offer
         if (qrData.includes("credential_offer_uri=")) {
 
             // Retrieve the credential offer from the Issuer
@@ -123,12 +128,16 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             }
 
         } else {
+            mylog("Non-standard issuance")
             // This is a non-standard nechanism to issue credentials (easier in controlled environments).
             // We have received a URL that was scanned as a QR code.
             // First we should do a GET to the URL to retrieve the VC.
-            this.VC = await getVerifiableCredentialLD(qrData);
-            this.VCType = "DOME"
-            this.renderedVC = this.renderEmployeeCredential(this.VC)
+            var result = await doFetchJSON(qrData)
+            this.VC = result["credential"]
+            this.VCId = result["id"]
+            this.VCType = result["type"]
+            this.VCStatus = result["status"]
+            this.renderedVC = this.prerenderEmployeeCredential(this.VC, this.VCType, this.VCStatus)
         }
 
         // Ask the user if we should store the VC
@@ -186,6 +195,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             // Store in an instance variable
             this.VC = jwtCredential
             this.VCType = "EBSI"
+            this.VCStatus = "signed"
 
             // Decode and render the credencial
             const decoded = decodeJWT(jwtCredential)
@@ -193,16 +203,16 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
             // Ask the user if we should store the VC
             let theHtml = html`
-        <ion-card color="warning">
-            <ion-card-content>
-            <p><b>
-            ${T("You received a Verifiable Credential")}. ${T("You can save it in this device for easy access later, or cancel the operation.")}
-            </b></p>
-            </ion-card-content>
-        </ion-card>
+            <ion-card color="warning">
+                <ion-card-content>
+                <p><b>
+                ${T("You received a Verifiable Credential")}. ${T("You can save it in this device for easy access later, or cancel the operation.")}
+                </b></p>
+                </ion-card-content>
+            </ion-card>
 
-        ${this.renderedVC}
-        `
+            ${this.renderedVC}
+            `
             this.render(theHtml)
         } catch (error) {
             debugger
@@ -243,7 +253,10 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
     }
 
 
+    // Save the credential and perform any additional actions needed
     async saveVC() {
+        var replace = false
+
         console.log("Save VC " + this.VC)
 
         if (this.VCType == "EBSI") {
@@ -252,25 +265,72 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
             var credStruct = {
                 type: "EBSI",
+                status: this.VCStatus,
                 encoded: this.VC,
                 decoded: decoded
             }
+            var saved = await credentialsSave(credStruct, replace)
+            if (!saved) {
+                return
+            }
     
+        } else if (this.VCType == "jwt_vc") {
+            const decoded = decodeJWT(this.VC)
+    
+            var credStruct = {
+                type: this.VCType,
+                status: this.VCStatus,
+                encoded: this.VC,
+                decoded: decoded.body,
+                id: decoded.body.id
+            }
+
+            if (this.VCStatus == "signed") {
+                replace = true
+            }
+            var saved = await credentialsSave(credStruct, replace)
+            if (!saved) {
+                return
+            }
+        
+            // Get my did:key
+            var myDid = await getOrCreateDidKey()
+            debugger
+
+            // Update the credential with the did:key
+            try {
+                var result = await pb.send(`/apiuser/updatecredential/${this.VCId}`,
+                {
+                    method: "POST",
+                    body: {did: myDid.did},
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                })
+                console.log(result)            
+            } catch (error) {
+                gotoPage("ErrorPage", {title: "Error updating credential", msg: error.message})
+                return
+            }
+    
+            alert("Credential succesfully updated")
+
         } else {
             const decoded = JSON.parse(this.VC)
 
             var credStruct = {
                 type: "w3cvc",
+                status: this.VCStatus,
                 encoded: this.VC,
                 decoded: decoded
             }
-    
+            var saved = await credentialsSave(credStruct, replace)
+            if (!saved) {
+                return
+            }
+        
         }
         
-        var saved = await credentialsSave(credStruct)
-        if (!saved) {
-            return
-        }
 
         // Reload the application with a clean URL
         location = window.location.origin + window.location.pathname
@@ -322,14 +382,19 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
     
     }
     
-    renderEmployeeCredential(vcencoded) {
-        
+    prerenderEmployeeCredential(vcencoded, vctype, vcstatus) {
+
+        if (vctype == "jwt_vc") {
+            var decoded = decodeJWT(vcencoded)
+        } else {
+            decoded = vcencoded
+        }
         let html = this.html
 
-        const vc = JSON.parse(vcencoded)
+        const vc = decoded.body
         const div = html`
         <ion-card>
-            ${renderLEARCredential(vc)}
+            ${renderLEARCredentialCard(vc, vcstatus)}
 
             <div class="ion-margin-start ion-margin-bottom">
                 <ion-button @click=${() => this.cleanReload()}>
@@ -709,7 +774,6 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
 
     return credentialResponse.credential
 
-
 }
 
 function delay(ms) {
@@ -1000,32 +1064,8 @@ async function getAuthServerMetadata(authServerAddress) {
 
 async function getVerifiableCredentialLD(backEndpoint) {
 
+    var vc = await doFetchText(backEndpoint)
 
-    try {
-        let response = await fetch(backEndpoint, {
-            mode: "cors"
-        });
-        if (response.ok) {
-            var vc = await response.text();
-        } else {
-            if (response.status == 403) {
-                alert.apply("error 403");
-                window.MHR.goHome();
-                return "Error 403";
-            }
-            var error = await response.text();
-            myerror(error);
-            window.MHR.goHome();
-            alert(error);
-            return null;
-        }
-    } catch (error) {
-        myerror(error);
-        alert(error);
-        return null;
-    }
-    console.log(vc);
-    return vc;
 }
 
 async function getCredentialOffer(url) {
@@ -1402,3 +1442,39 @@ window.MHR.register("EBSIRedirectCode", class extends window.MHR.AbstractPage {
 
     }
 })
+
+
+async function doFetchJSON(serverURL) {
+    mylog(`doFetchJSON: ${serverURL}`)
+
+    try {
+        var response = await fetch(serverURL)      
+    } catch (error) {
+        myerror(error.message)
+        throw new Error("error performing fetch")
+    }
+    if (response.ok) {
+        var responseJSON = await response.json();
+        mylog("doFetchJSON result:", responseJSON)
+        return responseJSON;
+    } else {
+        myerror(`doFetchJSON: ${response.statusText}`)
+        throw new Error("error performing fetch")
+    }                
+
+}
+
+async function doFetchText(serverURL) {
+
+    var response = await fetch(serverURL, {
+        cache: "no-cache",
+        mode: "cors"
+    });
+    if (response.ok) {
+        var responseJSON = await response.text();
+        return responseJSON;
+    } else {
+        throw new Error("error performing fetch")
+    }                
+
+}
