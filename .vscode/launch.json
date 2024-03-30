@@ -10,9 +10,9 @@
             "request": "launch",
             "mode": "auto",
             
-            "program": "main.go",
+            "program": "cmd/lsign/lsign.go",
             "cwd": ".",
-            "args": ["serve"]
+            "args": [""]
         }
 
 

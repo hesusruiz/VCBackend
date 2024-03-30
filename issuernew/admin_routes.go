@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
@@ -142,7 +143,7 @@ func signCredential(c echo.Context) error {
 	}
 
 	// Sign the credential
-	tok, err := CreateLEARCredentialJWTtoken(learCred, privateKey)
+	tok, err := CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
 	if err != nil {
 		return err
 	}

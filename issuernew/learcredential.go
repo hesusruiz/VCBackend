@@ -62,7 +62,7 @@ type LEARCredentialEmployeeJWTClaims struct {
 
 // CreateLEARCredentialJWTtoken creates a JWT token from the given claims,
 // signed with the first private key associated to the issuer DID
-func CreateLEARCredentialJWTtoken(learCred LEARCredentialEmployee, privateKey any) (string, error) {
+func CreateLEARCredentialJWTtoken(learCred LEARCredentialEmployee, sigMethod jwt.SigningMethod, privateKey any) (string, error) {
 
 	// Prepare some fields of the LEARCredential
 	now := time.Now()
@@ -83,7 +83,7 @@ func CreateLEARCredentialJWTtoken(learCred LEARCredentialEmployee, privateKey an
 
 	// Serialize and sign the JWT. The result is a byte array with the JWT in compact form:
 	// header.payload.signature
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token := jwt.NewWithClaims(sigMethod, claims)
 	ss, err := token.SignedString(privateKey)
 	fmt.Println(ss, err)
 
