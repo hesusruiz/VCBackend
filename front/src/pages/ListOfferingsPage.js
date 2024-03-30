@@ -316,7 +316,6 @@ async function signCredentialOfferingLocal(record) {
     }
 
     // Store the signed credential with the status "signed"
-    debugger
     record.status = "signed"
     record.raw = signedCredential
     record.signer_email = pb.authStore.model.email

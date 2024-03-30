@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/skip2/go-qrcode"
@@ -161,7 +162,7 @@ func (is *IssuerServer) sendDid(c echo.Context) error {
 	}
 
 	// Sign the credential with the server certificate
-	tok, err := CreateLEARCredentialJWTtoken(learCred, privateKey)
+	tok, err := CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
 	if err != nil {
 		return err
 	}
