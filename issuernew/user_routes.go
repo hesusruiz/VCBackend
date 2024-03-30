@@ -8,44 +8,43 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
-	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/skip2/go-qrcode"
 	"github.com/valyala/fasttemplate"
 )
 
-func addUserRoutes(app *pocketbase.PocketBase, e *core.ServeEvent) {
+func (is *IssuerServer) addUserRoutes(e *core.ServeEvent) {
 
 	// Add special normal user routes with a common prefix
 	// TODO: document authentication used
 	userGroup := e.Router.Group(userApiGroupPrefix)
 
 	userGroup.GET("/startissuancepage/:credid", func(c echo.Context) error {
-		return startCredentialIssuancePage(app, c)
+		return is.startCredentialIssuancePage(c)
 	})
 
 	// Retrieve a credential, applying the proper access control depending on the status
 	userGroup.GET("/retrievecredential/:credid", func(c echo.Context) error {
-		return retrieveCredential(app, c)
+		return is.retrieveCredential(c)
 	})
 
 	// Update a credential, applying the proper access control depending on the status
-	userGroup.POST("/updatecredential/:credid", func(c echo.Context) error {
-		return updateCredential(app, c)
+	userGroup.POST("/senddid/:credid", func(c echo.Context) error {
+		return is.sendDid(c)
 	})
 
 	// Retrieve a credential, applying the proper access control depending on the status
 	userGroup.GET("/retrievecredentialpage/:credid", func(c echo.Context) error {
-		return retrieveCredentialPage(app, c)
+		return is.retrieveCredentialPage(c)
 	})
 
 }
 
-func startCredentialIssuancePage(app *pocketbase.PocketBase, c echo.Context) error {
+func (is *IssuerServer) startCredentialIssuancePage(c echo.Context) error {
+	app := is.App
 
-	// Retrieve the credential passed from the Wallet
+	// Retrieve the credential passed
 	id := c.PathParam("credid")
 	log.Println("startCredentialIssuance", id)
 
@@ -55,7 +54,7 @@ func startCredentialIssuancePage(app *pocketbase.PocketBase, c echo.Context) err
 	}
 
 	// This is the url for Wallet
-	wallet_url := "https://wallet.mycredential.eu"
+	wallet_url := is.cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
 
 	// QRcode for downloading the Wallet
 	walletQRcode, err := qrcodeFromUrl(wallet_url)
@@ -87,7 +86,8 @@ func startCredentialIssuancePage(app *pocketbase.PocketBase, c echo.Context) err
 
 }
 
-func retrieveCredential(app *pocketbase.PocketBase, c echo.Context) error {
+func (is *IssuerServer) retrieveCredential(c echo.Context) error {
+	app := is.App
 
 	id := c.PathParam("credid")
 
@@ -108,22 +108,28 @@ type updateCredentialrequest struct {
 	DID string `query:"did"`
 }
 
-func updateCredential(app *pocketbase.PocketBase, c echo.Context) error {
+func (is *IssuerServer) sendDid(c echo.Context) error {
+	app := is.App
 
+	// Get the did specified by the user
 	var request updateCredentialrequest
 	err := c.Bind(&request)
 	if err != nil {
 		return c.String(http.StatusBadRequest, "bad request")
 	}
+
+	// Get the unique id of the credential to be updated
 	id := c.PathParam("credid")
 	didKey := request.DID
 	log.Println("updateCredential", id, didKey)
 
+	// Retrieve the credential from storage
 	record, err := app.Dao().FindRecordById("credentials", id)
 	if err != nil {
 		return err
 	}
 
+	// Decode the payload of the JWT, which is the actual credential in JSON
 	tokenString := record.GetString("raw")
 	parts := strings.Split(tokenString, ".")
 	if len(parts) != 3 {
@@ -137,12 +143,14 @@ func updateCredential(app *pocketbase.PocketBase, c echo.Context) error {
 		return err
 	}
 
+	// Build the Go struct from the JSON credential
 	var learCred LEARCredentialEmployee
 	err = json.Unmarshal(claimsDecoded, &learCred)
 	if err != nil {
 		return err
 	}
 
+	// Replace the Mandatee id with the did that the user specified
 	learCred.CredentialSubject.Mandate.Mandatee.Id = didKey
 	log.Println("Updated Mandate with didKey", didKey)
 
@@ -152,8 +160,8 @@ func updateCredential(app *pocketbase.PocketBase, c echo.Context) error {
 		return err
 	}
 
-	// Sign the credential
-	tok, err := CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
+	// Sign the credential with the server certificate
+	tok, err := CreateLEARCredentialJWTtoken(learCred, privateKey)
 	if err != nil {
 		return err
 	}
@@ -161,7 +169,7 @@ func updateCredential(app *pocketbase.PocketBase, c echo.Context) error {
 	// Update the record in the db
 	status := "tobesigned"
 	record.Set("raw", tok)
-	record.Set("status", "signed")
+	record.Set("status", status)
 	if err := app.Dao().SaveRecord(record); err != nil {
 		return err
 	}
@@ -170,7 +178,8 @@ func updateCredential(app *pocketbase.PocketBase, c echo.Context) error {
 
 }
 
-func retrieveCredentialPage(app *pocketbase.PocketBase, c echo.Context) error {
+func (is *IssuerServer) retrieveCredentialPage(c echo.Context) error {
+	app := is.App
 
 	id := c.PathParam("credid")
 
@@ -180,7 +189,7 @@ func retrieveCredentialPage(app *pocketbase.PocketBase, c echo.Context) error {
 	}
 
 	// This is the url for Wallet
-	wallet_url := "https://wallet.mycredential.eu"
+	wallet_url := is.cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
 
 	// Create the QR code
 	png, err := qrcode.Encode(wallet_url, qrcode.Medium, 256)

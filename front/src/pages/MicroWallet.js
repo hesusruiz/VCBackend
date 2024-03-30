@@ -122,13 +122,6 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
                         ${T("Details")}
                     </ion-button>
 
-                    ${(status == "signed") ? null : html`
-                    <ion-button @click=${() => gotoPage("DisplayVC", vcraw)}>
-                        <ion-icon slot="start" name="construct"></ion-icon>
-                        ${T("Submit for signature")}
-                    </ion-button>`
-                    }
-
                     <ion-button color="danger" @click=${() => this.presentActionSheet(currentId)}>
                         <ion-icon slot="start" name="trash"></ion-icon>
                         ${T("Delete")}

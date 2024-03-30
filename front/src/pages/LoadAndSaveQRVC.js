@@ -295,11 +295,10 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         
             // Get my did:key
             var myDid = await getOrCreateDidKey()
-            debugger
 
             // Update the credential with the did:key
             try {
-                var result = await pb.send(`/apiuser/updatecredential/${this.VCId}`,
+                var result = await pb.send(`/apiuser/senddid/${this.VCId}`,
                 {
                     method: "POST",
                     body: {did: myDid.did},

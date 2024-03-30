@@ -116,61 +116,6 @@ window.MHR.register("DisplayOfferingQRCode", class extends window.MHR.AbstractPa
 
 })
 
-
-async function sendReminder(id) {
-    try {
-        var record = await pb.send('/apiadmin/sendreminder/'+id)
-        console.log(record)            
-    } catch (error) {
-        gotoPage("ErrorPage", {title: "Error retrieving credential "+id, msg: error.message})
-        return
-    }
-
-    alert("Reminder sent")
-
-}
-
-async function signCredentialOfferingLocal(credRecord) {
-
-    try {
-        var response = await fetch("http://127.0.0.1:80/",
-            {
-                mode: "cors"
-            })
-        if (!response.ok) {
-            alert("Response status not OK")
-            return
-        }
-        var responseText = await response.text()
-        alert("OK: "+ responseText)
-
-    } catch (error) {
-        alert("ERROR: " + error.message)
-    }
-
-    return
-
-}
-
-async function signCredentialOfferingInServer(credRecord) {
-
-    // Store the signed credential with the status "signed"
-    try {
-        console.log("Storing signed credential in Record", credRecord.id)
-        const record = await pb.collection('credentials').update(credRecord.id, credRecord);
-        console.log(record)            
-    } catch (error) {
-        gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
-        return
-    }
-
-    alert("Credential signed!!")
-
-    goHome()
-
-}
-
-
 function renderMandateReadOnly(cred) {
 
     console.log("Status", cred.status)
@@ -303,15 +248,20 @@ function renderMandateReadOnly(cred) {
     </ion-card-content>
 
     <div class="ion-margin-start ion-margin-bottom">
+
         <ion-button @click=${()=> history.back()}>
             ${T("Back")}
         </ion-button>
+
+        ${(cred.status == "tobesigned") ? html`
         <ion-button @click=${()=> signCredentialOfferingLocal(cred)}>
             ${T("Sign in Local")}
         </ion-button>
         <ion-button @click=${()=> signCredentialOfferingInServer(cred)}>
             ${T("Sign Credential")}
         </ion-button>
+        ` : null}
+
         <ion-button @click=${()=> sendReminder(cred.id)}>
             ${T("Send reminder")}
         </ion-button>
@@ -325,3 +275,84 @@ function renderMandateReadOnly(cred) {
 return theHtml
 
 }
+
+async function sendReminder(id) {
+    try {
+        var record = await pb.send('/apiadmin/sendreminder/'+id)
+        console.log(record)            
+    } catch (error) {
+        gotoPage("ErrorPage", {title: "Error sending reminder "+id, msg: error.message})
+        return
+    }
+
+    alert("Reminder sent")
+
+}
+
+async function signCredentialOfferingLocal(record) {
+
+    var learcred = decodeJWT(record.raw).body
+
+    if (!learcred.credentialSubject) {
+        gotoPage("ErrorPage", {title: "Invalid credential", msg: "signCredentialOfferingLocal: Invalid credential received"})
+        return
+    }
+
+    // Sign the credential in the local machine, to be able to access the certificate store
+    try {
+        var result = await fetch('http://127.0.0.1/signcredential', 
+        {
+            method: "POST",
+            body: learcred,
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+        var signedCredential = result.signed
+        console.log(signedCredential)            
+    } catch (error) {
+        gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
+        return
+    }
+
+    // Store the signed credential with the status "signed"
+    debugger
+    record.status = "signed"
+    record.raw = signedCredential
+    record.signer_email = pb.authStore.model.email
+    try {
+        console.log("Storing signed credential in Record", record.id)
+        const result = await pb.collection('credentials').update(record.id, record);
+        console.log(result)            
+    } catch (error) {
+        gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
+        return
+    }
+
+    alert("Credential signed!!")
+
+    goHome()
+
+    return
+
+}
+
+async function signCredentialOfferingInServer(credRecord) {
+
+    // Store the signed credential with the status "signed"
+    try {
+        console.log("Storing signed credential in Record", credRecord.id)
+        const record = await pb.collection('credentials').update(credRecord.id, credRecord);
+        console.log(record)            
+    } catch (error) {
+        gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
+        return
+    }
+
+    alert("Credential signed!!")
+
+    goHome()
+
+}
+
+

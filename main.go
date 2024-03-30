@@ -15,7 +15,6 @@ import (
 	"github.com/evidenceledger/vcdemo/verifier"
 	"github.com/hesusruiz/vcutils/yaml"
 	"github.com/labstack/echo/v5"
-	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/spf13/cobra"
@@ -87,7 +86,8 @@ func main() {
 	issuerCfgNew := yaml.New(icfgnew)
 
 	// Create a new Pocketbase App
-	app := pocketbase.New()
+	iss := issuernew.New(issuerCfgNew)
+	app := iss.App
 
 	// loosely check if it was executed using "go run"
 	isGoRun := strings.HasPrefix(os.Args[0], os.TempDir())
@@ -133,17 +133,21 @@ func main() {
 		},
 	})
 
-	// Start Verifier and other services
-	StartServices(app, cfg)
+	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+		// Start Verifier and Wallet static server other services
+		StartServices(cfg)
+		return nil
+	})
 
 	// Start the new Issuer and block
-	if err := issuernew.Start(app, issuerCfgNew); err != nil {
+	err := iss.Start()
+	if err != nil {
 		panic(err)
 	}
 
 }
 
-func StartServices(app *pocketbase.PocketBase, cfg *yaml.YAML) {
+func StartServices(cfg *yaml.YAML) {
 
 	buildConfigFile := cfg.String("server.buildFront.buildConfigFile", defaultBuildConfigFile)
 	buildConfigFile = LookupEnvOrString("BUILD_CONFIG_FILE", buildConfigFile)
@@ -166,81 +170,77 @@ func StartServices(app *pocketbase.PocketBase, cfg *yaml.YAML) {
 	// 	panic("no configuration for Wallet found")
 	// }
 	// walletCfg := yaml.New(wcfg)
-	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 
-		// Create the HTTP server
-		s := handlers.NewServer(cfg)
+	// Create the HTTP server
+	s := handlers.NewServer(cfg)
 
-		// Create default credentials if not already created
-		issuer.BatchGenerateLEARCredentials(issuerCfg)
+	// Create default credentials if not already created
+	issuer.BatchGenerateLEARCredentials(issuerCfg)
 
-		// Create the template engine using the templates in the configured directory
-		templateDir := cfg.String("server.templateDir", defaultTemplateDir)
-		templateEngine := html.New(templateDir, ".html").AddFuncMap(sprig.FuncMap())
+	// Create the template engine using the templates in the configured directory
+	templateDir := cfg.String("server.templateDir", defaultTemplateDir)
+	templateEngine := html.New(templateDir, ".html").AddFuncMap(sprig.FuncMap())
 
-		if cfg.String("server.environment") == "development" {
-			// Just for development time. Disable when in production
-			templateEngine.Reload(true)
-		}
+	if cfg.String("server.environment") == "development" {
+		// Just for development time. Disable when in production
+		templateEngine.Reload(true)
+	}
 
-		// Define the configuration for Fiber
-		fiberCfg := fiber.Config{
-			Views:       templateEngine,
-			ViewsLayout: "layouts/main",
-			Prefork:     *prod,
-		}
+	// Define the configuration for Fiber
+	fiberCfg := fiber.Config{
+		Views:       templateEngine,
+		ViewsLayout: "layouts/main",
+		Prefork:     *prod,
+	}
 
-		// Create a Fiber instance and set it in our Server struct
-		s.App = fiber.New(fiberCfg)
-		s.Cfg = cfg
+	// Create a Fiber instance and set it in our Server struct
+	s.App = fiber.New(fiberCfg)
+	s.Cfg = cfg
 
-		// Recover panics from the HTTP handlers so the server continues running
-		s.Use(recover.New(recover.Config{EnableStackTrace: true}))
+	// Recover panics from the HTTP handlers so the server continues running
+	s.Use(recover.New(recover.Config{EnableStackTrace: true}))
 
-		// CORS
-		s.Use(cors.New())
+	// CORS
+	s.Use(cors.New())
 
-		// Create a storage entry for logon expiration
-		s.SessionStorage = memory.New()
-		defer s.SessionStorage.Close()
+	// Create a storage entry for logon expiration
+	s.SessionStorage = memory.New()
+	defer s.SessionStorage.Close()
 
-		// Application Home pages
-		s.Get("/", s.HandleHome)
-		s.Get("/walletprovider", s.HandleWalletProviderHome)
+	// Application Home pages
+	s.Get("/", s.HandleHome)
+	s.Get("/walletprovider", s.HandleWalletProviderHome)
 
-		// WARNING! This is just for development. Disable this in production by using the config file setting
-		if cfg.String("server.environment") == "development" {
-			s.Get("/stop", s.HandleStop)
-		}
+	// WARNING! This is just for development. Disable this in production by using the config file setting
+	if cfg.String("server.environment") == "development" {
+		s.Get("/stop", s.HandleStop)
+	}
 
-		// Setup the Issuer, Wallet and Verifier routes
-		issuer.Setup(s, issuerCfg)
-		verifier.Setup(s, verifierCfg)
+	// Setup the Issuer, Wallet and Verifier routes
+	issuer.Setup(s, issuerCfg)
+	verifier.Setup(s, verifierCfg)
 
-		// Setup static files
-		s.Static("/static", cfg.String("server.staticDir", defaultStaticDir))
+	// Setup static files
+	s.Static("/static", cfg.String("server.staticDir", defaultStaticDir))
 
-		// Start the Wallet backend server
-		//		wallet.Start(walletCfg)
+	// Start the Wallet backend server
+	//		wallet.Start(walletCfg)
 
-		// Start the watcher
-		go faster.WatchAndBuild(buildConfigFile)
+	// Start the watcher
+	go faster.WatchAndBuild(buildConfigFile)
 
-		// Start the server
-		go func() {
-			log.Fatal(s.Listen(cfg.String("server.listenAddress")))
-		}()
+	// Start the Verifier server
+	go func() {
+		log.Fatal(s.Listen(cfg.String("server.listenAddress")))
+	}()
 
-		// Start the server for static Wallet assets
-		go func() {
-			staticServer := echo.New()
-			staticServer.Static("/*", "www")
-			log.Println("Serving static assets from", cfg.String("server.staticDir", defaultStaticDir))
-			log.Fatal(staticServer.Start(":3030"))
-		}()
-
-		return nil
-	})
+	// Start the server for static Wallet assets
+	go func() {
+		staticServer := echo.New()
+		staticServer.Static("/*", "www")
+		log.Println("Serving static assets from", cfg.String("server.staticDir", defaultStaticDir))
+		log.Fatal(staticServer.Start(":3030"))
+	}()
 
 }
 

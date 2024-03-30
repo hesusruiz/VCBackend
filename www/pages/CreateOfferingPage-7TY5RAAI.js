@@ -1,7 +1,6 @@
 import {
   Client
 } from "../chunks/chunk-J6D2DG7T.js";
-import "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
 // front/src/pages/CreateOfferingPage.js
@@ -264,8 +263,8 @@ async function createCredentialOffer() {
     Power: powers
   };
   try {
-    var tempCredential = await pb.send(
-      "/apiadmin/createcredential",
+    var jsonCredential = await pb.send(
+      "/apiadmin/createjsoncredential",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -274,19 +273,19 @@ async function createCredentialOffer() {
         }
       }
     );
-    console.log(tempCredential);
+    console.log(jsonCredential);
   } catch (error) {
     gotoPage("ErrorPage", { title: "Error creating credential", msg: error.message });
     return;
   }
-  gotoPage("DisplayOfferingPage", tempCredential);
+  gotoPage("DisplayOfferingPage", jsonCredential);
 }
 window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage {
   constructor(id) {
     super(id);
   }
-  async enter(tempCredential) {
-    const learcred = JSON.stringify(tempCredential, null, "  ");
+  async enter(jsonCredential) {
+    const learcred = JSON.stringify(jsonCredential, null, "  ");
     console.log("AuthStore is valid:", pb.authStore.isValid);
     console.log(pb.authStore.model);
     if (!pb.authStore.isValid || !pb.authStore.model.verified) {
@@ -302,7 +301,7 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
         </div>
         
         <div class="ion-margin-start ion-margin-bottom">
-            <ion-button @click=${() => storeOfferingInServer(tempCredential)}>
+            <ion-button @click=${() => storeOfferingInServer(jsonCredential)}>
                 <ion-icon slot="start" name="home"></ion-icon>
                 ${T("Save Credential Offer")}
             </ion-button>
@@ -316,14 +315,13 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
     Prism.highlightAll();
   }
 });
-async function storeOfferingInServer(tempCredential) {
-  const userEmail = tempCredential.credentialSubject.mandate.mandatee.email;
-  const learcred = JSON.stringify(tempCredential);
+async function storeOfferingInServer(jsonCredential) {
+  const userEmail = jsonCredential.credentialSubject.mandate.mandatee.email;
+  const learcred = JSON.stringify(jsonCredential);
   var model = pb.authStore.model;
-  debugger;
   try {
-    var result = await fetch(
-      "http://127.0.0.1/signcredential",
+    var result = await pb.send(
+      "/apiadmin/signcredential",
       {
         method: "POST",
         body: learcred,

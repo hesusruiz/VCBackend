@@ -3,7 +3,6 @@ package issuernew
 import (
 	"net/mail"
 
-	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/tools/mailer"
 	"github.com/valyala/fasttemplate"
 )
@@ -110,7 +109,8 @@ var emailBodyTemplate = `
 </html>
 `
 
-func sendEmailReminder(app *pocketbase.PocketBase, credId string) error {
+func (is *IssuerServer) sendEmailReminder(credId string) error {
+	app := is.App
 
 	cred, err := app.Dao().FindRecordById("credentials", credId)
 	if err != nil {

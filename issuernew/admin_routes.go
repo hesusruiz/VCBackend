@@ -8,12 +8,11 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
-	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 )
 
-func addAdminRoutes(app *pocketbase.PocketBase, e *core.ServeEvent) {
+func (is *IssuerServer) addAdminRoutes(e *core.ServeEvent) {
 	// Add special Issuer routes with a common prefix
 	// All requests for this group should be authenticated as Admin or with x509 certificate
 	adminApiGroup := e.Router.Group(adminApiGroupPrefix, RequireAdminOrX509Auth())
@@ -30,30 +29,25 @@ func addAdminRoutes(app *pocketbase.PocketBase, e *core.ServeEvent) {
 	})
 
 	// Create a LEARCredential with the info in the request
-	adminApiGroup.POST("/createcredential", func(c echo.Context) error {
-		return createCredential(c)
+	adminApiGroup.POST("/createjsoncredential", func(c echo.Context) error {
+		return is.createJSONCredential(c)
 	})
 
 	// Sign in the server the credential passed in the request
 	adminApiGroup.POST("/signcredential", func(c echo.Context) error {
-		return signCredential(c)
+		return is.signCredential(c)
 	})
 
 	// Send a reminder to the user that there is a credential waiting
 	adminApiGroup.GET("/sendreminder/:credid", func(c echo.Context) error {
-		return sendReminder(app, c)
+		return is.sendReminder(c)
 	})
-
-	// // Create the QR code in the server and return the image ready to be presented
-	// iss.GET("/createqrcode/:credid", func(c echo.Context) error {
-	// 	return createQRCode(c, settings.Meta.AppUrl, cfg.String("samedeviceWallet", "https://wallet.mycredential.eu"))
-	// })
 
 }
 
-// createCredential is the Echo route to create a credential from the Mandate in the body of the request.
+// createJSONCredential is the Echo route to create a credential from the Mandate in the body of the request.
 // We get the Mandate object, create a LEARCredential and insert the Mandate into the 'credentialSubject' object.
-func createCredential(c echo.Context) error {
+func (is *IssuerServer) createJSONCredential(c echo.Context) error {
 
 	info := apis.RequestInfo(c)
 
@@ -126,7 +120,7 @@ func createCredential(c echo.Context) error {
 	return c.JSON(http.StatusOK, lc)
 }
 
-func signCredential(c echo.Context) error {
+func (is *IssuerServer) signCredential(c echo.Context) error {
 
 	// Get the private key from the configured x509 certificate
 	privateKey, err := getConfigPrivateKey()
@@ -151,10 +145,10 @@ func signCredential(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]any{"signed": tok})
 }
 
-func sendReminder(app *pocketbase.PocketBase, c echo.Context) error {
+func (is *IssuerServer) sendReminder(c echo.Context) error {
 
 	id := c.PathParam("credid")
 
-	return sendEmailReminder(app, id)
+	return is.sendEmailReminder(id)
 
 }

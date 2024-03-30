@@ -1,7 +1,7 @@
+import "../chunks/chunk-BFXLU5VG.js";
 import {
   Client
 } from "../chunks/chunk-J6D2DG7T.js";
-import "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
 // front/src/pages/IssuerSignerHome.js
