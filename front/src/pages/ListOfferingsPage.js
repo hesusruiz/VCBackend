@@ -130,6 +130,28 @@ async function sendReminder(id) {
 
 }
 
+async function signCredentialOfferingLocal(credRecord) {
+
+    try {
+        var response = await fetch("http://127.0.0.1:80/",
+            {
+                mode: "cors"
+            })
+        if (!response.ok) {
+            alert("Response status not OK")
+            return
+        }
+        var responseText = await response.text()
+        alert("OK: "+ responseText)
+
+    } catch (error) {
+        alert("ERROR: " + error.message)
+    }
+
+    return
+
+}
+
 async function signCredentialOfferingInServer(credRecord) {
 
     // Store the signed credential with the status "signed"
@@ -283,6 +305,9 @@ function renderMandateReadOnly(cred) {
     <div class="ion-margin-start ion-margin-bottom">
         <ion-button @click=${()=> history.back()}>
             ${T("Back")}
+        </ion-button>
+        <ion-button @click=${()=> signCredentialOfferingLocal(cred)}>
+            ${T("Sign in Local")}
         </ion-button>
         <ion-button @click=${()=> signCredentialOfferingInServer(cred)}>
             ${T("Sign Credential")}

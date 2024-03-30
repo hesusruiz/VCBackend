@@ -367,10 +367,10 @@ async function storeOfferingInServer(tempCredential) {
 
     var model = pb.authStore.model
 
-
+    debugger
     // Sign the credential in the server with the x509 certificate
     try {
-        var result = await pb.send('/apiadmin/signcredential', 
+        var result = await fetch('http://127.0.0.1/signcredential', 
         {
             method: "POST",
             body: learcred,
@@ -384,6 +384,24 @@ async function storeOfferingInServer(tempCredential) {
         gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
         return
     }
+
+
+    // // Sign the credential in the server with the x509 certificate
+    // try {
+    //     var result = await pb.send('/apiadmin/signcredential', 
+    //     {
+    //         method: "POST",
+    //         body: learcred,
+    //         headers: {
+    //             "Content-Type": "application/json",
+    //         },
+    //     })
+    //     var signedCredential = result.signed
+    //     console.log(signedCredential)            
+    // } catch (error) {
+    //     gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
+    //     return
+    // }
 
     // Create the record in "tobesigned" status
     var data = {

@@ -320,9 +320,10 @@ async function storeOfferingInServer(tempCredential) {
   const userEmail = tempCredential.credentialSubject.mandate.mandatee.email;
   const learcred = JSON.stringify(tempCredential);
   var model = pb.authStore.model;
+  debugger;
   try {
-    var result = await pb.send(
-      "/apiadmin/signcredential",
+    var result = await fetch(
+      "http://127.0.0.1/signcredential",
       {
         method: "POST",
         body: learcred,
