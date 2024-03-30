@@ -3,7 +3,7 @@
 <main class="w3-container">
 
     <div class="w3-container w3-padding-16">
-        <h4>Welcome {{.claims.credentialSubject.name}}</h4>
+        <h4>Welcome {{.claims.credentialSubject.mandate.mandatee.first_name}} {{.claims.credentialSubject.mandate.mandatee.last_name}}</h4>
     </div>
 
     <div>

@@ -1,6 +1,7 @@
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
-let log = window.MHR.log
+let myerror = window.MHR.storage.myerror
+let mylog = window.MHR.storage.mylog
 
 window.MHR.register("AuthenticatorPage", class extends window.MHR.AbstractPage {
 
@@ -42,7 +43,7 @@ window.MHR.register("AuthenticatorPage", class extends window.MHR.AbstractPage {
             <div class="ion-margin-start ion-margin-bottom">
                 <ion-button expand="block" @click=${()=> webAuthn(authType, origin, email, state)}>
                     <ion-icon size="large" slot="start" name="finger-print"></ion-icon>
-                    ${T("Use biometric authentication")}
+                    ${T("Click to use biometric authentication")}
                 </ion-button>
             </div>
 
@@ -66,7 +67,7 @@ async function webAuthn(authType, origin, username, state) {
         console.log("no webauthn credentials in local device, registering", username)
         error = await registerUser(origin, username, state)
         if (error) {
-            log.error(error)
+            myerror(error)
             gotoPage("ErrorPage", {
                 title: "Error",
                 msg: "Error registering the user"
@@ -78,7 +79,7 @@ async function webAuthn(authType, origin, username, state) {
         console.log("no credentials in server, registering", username)
         error = await registerUser(origin, username, state)
         if (error) {
-            log.error(error)
+            myerror(error)
             gotoPage("ErrorPage", {
                 title: "Error",
                 msg: "Error registering the user"
@@ -90,7 +91,7 @@ async function webAuthn(authType, origin, username, state) {
         console.log("already credentials in server, loging", username)
         error = await loginUser(origin, username, state)
         if (error) {
-            log.error(error)
+            myerror(error)
             gotoPage("ErrorPage", {
                 title: "Error",
                 msg: "Error loging user"
@@ -119,7 +120,7 @@ async function registerUser(origin, username, state) {
             })
         if (!response.ok) {
             var errorText = await response.text()
-            log.log(errorText)
+            mylog(errorText)
             return "error"
         }
         var responseJSON = await response.json()
@@ -129,8 +130,8 @@ async function registerUser(origin, username, state) {
         // so the server can match the reply with the request
         var session = responseJSON.session
         
-        log.log("Received CredentialCreationOptions", credentialCreationOptions)
-        log.log("Session:", session)
+        mylog("Received CredentialCreationOptions", credentialCreationOptions)
+        mylog("Session:", session)
 
 
         // Decode the fields that are b64Url encoded for transmission
@@ -154,17 +155,17 @@ async function registerUser(origin, username, state) {
         }
 
         // Make the Authenticator create the credential
-        log.log("creating new Authenticator credential")
+        mylog("creating new Authenticator credential")
         try {
             var credential = await navigator.credentials.create({
                 publicKey: credentialCreationOptions.publicKey
             })
         } catch (error) {
-            log.error(error)
+            myerror(error)
             return error
         }
 
-        log.log("Authenticator created Credential", credential)
+        mylog("Authenticator created Credential", credential)
 
         // Get the fields that we should encode for transmission to the server
         let attestationObject = credential.response.attestationObject;
@@ -188,7 +189,7 @@ async function registerUser(origin, username, state) {
         }
 
         // Perform a POST to the server
-        log.log("sending Authenticator credential to server")
+        mylog("sending Authenticator credential to server")
         var response = await fetch(origin + apiPrefix + '/register/finish/' + username + "?state=" + state, {
             method: 'POST',
             headers: {
@@ -199,12 +200,12 @@ async function registerUser(origin, username, state) {
             body: JSON.stringify(wholeData) // body data type must match "Content-Type" header
         });
         if (!response.ok) {
-            log.log(errorText)
+            mylog(errorText)
             var errorText = await response.text()
             return "error"
         }
 
-        log.log("Authenticator credential sent successfully to server")
+        mylog("Authenticator credential sent successfully to server")
 
         // Record locally that an attestation was created
         const wkey = "wauth-" + username
@@ -214,7 +215,7 @@ async function registerUser(origin, username, state) {
 
 
     } catch (error) {
-        log.error(error)
+        myerror(error)
         return error
     }
 
@@ -231,7 +232,7 @@ async function loginUser(origin, username, state) {
                 mode: "cors"
             })
         if (!response.ok) {
-            log.error("error requesting CredentialRequestOptions", response.status)
+            myerror("error requesting CredentialRequestOptions", response.status)
             return "error"
         }
 
@@ -239,7 +240,7 @@ async function loginUser(origin, username, state) {
         var credentialRequestOptions = responseJSON.options
         var session = responseJSON.session
 
-        log.log("Received CredentialRequestOptions", credentialRequestOptions)
+        mylog("Received CredentialRequestOptions", credentialRequestOptions)
 
         // Decode the challenge from the server
         credentialRequestOptions.publicKey.challenge = bufferDecode(credentialRequestOptions.publicKey.challenge)
@@ -260,16 +261,16 @@ async function loginUser(origin, username, state) {
                     publicKey: credentialRequestOptions.publicKey
                 })
                 if (assertion == null) {
-                    log.error("null assertion received from authenticator device")
+                    myerror("null assertion received from authenticator device")
                     return "error"
                 }
             } catch (error) {
                 // Log and present the error page
-                log.error(error)
+                myerror(error)
                 return error
             }
 
-            log.log("Discoverable Assertion created", assertion)
+            mylog("Discoverable Assertion created", assertion)
 
         } else {
             // Call the authenticator to create the assertion
@@ -278,18 +279,18 @@ async function loginUser(origin, username, state) {
                     publicKey: credentialRequestOptions.publicKey
                 })
                 if (assertion == null) {
-                    log.error("null assertion received from authenticator device")
+                    myerror("null assertion received from authenticator device")
                     return "error"
                 }
             } catch (error) {
                 // Log and present the error page
-                log.error(error)
+                myerror(error)
                 return error
             }
 
         }
 
-        log.log("Authenticator created Assertion", assertion)
+        mylog("Authenticator created Assertion", assertion)
 
         // Get the fields that we should encode for transmission to the server
         let authData = assertion.response.authenticatorData
@@ -332,7 +333,7 @@ async function loginUser(origin, username, state) {
 
             if (!response.ok) {
                 var errorText = await response.text()
-                log.log(errorText)
+                mylog(errorText)
                 return "error"
             }
 
@@ -340,12 +341,12 @@ async function loginUser(origin, username, state) {
     
 
         } catch (error) {
-            log.error(error)
+            myerror(error)
             return error        
         }
 
     } catch (error) {
-        log.error(error)
+        myerror(error)
         return error
     }
 

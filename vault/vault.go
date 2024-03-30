@@ -22,7 +22,7 @@ import (
 
 var (
 	ErrDIDMethodNotSupported = errors.New("DID method not supported")
-	ErrDIDKeyInvalid         = errors.New("invalid string for DID key")
+	ErrDIDInvalid            = errors.New("invalid string for DID key")
 	ErrInvalidCodec          = errors.New("invalid codec")
 )
 

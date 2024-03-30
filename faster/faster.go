@@ -175,9 +175,6 @@ func postprocess(r api.BuildResult, cfg *yaml.YAML) error {
 
 	// Get the outputs field, which is a map with the key as each output file name
 	outputs := meta.Map("outputs")
-	if err != nil {
-		return err
-	}
 
 	targetFullDir := cfg.String("pagedir", defaultpagedir)
 
@@ -250,40 +247,46 @@ func postprocess(r api.BuildResult, cfg *yaml.YAML) error {
 
 	pageNamesMappingJSON, _ := json.MarshalIndent(pageNamesMapping, "", "  ")
 
-	indexFilePath := path.Join(cfg.String("targetdir"), "index.html")
+	indexFiles := cfg.ListString("htmlfiles", []string{defaulthtmlfile})
 
-	// Read the contents of the output HTML file
-	bytesOut, err := os.ReadFile(indexFilePath)
-	if err != nil {
-		log.Fatal(err)
-	}
+	for _, indexf := range indexFiles {
+		fmt.Println(indexf)
+		indexFilePath := path.Join(cfg.String("targetdir"), indexf)
 
-	for outFile, cssBundleBasename := range rootEntryPointMap {
+		// Read the contents of the output HTML file
+		bytesOut, err := os.ReadFile(indexFilePath)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		// Get the base name for the outfile of the entrypoint
-		outFileBaseName := path.Join(cfg.String("subdomainprefix"), filepath.Base(outFile))
-		fullCSS := path.Join(cfg.String("subdomainprefix"), cssBundleBasename)
+		for outFile, cssBundleBasename := range rootEntryPointMap {
 
-		// Replace the entrypoint name for JavaScript
-		bytesOut = bytes.Replace(bytesOut, []byte("PUT_APP_JS_NAME_HERE"), []byte(outFileBaseName), 1)
+			// Get the base name for the outfile of the entrypoint
+			outFileBaseName := path.Join(cfg.String("subdomainprefix"), filepath.Base(outFile))
+			fullCSS := path.Join(cfg.String("subdomainprefix"), cssBundleBasename)
 
-		// Replace the entrypoint name for CSS
-		bytesOut = bytes.Replace(bytesOut, []byte("PUT_APP_CSS_NAME_HERE"), []byte(fullCSS), 1)
+			// Replace the entrypoint name for JavaScript
+			bytesOut = bytes.Replace(bytesOut, []byte("PUT_APP_JS_NAME_HERE"), []byte(outFileBaseName), 1)
 
-		bytesOut = bytes.Replace(bytesOut, []byte("PUT_PAGEMAP_HERE"), pageNamesMappingJSON, 1)
+			// Replace the entrypoint name for CSS
+			bytesOut = bytes.Replace(bytesOut, []byte("PUT_APP_CSS_NAME_HERE"), []byte(fullCSS), 1)
 
-	}
+			bytesOut = bytes.Replace(bytesOut, []byte("PUT_PAGEMAP_HERE"), pageNamesMappingJSON, 1)
 
-	template := string(bytesOut)
-	t := fasttemplate.New(template, "{{", "}}")
-	str := t.ExecuteString(map[string]interface{}{
-		"subdomainprefix": cfg.String("subdomainprefix"),
-	})
+		}
 
-	// Overwrite file with modified contents
-	err = os.WriteFile(indexFilePath, []byte(str), 0755)
-	if err != nil {
-		log.Fatal(err)
+		template := string(bytesOut)
+		t := fasttemplate.New(template, "{{", "}}")
+		str := t.ExecuteString(map[string]interface{}{
+			"subdomainprefix": cfg.String("subdomainprefix"),
+		})
+
+		// Overwrite file with modified contents
+		err = os.WriteFile(indexFilePath, []byte(str), 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 	}
 
 	return nil
@@ -596,28 +599,28 @@ func watchAndBuild(cfg *yaml.YAML) {
 	// Start listening for events.
 	go dedupLoop(w, cfg)
 
-	watchDir := cfg.String("sourcedir")
+	watchDir := cfg.String("sourcedir", "src")
 	err = w.Add(watchDir)
 	if err != nil {
 		fmt.Printf("%q: %s", watchDir, err)
 		os.Exit(1)
 	}
 
-	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("pagedir"))
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("pagedir", "pages"))
 	err = w.Add(watchDir)
 	if err != nil {
 		fmt.Printf("%q: %s", watchDir, err)
 		os.Exit(1)
 	}
 
-	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("components"))
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("components", "components"))
 	err = w.Add(watchDir)
 	if err != nil {
 		fmt.Printf("%q: %s", watchDir, err)
 		os.Exit(1)
 	}
 
-	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("public"))
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("public", "public"))
 	err = w.Add(watchDir)
 	if err != nil {
 		fmt.Printf("%q: %s", watchDir, err)

@@ -1,0 +1,61 @@
+{{define "title"}} Page 1 {{end}}
+
+{{define "body"}}
+
+<main class="w3-container">
+
+    {{if .credlist}}
+    <h3>Available credentials</h3>
+
+    <div class="w3-row">
+    {{range .credlist}}
+
+        <div class="w3-half w3-container w3-margin-bottom">
+            <div class="w3-card-4">
+                <div class=" w3-container w3-margin-bottom color-primary">
+                    <h5>Employee</h5>
+                </div>
+
+                {{with mustFromJson .Encoded}}
+
+                <div class="w3-container">
+                    {{if eq .credentialSubject.gender "f" }}
+                    <img src="https://www.w3schools.com/w3css/img_avatar4.png" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
+                    {{else}}
+                    <img src="https://www.w3schools.com/w3css/img_avatar3.png" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
+                    {{end}}
+                    <p class="w3-large">{{.credentialSubject.mandate.mandatee.first_name}} {{.credentialSubject.mandate.mandatee.last_name}}</p>
+                    <hr>
+                <div class="w3-row-padding">
+
+                    {{range .credentialSubject.mandate.power}}
+                    <li class="w3-margin-bottom5">{{index .tmf_domain 0}} {{.tmf_function}} {{.tmf_action}}</li>
+                    {{end}}
+
+                </div>
+                
+                </div>
+                {{end}}
+
+                <div class="w3-container w3-padding-16">
+                    <a href="{{$.apiPrefix}}/creddetails/{{.Id}}" class="btn-primary">Details</a>
+                    <a href="{{$.apiPrefix}}/displayqrurl/{{.Id}}" class="btn-primary">QR</a>
+                </div>
+
+            </div>
+        </div>
+
+    {{end}}
+    </div>
+
+    {{else}}
+    <h3>There are no credentials</h3>
+    {{end}}
+
+    <div class="buttonfixed">
+        <a href="{{.apiPrefix}}/newcredential" class="w3-btn w3-circle w3-xlarge color-primary">+</a>
+    </div>
+
+</main>
+
+{{end}}

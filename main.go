@@ -3,15 +3,22 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/evidenceledger/vcdemo/back/handlers"
 	"github.com/evidenceledger/vcdemo/faster"
 	"github.com/evidenceledger/vcdemo/issuer"
+	"github.com/evidenceledger/vcdemo/issuernew"
 	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/evidenceledger/vcdemo/verifier"
-	"github.com/evidenceledger/vcdemo/wallet"
 	"github.com/hesusruiz/vcutils/yaml"
+	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/plugins/migratecmd"
+	"github.com/spf13/cobra"
 
 	"flag"
 	"log"
@@ -31,10 +38,9 @@ const defaultStaticDir = "back/www"
 const defaultPassword = "ThePassword"
 
 var (
-	prod            = flag.Bool("prod", false, "Enable prefork in Production, for better performance")
-	buildConfigFile = flag.String("buildconfig", LookupEnvOrString("BUILD_CONFIG_FILE", defaultBuildConfigFile), "path to config file for building the front")
-	configFile      = flag.String("config", LookupEnvOrString("CONFIG_FILE", defaultConfigFile), "path to config file for the demo")
-	password        = flag.String("pass", LookupEnvOrString("PASSWORD", defaultPassword), "admin password for the server")
+	prod       = flag.Bool("prod", false, "Enable prefork in Production, for better performance")
+	configFile = LookupEnvOrString("CONFIG_FILE", defaultConfigFile)
+	// Path to config file for building the front
 )
 
 func LookupEnvOrString(key string, defaultVal string) string {
@@ -46,33 +52,101 @@ func LookupEnvOrString(key string, defaultVal string) string {
 
 func main() {
 
-	flag.Usage = func() {
-		fmt.Printf("Usage of vcdemo (v1.1)\n")
-		fmt.Println("  vcdemo            \tStart the server")
-		fmt.Println("  vcdemo build      \tBuild the wallet front application")
-		fmt.Println("  vcdemo cleandb    \tErase the SQLite database files")
-		fmt.Println()
-		fmt.Printf("vcdemo uses a configuration file named 'server.yaml' located by default in '%s'\n", defaultConfigFile)
-		fmt.Println()
-		fmt.Println("The server has the following flags:")
-		flag.PrintDefaults()
-	}
+	var baseDir string
+	var withGoRun bool
 
-	// Parse command-line flags
+	if strings.HasPrefix(os.Args[0], os.TempDir()) {
+		// probably ran with go run
+		withGoRun = true
+		baseDir, _ = os.Getwd()
+	} else {
+		// probably ran with go build
+		withGoRun = false
+		baseDir = filepath.Dir(os.Args[0])
+	}
+	fmt.Println(os.Args)
+	fmt.Println("BaseDir:", baseDir, "GoRun:", withGoRun)
+
+	// Parse command-line flags before anything else
 	flag.Parse()
-	argsCmd := flag.Args()
 
 	// Read configuration file
-	cfg := readConfiguration(*configFile)
+	cfg := readConfiguration(configFile)
 
-	// Create the HTTP server
-	s := handlers.NewServer(cfg)
-
-	// Prepare the arguments map
-	args := map[string]bool{}
-	for _, arg := range argsCmd {
-		args[arg] = true
+	// Get the configurations for the individual services
+	icfg := cfg.Map("issuer")
+	if len(icfg) == 0 {
+		panic("no configuration for Issuer found")
 	}
+	issuerCfg := yaml.New(icfg)
+
+	icfgnew := cfg.Map("issuernew")
+	if len(icfg) == 0 {
+		panic("no configuration for new Issuer found")
+	}
+	issuerCfgNew := yaml.New(icfgnew)
+
+	// Create a new Pocketbase App
+	app := pocketbase.New()
+
+	// loosely check if it was executed using "go run"
+	isGoRun := strings.HasPrefix(os.Args[0], os.TempDir())
+
+	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
+		// enable auto creation of migration files when making collection changes in the Admin UI
+		// (the isGoRun check is to enable it only during development)
+		Automigrate: isGoRun,
+	})
+
+	// Customize the root command
+	app.RootCmd.Short = "VCDemo CLI"
+
+	buildConfigFile := cfg.String("server.buildFront.buildConfigFile", defaultBuildConfigFile)
+	buildConfigFile = LookupEnvOrString("BUILD_CONFIG_FILE", buildConfigFile)
+
+	// Add our commands
+	app.RootCmd.AddCommand(&cobra.Command{
+		Use:   "build",
+		Short: "Build the wallet front application",
+		Run: func(cmd *cobra.Command, args []string) {
+			log.Println("Building the front")
+			faster.BuildFront(buildConfigFile)
+		},
+	})
+
+	app.RootCmd.AddCommand(&cobra.Command{
+		Use:   "lear",
+		Short: "Create the LEAR Credential",
+		Run: func(cmd *cobra.Command, args []string) {
+			log.Println("Create the LEAR Credential")
+			deleteDatabase(cfg)
+			issuer.BatchGenerateLEARCredentials(issuerCfg)
+		},
+	})
+
+	app.RootCmd.AddCommand(&cobra.Command{
+		Use:   "cleandb",
+		Short: "Erase the SQLite database files",
+		Run: func(cmd *cobra.Command, args []string) {
+			log.Println("Erase the SQLite database files")
+			deleteDatabase(cfg)
+		},
+	})
+
+	// Start Verifier and other services
+	StartServices(app, cfg)
+
+	// Start the new Issuer and block
+	if err := issuernew.Start(app, issuerCfgNew); err != nil {
+		panic(err)
+	}
+
+}
+
+func StartServices(app *pocketbase.PocketBase, cfg *yaml.YAML) {
+
+	buildConfigFile := cfg.String("server.buildFront.buildConfigFile", defaultBuildConfigFile)
+	buildConfigFile = LookupEnvOrString("BUILD_CONFIG_FILE", buildConfigFile)
 
 	// Check that the configuration entries for Issuer, Verifier and Wallet do exist
 	icfg := cfg.Map("issuer")
@@ -87,83 +161,86 @@ func main() {
 	}
 	verifierCfg := yaml.New(vcfg)
 
-	wcfg := cfg.Map("wallet")
-	if len(wcfg) == 0 {
-		panic("no configuration for Wallet found")
-	}
-	walletCfg := yaml.New(wcfg)
+	// wcfg := cfg.Map("wallet")
+	// if len(wcfg) == 0 {
+	// 	panic("no configuration for Wallet found")
+	// }
+	// walletCfg := yaml.New(wcfg)
+	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 
-	// Build the front
-	if args["build"] {
-		faster.BuildFront(*buildConfigFile)
-		os.Exit(0)
-	}
+		// Create the HTTP server
+		s := handlers.NewServer(cfg)
 
-	// Erase SQLite database files
-	if args["cleandb"] {
-		deleteDatabase(cfg)
-		os.Exit(0)
-	}
+		// Create default credentials if not already created
+		issuer.BatchGenerateLEARCredentials(issuerCfg)
 
-	// Create default credentials if not already created
-	issuer.BatchGenerateCredentials(issuerCfg)
+		// Create the template engine using the templates in the configured directory
+		templateDir := cfg.String("server.templateDir", defaultTemplateDir)
+		templateEngine := html.New(templateDir, ".html").AddFuncMap(sprig.FuncMap())
 
-	// Create the template engine using the templates in the configured directory
-	templateDir := cfg.String("server.templateDir", defaultTemplateDir)
-	templateEngine := html.New(templateDir, ".html").AddFuncMap(sprig.FuncMap())
+		if cfg.String("server.environment") == "development" {
+			// Just for development time. Disable when in production
+			templateEngine.Reload(true)
+		}
 
-	if cfg.String("server.environment") == "development" {
-		// Just for development time. Disable when in production
-		templateEngine.Reload(true)
-	}
+		// Define the configuration for Fiber
+		fiberCfg := fiber.Config{
+			Views:       templateEngine,
+			ViewsLayout: "layouts/main",
+			Prefork:     *prod,
+		}
 
-	// Define the configuration for Fiber
-	fiberCfg := fiber.Config{
-		Views:       templateEngine,
-		ViewsLayout: "layouts/main",
-		Prefork:     *prod,
-	}
+		// Create a Fiber instance and set it in our Server struct
+		s.App = fiber.New(fiberCfg)
+		s.Cfg = cfg
 
-	// Create a Fiber instance and set it in our Server struct
-	s.App = fiber.New(fiberCfg)
-	s.Cfg = cfg
+		// Recover panics from the HTTP handlers so the server continues running
+		s.Use(recover.New(recover.Config{EnableStackTrace: true}))
 
-	// Recover panics from the HTTP handlers so the server continues running
-	s.Use(recover.New(recover.Config{EnableStackTrace: true}))
+		// CORS
+		s.Use(cors.New())
 
-	// CORS
-	s.Use(cors.New())
+		// Create a storage entry for logon expiration
+		s.SessionStorage = memory.New()
+		defer s.SessionStorage.Close()
 
-	// Create a storage entry for logon expiration
-	s.SessionStorage = memory.New()
-	defer s.SessionStorage.Close()
+		// Application Home pages
+		s.Get("/", s.HandleHome)
+		s.Get("/walletprovider", s.HandleWalletProviderHome)
 
-	// Application Home pages
-	s.Get("/", s.HandleHome)
-	s.Get("/walletprovider", s.HandleWalletProviderHome)
+		// WARNING! This is just for development. Disable this in production by using the config file setting
+		if cfg.String("server.environment") == "development" {
+			s.Get("/stop", s.HandleStop)
+		}
 
-	// WARNING! This is just for development. Disable this in production by using the config file setting
-	if cfg.String("server.environment") == "development" {
-		s.Get("/stop", s.HandleStop)
-	}
+		// Setup the Issuer, Wallet and Verifier routes
+		issuer.Setup(s, issuerCfg)
+		verifier.Setup(s, verifierCfg)
 
-	// Setup the Issuer, Wallet and Verifier routes
-	issuer.Setup(s, issuerCfg)
-	verifier.Setup(s, verifierCfg)
+		// Setup static files
+		s.Static("/static", cfg.String("server.staticDir", defaultStaticDir))
 
-	// Setup static files
-	s.Static("/static", cfg.String("server.staticDir", defaultStaticDir))
+		// Start the Wallet backend server
+		//		wallet.Start(walletCfg)
 
-	// Start the Wallet backend server
-	wallet.Start(walletCfg)
+		// Start the watcher
+		go faster.WatchAndBuild(buildConfigFile)
 
-	// Start the watcher
-	if args["autobuild"] {
-		go faster.WatchAndBuild(*buildConfigFile)
-	}
+		// Start the server
+		go func() {
+			log.Fatal(s.Listen(cfg.String("server.listenAddress")))
+		}()
 
-	// Start the server
-	log.Fatal(s.Listen(cfg.String("server.listenAddress")))
+		// Start the server for static Wallet assets
+		go func() {
+			staticServer := echo.New()
+			staticServer.Static("/*", "www")
+			log.Println("Serving static assets from", cfg.String("server.staticDir", defaultStaticDir))
+			log.Fatal(staticServer.Start(":3030"))
+		}()
+
+		return nil
+	})
 
 }
 

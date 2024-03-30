@@ -1,7 +1,6 @@
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
 let storage = window.MHR.storage
-let log = window.MHR.log
 
 window.MHR.register("MenuPage", class extends window.MHR.AbstractPage {
 

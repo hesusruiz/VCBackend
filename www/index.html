@@ -12,6 +12,7 @@
     <script>
         // Set here the default home page for the app, before loading app.js
         window.homePage = "MicroWallet"
+        window.myAppTitle = "Privacy Wallet"
         // Configure the menu items, with entries like:
         //    {page:"NameOfPage", text:"Text in menu item", params: object to pass to page}
         window.menuItems = [
@@ -22,25 +23,7 @@
             { page: "ConfirmResetApp", text: "Reset application" }
         ]
         // The page mapping
-        window.pageModules = {
-  "AuthenticatorPage": "/pages/AuthenticatorPage-RK5RLQ4F.js",
-  "ConfirmDeleteAll": "/pages/ConfirmDeleteAll-ND5IHMQA.js",
-  "ConfirmDeleteCred": "/pages/ConfirmDeleteCred-PYPUDKLW.js",
-  "ConfirmResetApp": "/pages/ConfirmResetApp-NNGCVBX3.js",
-  "DisplayNormalQR": "/pages/DisplayNormalQR-6RUKFCOP.js",
-  "DisplayQR": "/pages/DisplayQR-U7OIADFI.js",
-  "DisplayVC": "/pages/DisplayVC-PPMAAGCR.js",
-  "LoadAndSaveQRVC": "/pages/LoadAndSaveQRVC-AIDYKXCR.js",
-  "LoadAndVerifyQRVC": "/pages/LoadAndVerifyQRVC-3SG52E5I.js",
-  "LogsPage": "/pages/LogsPage-BEOPMU22.js",
-  "MenuPage": "/pages/MenuPage-4WBUJYOC.js",
-  "MicroWallet": "/pages/MicroWallet-D3V4UPHZ.js",
-  "SIOPSelectCredential": "/pages/SIOPSelectCredential-OXQH6XWW.js",
-  "SWNotify": "/pages/SWNotify-GAGYDBBU.js",
-  "ScanQrPage": "/pages/ScanQrPage-3KOB4GVD.js",
-  "SelectCamera": "/pages/SelectCamera-FPMKSJAM.js",
-  "TestPage": "/pages/TestPage-OKISILJI.js"
-}
+        window.pageModules = PUT_PAGEMAP_HERE
 
 
         window.Ionic = {
@@ -52,8 +35,8 @@
     </script>
 
     <!-- Load the application -->
-    <!-- <link rel="stylesheet" href="." /> -->
-    <script type="module" src="app-HRIFAW6G.js"></script>
+    <!-- <link rel="stylesheet" href="PUT_APP_CSS_NAME_HERE" /> -->
+    <script type="module" src="PUT_APP_JS_NAME_HERE"></script>
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -146,13 +129,13 @@
 
 <ion-app>
 
-<ion-header id="the_header">
+<ion-header id="the_header" class="half-centered">
 
 </ion-header>
 
 <ion-content id="main-content">
 
-<main>
+<main class="half-centered">
 </main>
 
 </ion-content>

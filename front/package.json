@@ -8,6 +8,7 @@
     "workbox-cli": "^7.0.0"
   },
   "dependencies": {
+    "@cef-ebsi/key-did-resolver": "^2.0.1",
     "@peculiar/x509": "^1.6.1",
     "@zxing/browser": "^0.0.9",
     "@zxing/library": "^0.18.6",

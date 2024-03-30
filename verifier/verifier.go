@@ -342,7 +342,7 @@ func (v *Verifier) PageLoginCompleted(c *fiber.Ctx) error {
 		"credential": decoded,
 	}
 	// Create an access token from the credential
-	accessToken, err := v.vault.CreateToken(claims, v.did)
+	accessToken, err := v.vault.CreateJWTtoken(claims, v.did)
 	if err != nil {
 		return err
 	}
@@ -443,7 +443,7 @@ func (v *Verifier) PageAccessProtectedService(c *fiber.Ctx) error {
 	// Try to get the access token from the cookie (for interactive HTML pages)
 	accessToken := c.Cookies("dsbamvf")
 
-	// Otherwise, try to teh the token from the Authorization HTTP Request header
+	// Otherwise, try to get the token from the Authorization HTTP Request header
 	if len(accessToken) == 0 {
 		auth := strings.Split(c.Get("authorization"), " ")
 		if len(auth) > 1 {
@@ -452,7 +452,7 @@ func (v *Verifier) PageAccessProtectedService(c *fiber.Ctx) error {
 		}
 	}
 
-	// It is an error to receive a request withou Access Token
+	// It is an error to receive a request without Access Token
 	if len(accessToken) == 0 {
 		zlog.Error().Str("token", accessToken).Msg("no Access Token received")
 		return fiber.NewError(fiber.StatusUnauthorized, "no Access Token received")
@@ -462,7 +462,7 @@ func (v *Verifier) PageAccessProtectedService(c *fiber.Ctx) error {
 	// Verify the format and the signature of the Access Token.
 	// No content verification is done here.
 	// The token should have been signed by ourselves.
-	token, err := v.vault.VerifyToken([]byte(accessToken), v.did)
+	token, err := v.vault.VerifyJWTtoken([]byte(accessToken), v.did)
 	if err != nil {
 		return err
 	}
@@ -682,23 +682,23 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 	}
 
 	// Get the email of the user
-	email := theCredential.String("credentialSubject.email")
-	name := theCredential.String("credentialSubject.name")
-	zlog.Info().Str("email", email).Msg("data in vp_token")
+	email := theCredential.String("credentialSubject.mandate.mandatee.email")
+	// name := theCredential.String("credentialSubject.name")
+	// zlog.Info().Str("email", email).Msg("data in vp_token")
 
-	// Get user from Database
-	usr, err := v.vault.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
-	if err != nil {
-		zlog.Err(err).Msg("CreateOrGetUserWithDIDKey error")
-		return err
-	}
+	// // Get user from Database
+	// usr, err := v.vault.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
+	// if err != nil {
+	// 	zlog.Err(err).Msg("CreateOrGetUserWithDIDKey error")
+	// 	return err
+	// }
 
-	// Check if the user has a registered WebAuthn credential
+	// // Check if the user has a registered WebAuthn credential
 	var userNotRegistered bool
-	if len(usr.WebAuthnCredentials()) == 0 {
-		userNotRegistered = true
-		zlog.Info().Msg("user does not have a registered WebAuthn credential")
-	}
+	// if len(usr.WebAuthnCredentials()) == 0 {
+	// 	userNotRegistered = true
+	// 	zlog.Info().Msg("user does not have a registered WebAuthn credential")
+	// }
 
 	if isEnterpriseWallet {
 
@@ -713,6 +713,35 @@ func (v *Verifier) APIWalletAuthenticationResponse(c *fiber.Ctx) error {
 		return c.SendString(email)
 
 	} else {
+
+		if !v.cfg.Bool("authenticatorRequired", false) {
+
+			// Set the credential in storage, and wait for the polling from client
+			newState := handlers.NewState()
+			newState.SetStatus(handlers.StateCompleted)
+			newState.SetContent(serialCredential)
+			newStateString := newState.String()
+
+			err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
+			if err != nil {
+				zlog.Err(err).Send()
+				return err
+			}
+
+			zlog.Info().
+				Str("state", newStateString).
+				Str("email", email).
+				Msg("AuthenticationResponse success, not requiring webAuthn")
+
+			resp := map[string]string{
+				"authenticatorRequired": "no",
+				"type":                  "login",
+				"email":                 email,
+			}
+
+			return c.JSON(resp)
+
+		}
 
 		if userNotRegistered {
 			// The user does not have WebAuthn credentials, so we require initial registration of the Authenticator
@@ -787,7 +816,7 @@ func (v *Verifier) createJWTSecuredAuthenticationRequest(response_uri string, st
 		"iss":              verifierDID,
 		"aud":              "self-issued",
 		"max_age":          600,
-		"scope":            "dsba.credentials.presentation.Employee",
+		"scope":            "LEARCredentialEmployee",
 		"response_type":    "vp_token",
 		"response_mode":    "direct_post",
 		"client_id":        verifierDID,
@@ -797,7 +826,7 @@ func (v *Verifier) createJWTSecuredAuthenticationRequest(response_uri string, st
 		"nonce":            generateNonce(),
 	}
 
-	jar, err := v.vault.CreateToken(jarPlain, v.did)
+	jar, err := v.vault.CreateJWTtoken(jarPlain, v.did)
 	if err != nil {
 		return nil, err
 	}

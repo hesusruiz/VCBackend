@@ -1,5 +1,13 @@
+(client_auth) {
+    tls {
+        client_auth {
+            mode require
+        }
+    }
+}
+
 issuer.mycredential.eu {
-	reverse_proxy 172.31.40.66:3000
+	reverse_proxy 172.31.40.66:8090
 }
 
 verifier.mycredential.eu {
@@ -7,13 +15,23 @@ verifier.mycredential.eu {
 }
 
 wallet.mycredential.eu {
-	reverse_proxy 172.31.40.66:8090
+	reverse_proxy 172.31.40.66:3030
 }
 
 verifiertest.mycredential.eu {
 	reverse_proxy 172.31.40.66:3000
 }
 
+issuersec.mycredential.eu {
+    import client_auth
+    reverse_proxy 172.31.40.66:8090 {
+    	header_up tls-client-certificate {http.request.tls.client.certificate_der_base64}
+    }	
+}
+
 wallettest.mycredential.eu {
-	reverse_proxy 172.31.40.66:8090
+	import client_auth
+	reverse_proxy 172.31.40.66:8090 {
+		header_up tls-client-certificate {http.request.tls.client.certificate_der_base64}
+	}
 }
