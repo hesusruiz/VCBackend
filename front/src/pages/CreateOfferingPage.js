@@ -2,8 +2,6 @@ import PocketBase from '../components/pocketbase.es.mjs'
 
 const pb = new PocketBase(window.location.origin)
 
-import { log } from '../log'
-
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
 let storage = window.MHR.storage
@@ -290,9 +288,9 @@ async function createCredentialOffer() {
     }
         
 
-    // Create the credential but do not store anything yet in the server
+    // Create the JSON structure of the credential but do not store anything yet in the server
     try {
-        var tempCredential = await pb.send('/apiadmin/createcredential', 
+        var jsonCredential = await pb.send('/apiadmin/createjsoncredential', 
         {
             method: "POST",
             body: JSON.stringify(data),
@@ -300,13 +298,13 @@ async function createCredentialOffer() {
                 "Content-Type": "application/json",
             },
         })
-        console.log(tempCredential)            
+        console.log(jsonCredential)            
     } catch (error) {
         gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
         return
     }
 
-    gotoPage("DisplayOfferingPage", tempCredential)
+    gotoPage("DisplayOfferingPage", jsonCredential)
 
 
     // window.MHR.cleanReload()
@@ -318,9 +316,9 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
         super(id)
     }
 
-    async enter(tempCredential) {
+    async enter(jsonCredential) {
 
-        const learcred = JSON.stringify(tempCredential, null, "  ")
+        const learcred = JSON.stringify(jsonCredential, null, "  ")
 
         console.log("AuthStore is valid:", pb.authStore.isValid)
         console.log(pb.authStore.model)
@@ -339,7 +337,7 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
         </div>
         
         <div class="ion-margin-start ion-margin-bottom">
-            <ion-button @click=${()=> storeOfferingInServer(tempCredential)}>
+            <ion-button @click=${()=> storeOfferingInServer(jsonCredential)}>
                 <ion-icon slot="start" name="home"></ion-icon>
                 ${T("Save Credential Offer")}
             </ion-button>
@@ -355,22 +353,19 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
         // Re-run the highlighter for the VC display
         Prism.highlightAll()
 
-
     }
-
 
 })
 
-async function storeOfferingInServer(tempCredential) {
-    const userEmail = tempCredential.credentialSubject.mandate.mandatee.email
-    const learcred = JSON.stringify(tempCredential)
+async function storeOfferingInServer(jsonCredential) {
+    const userEmail = jsonCredential.credentialSubject.mandate.mandatee.email
+    const learcred = JSON.stringify(jsonCredential)
 
     var model = pb.authStore.model
 
-    debugger
     // Sign the credential in the server with the x509 certificate
     try {
-        var result = await fetch('http://127.0.0.1/signcredential', 
+        var result = await pb.send('/apiadmin/signcredential', 
         {
             method: "POST",
             body: learcred,
@@ -384,24 +379,6 @@ async function storeOfferingInServer(tempCredential) {
         gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
         return
     }
-
-
-    // // Sign the credential in the server with the x509 certificate
-    // try {
-    //     var result = await pb.send('/apiadmin/signcredential', 
-    //     {
-    //         method: "POST",
-    //         body: learcred,
-    //         headers: {
-    //             "Content-Type": "application/json",
-    //         },
-    //     })
-    //     var signedCredential = result.signed
-    //     console.log(signedCredential)            
-    // } catch (error) {
-    //     gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
-    //     return
-    // }
 
     // Create the record in "tobesigned" status
     var data = {

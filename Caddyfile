@@ -18,6 +18,10 @@ wallet.mycredential.eu {
 	reverse_proxy 172.31.40.66:3030
 }
 
+wallettest.mycredential.eu {
+	reverse_proxy 172.31.40.66:3030
+}
+
 verifiertest.mycredential.eu {
 	reverse_proxy 172.31.40.66:3000
 }
@@ -27,11 +31,4 @@ issuersec.mycredential.eu {
     reverse_proxy 172.31.40.66:8090 {
     	header_up tls-client-certificate {http.request.tls.client.certificate_der_base64}
     }	
-}
-
-wallettest.mycredential.eu {
-	import client_auth
-	reverse_proxy 172.31.40.66:8090 {
-		header_up tls-client-certificate {http.request.tls.client.certificate_der_base64}
-	}
 }

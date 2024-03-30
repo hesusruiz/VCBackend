@@ -10,10 +10,10 @@ import {
 import {
   credentialsSave
 } from "../chunks/chunk-YTTLZ6I3.js";
+import "../chunks/chunk-BFXLU5VG.js";
 import {
   Client
 } from "../chunks/chunk-J6D2DG7T.js";
-import "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-U2D4LOFI.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
@@ -246,10 +246,9 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         return;
       }
       var myDid = await getOrCreateDidKey();
-      debugger;
       try {
         var result = await pb.send(
-          `/apiuser/updatecredential/${this.VCId}`,
+          `/apiuser/senddid/${this.VCId}`,
           {
             method: "POST",
             body: { did: myDid.did },

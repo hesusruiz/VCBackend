@@ -58,8 +58,23 @@ func LookupEnvOrString(key string, defaultVal string) string {
 	return defaultVal
 }
 
+type IssuerServer struct {
+	App *pocketbase.PocketBase
+	cfg *my.YAML
+}
+
+func New(cfg *my.YAML) *IssuerServer {
+	is := &IssuerServer{}
+	is.App = pocketbase.New()
+	is.cfg = cfg
+	return is
+}
+
 // Start initializes the Issuer hooks and adds routes and spawns the server to handle them
-func Start(app *pocketbase.PocketBase, cfg *my.YAML) error {
+func (is *IssuerServer) Start() error {
+
+	app := is.App
+	cfg := is.cfg
 
 	// Check that we can access to the certificate
 	if _, err := getConfigPrivateKey(); err != nil {
@@ -127,10 +142,10 @@ func Start(app *pocketbase.PocketBase, cfg *my.YAML) error {
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./www"), false))
 
 		// Add routes for Signers
-		addAdminRoutes(app, e)
+		is.addAdminRoutes(e)
 
 		// Add routes for Holders
-		addUserRoutes(app, e)
+		is.addUserRoutes(e)
 
 		return nil
 	})
@@ -323,18 +338,14 @@ func Start(app *pocketbase.PocketBase, cfg *my.YAML) error {
 		if status == "signed" {
 
 			// Send an email to the user
-			return sendEmailReminder(app, e.Record.Id)
+			return is.sendEmailReminder(e.Record.Id)
 
 		}
 
 		return nil
 	})
 
-	err := app.Start()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return err
+	return is.App.Start()
 }
 
 // selectHomePage determines the HTML file to serve for the root path, depending on wether the server requires client certificate
