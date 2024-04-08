@@ -41,7 +41,7 @@ func publicKey(priv any) any {
 // GenDIDelsi generates a new 'did:elsi' DID by creating an EC key pair
 func GenDIDelsi(subject x509util.ELSIName, keyparams x509util.KeyParams) (did string, privateKey jwk.Key, cert x509util.PEMCert, err error) {
 
-	privateKey, cert, err = x509util.NewCACertificate(subject, keyparams)
+	privateKey, cert, err = x509util.NewCAELSICertificate(subject, keyparams)
 	if err != nil {
 		return "", nil, nil, err
 	}

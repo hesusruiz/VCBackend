@@ -42,8 +42,6 @@ const userApiGroupPrefix = "/apiuser"
 
 var credTemplate *template.Template
 
-var treg *pbtemplate.Registry
-
 func initCredentialTemplates(credentialTemplatesPath string) {
 
 	credTemplate = template.Must(template.New("base").Funcs(sprig.TxtFuncMap()).ParseGlob(credentialTemplatesPath))
@@ -59,8 +57,9 @@ func LookupEnvOrString(key string, defaultVal string) string {
 }
 
 type IssuerServer struct {
-	App *pocketbase.PocketBase
-	cfg *my.YAML
+	App  *pocketbase.PocketBase
+	cfg  *my.YAML
+	treg *pbtemplate.Registry
 }
 
 func New(cfg *my.YAML) *IssuerServer {
@@ -81,10 +80,11 @@ func (is *IssuerServer) Start() error {
 		return err
 	}
 
-	treg = pbtemplate.NewRegistry()
-	treg.AddFuncs(sprig.FuncMap())
+	// Create the HTML templates registry
+	is.treg = pbtemplate.NewRegistry()
+	is.treg.AddFuncs(sprig.FuncMap())
 
-	// Initialize the templates for credential creation
+	// Initialize the Go HTML templates for credential creation
 	credentialTemplatesDir := cfg.String("credentialTemplatesDir", defaultCredentialTemplatesDir)
 	credentialTemplatesPath := path.Join(credentialTemplatesDir, "*.tpl")
 	initCredentialTemplates(credentialTemplatesPath)
@@ -120,19 +120,27 @@ func (is *IssuerServer) Start() error {
 		}
 		log.Println("Running as", settings.Meta.AppName, "in", settings.Meta.AppUrl)
 
-		// Create the default admin
-		admin := &models.Admin{}
-		admin.Email = "jesus@alastria.io"
-		admin.SetPassword("1234567890")
+		// Create the default admin if needed
+		adminEmail := cfg.String("admin.email")
+		if len(adminEmail) == 0 {
+			log.Fatal("Email for server administrator is not specified in the configuration file")
+		}
 
-		if dao.IsAdminEmailUnique(admin.Email) {
+		admin, err := dao.FindAdminByEmail(adminEmail)
+		if err != nil {
+			return err
+		}
+		if admin == nil {
+			admin = &models.Admin{}
+			admin.Email = adminEmail
+			admin.SetPassword("1234567890")
 			err = dao.SaveAdmin(admin)
 			if err != nil {
 				return err
 			}
-			log.Println("Default Admin added!!!!")
+			log.Println("Default Admin added:", admin.Email)
 		} else {
-			log.Println("Default Admin already existed!!!!")
+			log.Println("Default Admin already existed:", admin.Email)
 		}
 
 		// Middleware to select the home page depending on the type of user (signers or holders)
@@ -142,7 +150,7 @@ func (is *IssuerServer) Start() error {
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./www"), false))
 
 		// Add routes for Signers
-		is.addAdminRoutes(e)
+		is.addSignerRoutes(e)
 
 		// Add routes for Holders
 		is.addUserRoutes(e)
@@ -186,7 +194,7 @@ func (is *IssuerServer) Start() error {
 		}
 
 		// Create a CA Certificate based on the info in the incoming certificate
-		privateKey, cert, err := x509util.NewCACertificate(*subject, keyparams)
+		privateKey, cert, err := x509util.NewCAELSICertificate(*subject, keyparams)
 		if err != nil {
 			return err
 		}
@@ -356,7 +364,7 @@ func selectHomePage(next echo.HandlerFunc) echo.HandlerFunc {
 			log.Println("My host is", c.Request().Host)
 			clientCertDer := c.Request().Header.Get("Tls-Client-Certificate")
 			if clientCertDer == "" {
-				return c.File("www/indexEmployee.html")
+				return c.File("www/issuerLandingPage.html")
 			} else {
 				return c.File("www/indexSigner.html")
 			}

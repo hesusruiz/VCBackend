@@ -1,0 +1,46 @@
+{{ define "content" -}}
+
+<div class="w3-auto w3-panel w3-card">
+    <h3>Scan this QR code to authenticate with a mobile</h3>
+
+    <img src="data:{{.QRcode}}" alt="QRcode">
+
+    <h3>Or click this button to authenticate with the browser</h3>
+
+    <div class="w3-container w3-padding-16">
+        <a href="{{.Samedevice}}" target="_blank" class="btn-primary">Login with browser</a>
+    </div>
+</div>
+<script>
+    // Schedule a poll to the server each second, until either an error or success is received
+    setTimeout(pollServer, 1000)
+
+    async function pollServer(a) {
+
+        // There will be an HTTP 302 Redirection after this
+        // We will receive the url to invoke as a result from the POST
+        let resp = await fetch('/login/poll?state={{.AuthRequestID}}', {
+            cache: "no-cache",
+            mode: "no-cors",
+            redirect: "manual"
+        });
+        if (resp.ok) {
+            const data = await resp.text()
+            if (data === "pending") {
+                // Poll again in 1 second
+                console.log("pending")
+                setTimeout(pollServer, 1000)
+                return
+            }
+        } else {
+            if (resp.type == "opaqueredirect") {
+                var redirectedURL = resp.url
+                console.log(redirectedURL)
+                location = redirectedURL
+            }
+        }
+
+    }
+
+</script>
+{{- end }}

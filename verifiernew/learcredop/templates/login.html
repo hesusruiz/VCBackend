@@ -1,0 +1,70 @@
+{{ define "login" -}}
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Login</title>
+    </head>
+    <body style="display: flex; align-items: center; justify-content: center; height: 100vh;">
+        <form method="POST" action="/login/username" style="height: 200px; width: 200px;">
+
+            <input type="hidden" name="id" value="{{.AuthRequestID}}">
+
+            <h3>Here will go the QR code</h3>
+            <img src="data:{{.QRcode}}" alt="QRcode">
+
+            <div class="w3-container w3-padding-16">
+                <a href="{{.Samedevice}}" target="_blank" class="btn-primary">Login with browser</a>
+            </div>
+
+            <div>
+                <label for="username">Username:</label>
+                <input id="username" name="username" style="width: 100%">
+            </div>
+
+            <div>
+                <label for="password">Password:</label>
+                <input id="password" name="password" style="width: 100%">
+            </div>
+
+            <p style="color:red; min-height: 1rem;">{{.Error}}</p>
+
+            <button type="submit">Login</button>
+        </form>
+    </body>
+
+    <script>
+        // Schedule a poll to the server each second, until either an error or success is received
+        setTimeout(pollServer, 1000)
+    
+        async function pollServer(a) {
+
+            // There will be an HTTP 302 Redirection after this
+            // We will receive the url to invoke as a result from the POST
+            let resp = await fetch('/login/poll?state={{.AuthRequestID}}', {
+                cache: "no-cache",
+                mode: "no-cors",
+                redirect: "manual"
+            });
+            if (resp.ok) {
+                const data = await resp.text()
+                if (data === "pending") {
+                    // Poll again in 1 second
+                    console.log("pending")
+                    setTimeout(pollServer, 1000)
+                    return
+                }
+            } else {
+                if (resp.type == "opaqueredirect") {
+                    var redirectedURL = resp.url
+                    console.log(redirectedURL)
+                    location = redirectedURL
+                }
+            }
+
+        }
+        
+    </script>
+
+</html>`
+{{- end }}

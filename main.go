@@ -5,14 +5,17 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/evidenceledger/vcdemo/back/handlers"
+	"github.com/evidenceledger/vcdemo/client"
 	"github.com/evidenceledger/vcdemo/faster"
 	"github.com/evidenceledger/vcdemo/issuer"
 	"github.com/evidenceledger/vcdemo/issuernew"
 	"github.com/evidenceledger/vcdemo/vault"
 	"github.com/evidenceledger/vcdemo/verifier"
+	"github.com/evidenceledger/vcdemo/verifiernew"
 	"github.com/hesusruiz/vcutils/yaml"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase/core"
@@ -85,7 +88,7 @@ func main() {
 	}
 	issuerCfgNew := yaml.New(icfgnew)
 
-	// Create a new Pocketbase App
+	// Create a new Issuer with its configuration
 	iss := issuernew.New(issuerCfgNew)
 	app := iss.App
 
@@ -226,6 +229,9 @@ func StartServices(cfg *yaml.YAML) {
 	// Start the Wallet backend server
 	//		wallet.Start(walletCfg)
 
+	// Start the new Verifier
+	go verifiernew.Setup()
+
 	// Start the watcher
 	go faster.WatchAndBuild(buildConfigFile)
 
@@ -241,6 +247,9 @@ func StartServices(cfg *yaml.YAML) {
 		log.Println("Serving static assets from", cfg.String("server.staticDir", defaultStaticDir))
 		log.Fatal(staticServer.Start(":3030"))
 	}()
+
+	time.Sleep(2 * time.Second)
+	go client.Setup()
 
 }
 

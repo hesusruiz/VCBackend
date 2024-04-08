@@ -98,7 +98,7 @@ var emailBodyTemplate = `
 	<p>Somebody from your company has created a LEARCredential for you.</p>
 	<p>Click on the button below to retrieve it and store into your wallet.</p>
 	<p>
-		<a class="btn" href="issuer.mycredential.eu/apiuser/startissuancepage/{{credential_id}}" target="_blank" rel="noo=pener">Go to MyCredential.eu portal</a>
+		<a class="btn" href="https://issuer.mycredential.eu/apiuser/startissuancepage/{{credential_id}}" target="_blank" rel="noo=pener">Go to MyCredential.eu portal</a>
 	</p>
 	<p>
 		Thanks,<br />

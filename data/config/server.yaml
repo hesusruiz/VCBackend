@@ -36,9 +36,12 @@ issuernew:
   listenAddress: ":8090"
   Meta:
     appName: "DOME Issuer"
-    appUrl: issuer.mycredential.eu
+    appUrl: https://issuer.mycredential.eu
     senderName: Support
     senderAddress: "admin@mycredential.eu"
+
+  admin:
+    email: jesus@alastria.io
 
   SMTP:
     Enabled: true

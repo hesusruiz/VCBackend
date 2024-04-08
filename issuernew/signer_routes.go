@@ -12,7 +12,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-func (is *IssuerServer) addAdminRoutes(e *core.ServeEvent) {
+func (is *IssuerServer) addSignerRoutes(e *core.ServeEvent) {
 	// Add special Issuer routes with a common prefix
 	// All requests for this group should be authenticated as Admin or with x509 certificate
 	adminApiGroup := e.Router.Group(adminApiGroupPrefix, RequireAdminOrX509Auth())
@@ -108,6 +108,7 @@ func (is *IssuerServer) createJSONCredential(c echo.Context) error {
 	lc.Issuer.Id = "did:elsi:" + mandate.Mandator.OrganizationIdentifier
 
 	lc.IssuanceDate = nowUTC
+	lc.ValidFrom = nowUTC
 	lc.ExpirationDate = nowPlusOneYearUTC
 
 	raw, err = json.MarshalIndent(lc, "", "  ")

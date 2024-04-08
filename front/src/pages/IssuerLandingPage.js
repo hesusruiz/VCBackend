@@ -18,12 +18,13 @@ window.MHR.register("IssuerLandingPage", class extends window.MHR.AbstractPage {
     async enter() {
 
         var theHtml = html`
+        ${introduction()}
         <ion-grid>
             <ion-row>
                 <ion-col size="12" size-md="6">
                     <ion-card>
                         <ion-card-header>
-                            <ion-card-title>Logon as Employee</ion-card-title>
+                            <ion-card-title>Obtain your Wallet</ion-card-title>
                         </ion-card-header>
                 
                         <ion-card-content>
@@ -61,7 +62,7 @@ window.MHR.register("IssuerLandingPage", class extends window.MHR.AbstractPage {
                         </ion-card-content>
                 
                         <div class="ion-margin-start ion-margin-bottom">
-                            <ion-button href="https://issuersec.mycredential.eu/issuer.html">
+                            <ion-button href="https://issuersec.mycredential.eu/">
                                 ${T("Logon as Legal representative")}
                             </ion-button>
                         </div>
@@ -79,3 +80,19 @@ window.MHR.register("IssuerLandingPage", class extends window.MHR.AbstractPage {
 
 
 })
+
+function introduction() {
+    return html`
+<h1>Welcome to the Issuer of LEARCredentials</h1>
+<p>This site is intended for Legal Representatives of companies who want to issue one or more LEARCredentials to one or more employees of the company.</p>
+<p>A LEARCredential is a type of Verifiable Credential which enables an employee, nominated by a legal representative, to act on behalf of an organisation with restricted powers with respect to third-parties.
+    <ol>
+        <li>The issuer of the LEARCredential <b>must be a legal representative</b> of the company. The legal representative will sign the LEARCredential with an eIDAS digital certificate, which can be either a personal one or a certificate of representation.</li>
+        <li>The receiver of the LEARCredential (both the subject and holder of the credential) <b>can be any employee (or contractor)</b> of the company. The legal representative will delegate a restricted set of powers to that person. Those restricted powers are included inside the credential and can be verified by any Relying party to whom the holder presents the LEARCredential.</li>
+    </ol>
+    
+</p>
+    
+    
+    `
+}

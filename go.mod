@@ -6,10 +6,10 @@ require (
 	entgo.io/ent v0.11.0
 	github.com/duo-labs/webauthn v0.0.0-20220815211337-00c9fb5711f5
 	github.com/evanw/esbuild v0.19.3
-	github.com/github/smimesign v0.2.0
+	github.com/go-chi/chi/v5 v5.0.12
+	github.com/go-jose/go-jose/v3 v3.0.3
 	github.com/gofiber/fiber/v2 v2.49.2
 	github.com/gofiber/storage/memory v0.0.0-20221128090226-a21499405c25
-	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/gorilla/sessions v1.2.1
 	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
@@ -18,8 +18,11 @@ require (
 	github.com/pocketbase/dbx v1.10.1
 	github.com/pocketbase/pocketbase v0.22.4
 	github.com/rs/zerolog v1.28.0
+	github.com/sirupsen/logrus v1.9.3
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/spf13/cobra v1.8.0
+	github.com/zitadel/logging v0.6.0
+	github.com/zitadel/oidc/v3 v3.19.0
 	go.starlark.net v0.0.0-20240314022150-ee8ed142361c
 	software.sslmate.com/src/go-pkcs12 v0.4.0
 )
@@ -49,17 +52,23 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.23.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.4 // indirect
 	github.com/aws/smithy-go v1.20.1 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/domodwyer/mailyak/v3 v3.6.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/foolin/goview v0.3.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/ganigeorgiev/fexpr v0.4.0 // indirect
+	github.com/go-chi/cors v1.2.1 // indirect
+	github.com/go-logr/logr v1.4.1 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/goccy/go-yaml v1.9.6 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/wire v0.6.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
@@ -77,19 +86,24 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
+	github.com/muhlemmer/gu v0.3.1 // indirect
+	github.com/muhlemmer/httpforwarded v0.1.0 // indirect
 	github.com/multiformats/go-base32 v0.0.4 // indirect
 	github.com/multiformats/go-base36 v0.1.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/philhofer/fwd v1.1.2 // indirect
-	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/rs/cors v1.10.1 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
+	github.com/zitadel/schema v1.3.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
+	go.opentelemetry.io/otel v1.24.0 // indirect
+	go.opentelemetry.io/otel/metric v1.24.0 // indirect
+	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	gocloud.dev v0.37.0 // indirect
 	golang.org/x/image v0.15.0 // indirect
 	golang.org/x/net v0.22.0 // indirect
@@ -127,8 +141,9 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/google/certificate-transparency-go v1.1.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/securecookie v1.1.1 // indirect
+	github.com/gorilla/securecookie v1.1.2
 	github.com/hashicorp/hcl/v2 v2.15.0 // indirect
 	github.com/hesusruiz/vcutils v1.1.1
 	github.com/klauspost/compress v1.16.7 // indirect
@@ -151,6 +166,6 @@ require (
 	golang.org/x/crypto v0.21.0
 	golang.org/x/mod v0.16.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.14.0
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 )

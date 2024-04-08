@@ -11,17 +11,14 @@
 
     <script>
         // Set here the default home page for the app, before loading app.js
-        window.homePage = "IssuerEmployeeHome"
-        window.myAppTitle = "Issuer for Employee"
+        window.homePage = "IssuerLandingPage"
+        window.myAppTitle = "Issuer for LEARCredentials"
         // Configure the menu items, with entries like:
         //    {page:"NameOfPage", text:"Text in menu item", params: object to pass to page}
         window.menuItems = [
-            { page: "IssuerEmployeeHome", text: "Home", params: "" },
-            { page: "ListOfferingsPage", text: "List Credential Offers" },
-            { page: "CreateOfferingPage", text: "Create new Credential Offer" },
+            { page: "IssuerLandingPage", text: "Home", params: "" },
             { page: "SelectCamera", text: "Camera" },
             { page: "LogsPage", text: "Show technical logs" },
-            { page: "ConfirmDeleteAll", text: "Delete ALL credentials" },
             { page: "ConfirmResetApp", text: "Reset application" },
             { page: "LogoffPage", text: "Logoff" },
         ]
@@ -37,9 +34,9 @@
   "DisplayQR": "/pages/DisplayQR-PIO5OPZ6.js",
   "DisplayVC": "/pages/DisplayVC-7FJXVKLF.js",
   "IssuerEmployeeHome": "/pages/IssuerEmployeeHome-YODPPSNO.js",
-  "IssuerLandingPage": "/pages/IssuerLandingPage-6ADTYDSE.js",
+  "IssuerLandingPage": "/pages/IssuerLandingPage-5AC7DMJL.js",
   "IssuerSignerHome": "/pages/IssuerSignerHome-RXT2ATPI.js",
-  "ListOfferingsPage": "/pages/ListOfferingsPage-QY7WXGMQ.js",
+  "ListOfferingsPage": "/pages/ListOfferingsPage-CYSAS64L.js",
   "LoadAndSaveQRVC": "/pages/LoadAndSaveQRVC-MGZMAZJZ.js",
   "LoadAndVerifyQRVC": "/pages/LoadAndVerifyQRVC-BUNKYWCO.js",
   "LogsPage": "/pages/LogsPage-DHLVIEZ4.js",
@@ -54,15 +51,15 @@
 
         window.Ionic = {
             config: {
-            mode: 'ios',
+                mode: 'ios',
             },
         };
 
     </script>
 
     <!-- Load the application -->
-    <!-- <link rel="stylesheet" href="PUT_APP_CSS_NAME_HERE" /> -->
-    <script type="module" src="PUT_APP_JS_NAME_HERE"></script>
+    <!-- <link rel="stylesheet" href="." /> -->
+    <script type="module" src="app-PBX46T3R.js"></script>
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -74,8 +71,7 @@
     <!-- Facebook Meta Tags -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="Private Verifiable Credentials">
-    <meta property="og:description"
-        content="Privacy-focused Wallet for Verifiable Credentials">
+    <meta property="og:description" content="Privacy-focused Wallet for Verifiable Credentials">
     <!-- <link rel="manifest" href="./manifest.webmanifest"> -->
 
     <link rel="icon" type="image/png" href="./favicon.ico" />
@@ -86,67 +82,69 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link href="prism.css" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: "Roboto";
+            src: url("./fonts/Roboto-Regular.ttf") format("truetype");
+        }
 
-    @font-face {
-        font-family: "Roboto";
-        src: url("./fonts/Roboto-Regular.ttf") format("truetype");
-    }
-    
-    @font-face {
-        font-family: "Roboto";
-        src: url("./fonts/Roboto-Medium.ttf") format("truetype");
-        font-weight: 450 500;
-    }
+        @font-face {
+            font-family: "Roboto";
+            src: url("./fonts/Roboto-Medium.ttf") format("truetype");
+            font-weight: 450 500;
+        }
 
-    .text-large {
-        font-size: large;
-    }
-    .text-menu {
-        font-size: large;
-        font-weight: 500;
-    }
-    .text-larger {
-        font-size: 1.3rem;
-    }
-    .text-medium {
-        font-size: medium;
-    }
-    .text-small {
-        font-size: small;
-    }
+        .text-large {
+            font-size: large;
+        }
 
-    ion-toolbar {
-        --min-height: 55px;
-    }
+        .text-menu {
+            font-size: large;
+            font-weight: 500;
+        }
 
+        .text-larger {
+            font-size: 1.3rem;
+        }
+
+        .text-medium {
+            font-size: medium;
+        }
+
+        .text-small {
+            font-size: small;
+        }
+
+        ion-toolbar {
+            --min-height: 55px;
+        }
     </style>
 
 </head>
 
 <body class="w3-content">
 
-<header>
-</header>
+    <header>
+    </header>
 
-<ion-app>
+    <ion-app>
 
-<ion-header id="the_header">
-</ion-header>
+        <ion-header id="the_header" class="half-centered">
+        </ion-header>
 
-<ion-content id="main-content">
+        <ion-content id="main-content">
 
-<main class="half-centered">
-</main>
+            <main class="half-centered">
+            </main>
 
-</ion-content>
-</ion-app>
+        </ion-content>
+    </ion-app>
 
 
 
-<footer>
-</footer>
+    <footer>
+    </footer>
 
-<script src="prism.js"></script>
+    <script src="prism.js"></script>
 </body>
 
 </html>

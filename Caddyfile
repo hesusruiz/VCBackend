@@ -11,7 +11,7 @@ issuer.mycredential.eu {
 }
 
 verifier.mycredential.eu {
-	reverse_proxy 172.31.40.66:3000
+	reverse_proxy 172.31.40.66:9999
 }
 
 wallet.mycredential.eu {
@@ -23,7 +23,7 @@ wallettest.mycredential.eu {
 }
 
 verifiertest.mycredential.eu {
-	reverse_proxy 172.31.40.66:3000
+	reverse_proxy 172.31.40.66:9998
 }
 
 issuersec.mycredential.eu {

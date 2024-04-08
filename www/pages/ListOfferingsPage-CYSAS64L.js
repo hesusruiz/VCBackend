@@ -287,7 +287,6 @@ async function signCredentialOfferingLocal(record) {
     gotoPage("ErrorPage", { title: "Error creating credential", msg: error.message });
     return;
   }
-  debugger;
   record.status = "signed";
   record.raw = signedCredential;
   record.signer_email = pb.authStore.model.email;
