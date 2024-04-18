@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/skip2/go-qrcode"
@@ -21,6 +22,7 @@ func (is *IssuerServer) addUserRoutes(e *core.ServeEvent) {
 	// Add special normal user routes with a common prefix
 	// TODO: document authentication used
 	userGroup := e.Router.Group(userApiGroupPrefix)
+	userGroup.Use(middleware.CORS())
 
 	userGroup.GET("/startissuancepage/:credid", func(c echo.Context) error {
 		return is.startCredentialIssuancePage(c)
@@ -29,16 +31,6 @@ func (is *IssuerServer) addUserRoutes(e *core.ServeEvent) {
 	// Retrieve a credential, applying the proper access control depending on the status
 	userGroup.GET("/retrievecredential/:credid", func(c echo.Context) error {
 		return is.retrieveCredential(c)
-	})
-
-	// Update the credential
-	userGroup.POST("/updatesignedcredential", func(c echo.Context) error {
-		return is.updateSignedCredential(c)
-	})
-
-	// Retrieve all credentials, applying the proper access control depending on the status
-	userGroup.GET("/retrievecredentials", func(c echo.Context) error {
-		return is.retrieveAllCredentials(c)
 	})
 
 	// Update a credential, applying the proper access control depending on the status
@@ -133,6 +125,7 @@ type updateCredentialrequest struct {
 	DID string `query:"did"`
 }
 
+// sendDid receives the did created by the user and updates the credential with it
 func (is *IssuerServer) sendDid(c echo.Context) error {
 	app := is.App
 
@@ -186,20 +179,22 @@ func (is *IssuerServer) sendDid(c echo.Context) error {
 	}
 
 	// Sign the credential with the server certificate
-	tok, err := CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
+	credential, err := CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
 	if err != nil {
 		return err
 	}
 
 	// Update the record in the db
 	status := "tobesigned"
-	record.Set("raw", tok)
+	record.Set("raw", credential)
 	record.Set("status", status)
 	if err := app.Dao().SaveRecord(record); err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, map[string]any{"status": status})
+	credType := record.GetString("type")
+
+	return c.JSON(http.StatusOK, map[string]any{"credential": credential, "type": credType, "status": status, "id": id})
 
 }
 
@@ -262,43 +257,4 @@ func (is *IssuerServer) retrieveCredentialPage(c echo.Context) error {
 
 	return c.HTML(http.StatusOK, html)
 
-}
-
-type updateSignedCredentialRequest struct {
-	Id     string
-	Status string
-	Raw    string
-}
-
-func (is *IssuerServer) updateSignedCredential(c echo.Context) error {
-	app := is.App
-
-	var request updateSignedCredentialRequest
-	err := echo.BindBody(c, &request)
-	if err != nil {
-		return err
-	}
-
-	out, err := json.MarshalIndent(request, "", "  ")
-	if err != nil {
-		return err
-	}
-	log.Println(string(out))
-
-	record, err := app.Dao().FindRecordById("credentials", request.Id)
-	if err != nil {
-		return err
-	}
-
-	// set individual fields
-	// or bulk load with record.Load(map[string]any{...})
-	record.Set("title", "Lorem ipsum")
-	record.Set("status", request.Status)
-	record.Set("raw", request.Raw)
-
-	if err := app.Dao().SaveRecord(record); err != nil {
-		return err
-	}
-
-	return c.JSONPretty(http.StatusOK, map[string]any{"result": "OK"}, "  ")
 }

@@ -189,7 +189,7 @@ func (s *Storage) CreateAuthRequest(ctx context.Context, authReq *oidc.AuthReque
 
 	// Create the authentication request for talking with the wallet
 	// This is the endpoint inside the QR that the wallet will use to send the VC/VP
-	response_uri := "https://verifiertest.mycredential.eu/login/authenticationresponse"
+	response_uri := "https://verifier.mycredential.eu/login/authenticationresponse"
 	walletAuthRequest, err := createJWTSecuredAuthenticationRequest(response_uri, request.ID)
 	if err != nil {
 		return nil, err

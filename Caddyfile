@@ -10,8 +10,12 @@ issuer.mycredential.eu {
 	reverse_proxy 172.31.40.66:8090
 }
 
-verifier.mycredential.eu {
+demo.mycredential.eu {
 	reverse_proxy 172.31.40.66:9999
+}
+
+verifier.mycredential.eu {
+	reverse_proxy 172.31.40.66:9998
 }
 
 wallet.mycredential.eu {

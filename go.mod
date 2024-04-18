@@ -6,13 +6,16 @@ require (
 	entgo.io/ent v0.11.0
 	github.com/duo-labs/webauthn v0.0.0-20220815211337-00c9fb5711f5
 	github.com/evanw/esbuild v0.19.3
+	github.com/foolin/goview v0.3.0
 	github.com/go-chi/chi/v5 v5.0.12
+	github.com/go-chi/cors v1.2.1
 	github.com/go-jose/go-jose/v3 v3.0.3
 	github.com/gofiber/fiber/v2 v2.49.2
 	github.com/gofiber/storage/memory v0.0.0-20221128090226-a21499405c25
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/gorilla/sessions v1.2.1
 	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
+	github.com/maragudk/gomponents v0.20.2
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/otiai10/copy v1.2.0
 	github.com/pocketbase/dbx v1.10.1
@@ -24,6 +27,7 @@ require (
 	github.com/zitadel/logging v0.6.0
 	github.com/zitadel/oidc/v3 v3.19.0
 	go.starlark.net v0.0.0-20240314022150-ee8ed142361c
+	golang.org/x/oauth2 v0.18.0
 	software.sslmate.com/src/go-pkcs12 v0.4.0
 )
 
@@ -57,10 +61,8 @@ require (
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/domodwyer/mailyak/v3 v3.6.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/foolin/goview v0.3.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/ganigeorgiev/fexpr v0.4.0 // indirect
-	github.com/go-chi/cors v1.2.1 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
@@ -107,7 +109,6 @@ require (
 	gocloud.dev v0.37.0 // indirect
 	golang.org/x/image v0.15.0 // indirect
 	golang.org/x/net v0.22.0 // indirect
-	golang.org/x/oauth2 v0.18.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/time v0.5.0 // indirect

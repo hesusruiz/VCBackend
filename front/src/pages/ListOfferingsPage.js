@@ -278,7 +278,7 @@ return theHtml
 
 async function sendReminder(id) {
     try {
-        var record = await pb.send('/apiadmin/sendreminder/'+id)
+        var record = await pb.send('/apisigner/sendreminder/'+id)
         console.log(record)            
     } catch (error) {
         gotoPage("ErrorPage", {title: "Error sending reminder "+id, msg: error.message})

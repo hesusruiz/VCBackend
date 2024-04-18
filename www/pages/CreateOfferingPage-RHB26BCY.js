@@ -264,7 +264,7 @@ async function createCredentialOffer() {
   };
   try {
     var jsonCredential = await pb.send(
-      "/apiadmin/createjsoncredential",
+      "/apisigner/createjsoncredential",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -321,7 +321,7 @@ async function storeOfferingInServer(jsonCredential) {
   var model = pb.authStore.model;
   try {
     var result = await pb.send(
-      "/apiadmin/signcredential",
+      "/apisigner/signcredential",
       {
         method: "POST",
         body: learcred,

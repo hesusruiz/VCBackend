@@ -37,7 +37,7 @@ import (
 )
 
 const defaultCredentialTemplatesDir = "vault/templates"
-const adminApiGroupPrefix = "/apiadmin"
+const signerApiGroupPrefix = "/apisigner"
 const userApiGroupPrefix = "/apiuser"
 
 var credTemplate *template.Template
@@ -252,6 +252,13 @@ func (is *IssuerServer) Start() error {
 			log.Println("Status is SIGNED")
 		}
 
+		if status == "offered" {
+
+			// Send an email to the user
+			return is.sendEmailReminder(e.Record.Id)
+
+		}
+
 		// // Check if the user already exists, to create a new one if needed
 		// user, err := app.Dao().FindAuthRecordByEmail("users", e.Record.Email())
 
@@ -285,13 +292,6 @@ func (is *IssuerServer) Start() error {
 		// }
 
 		// log.Println(user.Email())
-
-		// if status == "offered" {
-
-		// 	// Send an email to the user
-		// 	return sendEmailReminder(app, e.Record.Id)
-
-		// }
 
 		return nil
 	})

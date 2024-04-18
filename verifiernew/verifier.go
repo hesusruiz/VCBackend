@@ -14,7 +14,7 @@ func Setup() {
 	//we will run on :9998
 	port := "9998"
 
-	verifierUrl := "https://verifiertest.mycredential.eu"
+	verifierUrl := "https://verifier.mycredential.eu"
 
 	// the OpenIDProvider interface needs a Storage interface handling various checks and state manipulations
 	// this might be the layer for accessing your database

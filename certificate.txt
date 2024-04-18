@@ -1,0 +1,51 @@
+Certificate:
+    Data:
+        Version: 1 (0x0)
+        Serial Number:
+            64:2d:e0:e0:5a:64:f4:ee:d1:19:08:65:c8:97:d1:df:c6:ce:00:f7
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C = ES, O = DIGITEL ON TRUSTED SERVICES SLU, OU = DIGITEL QTSP Signature Services, serialNumber = B47447560, CN = Digitel TS eSignature Services, organizationIdentifier = VATES-B47447560
+        Validity
+            Not Before: Sep 14 13:18:47 2023 GMT
+            Not After : Sep 13 13:18:47 2024 GMT
+        Subject: C = ES, O = GoodAir, serialNumber = 56565656V, CN = 56565656V Jesus Ruiz, organizationIdentifier = VATES-12345678
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:d4:73:d8:68:84:47:22:49:b8:b2:3a:00:1f:94:
+                    32:8d:30:9b:79:ef:02:60:ab:fc:cf:45:6b:85:51:
+                    d7:ad:3a:13:4d:6e:24:2b:69:99:fb:ff:af:e7:3c:
+                    d4:99:6b:95:da:08:97:2e:81:e8:34:9c:63:6e:18:
+                    a7:b9:ae:28:75:d0:0f:5c:05:c5:0a:c1:3f:f3:ff:
+                    63:57:26:40:2c:4f:4a:0a:c4:5b:b4:dc:bb:be:f1:
+                    a8:9c:2e:d8:52:c9:5f:0b:eb:7f:f9:70:b3:cb:45:
+                    ad:99:1a:36:ba:fb:6c:2e:60:dc:6b:dc:09:1e:62:
+                    77:31:cd:2f:3a:0d:54:a3:39:b4:53:02:7f:f4:ac:
+                    54:8e:f1:9b:55:e9:b3:b5:81:2e:d8:31:15:68:6e:
+                    75:7f:75:3f:5a:c1:9e:21:fe:7e:c5:4e:e6:e4:90:
+                    61:08:71:74:7a:49:b9:de:88:10:77:f1:15:69:63:
+                    e0:68:ef:8a:09:38:d4:7b:27:29:dc:95:e3:bd:7e:
+                    dc:15:6f:20:4e:0d:2a:06:97:2c:df:d7:a6:dd:0f:
+                    3a:6d:5c:91:59:ce:66:11:56:0f:a9:0e:7d:ca:0a:
+                    75:09:0f:d0:a8:7a:0c:7d:ab:56:aa:1f:0b:43:20:
+                    d8:22:e7:d3:12:e8:bf:3e:61:d0:03:bb:6d:c7:8e:
+                    f2:ab
+                Exponent: 65537 (0x10001)
+    Signature Algorithm: sha256WithRSAEncryption
+    Signature Value:
+        35:49:e0:04:3d:c6:ae:99:44:a3:40:1e:b5:7e:32:6d:e2:b2:
+        ac:01:22:70:f1:ee:a0:10:a7:eb:1a:92:82:06:9e:ef:8c:e4:
+        bc:93:7f:69:81:27:53:a1:f4:63:ac:45:36:e8:da:50:da:24:
+        c3:be:f3:4a:9c:76:b7:29:e3:96:a6:4d:9f:3a:79:88:17:f1:
+        2e:01:c6:fe:dd:9a:cf:71:05:c5:df:70:ce:35:f3:10:95:8c:
+        03:d3:5d:fa:49:ff:d6:8f:a2:ee:81:5b:0d:76:9e:be:20:d7:
+        0e:72:c3:80:4b:18:94:38:ac:0b:99:27:d0:01:90:b7:20:0a:
+        6a:39:8e:d3:4c:1f:33:b7:09:4e:e2:c9:5d:cd:f7:92:84:63:
+        46:8c:b5:c3:c4:9a:cf:a0:b2:24:d7:12:55:18:e4:aa:84:06:
+        66:20:ce:db:1a:32:c5:5b:3a:52:2f:c3:7a:a2:b9:56:91:bd:
+        e2:d5:44:17:48:75:12:95:08:2b:83:0a:91:55:a6:bd:a1:3d:
+        16:04:20:af:af:5d:d3:42:f4:f5:ee:ba:ce:c2:ee:72:4e:5a:
+        63:97:bd:bd:b9:f6:76:80:bd:40:11:47:97:e9:41:ed:4c:26:
+        f5:02:38:93:c2:5c:dc:9f:c1:6d:d5:97:16:93:9f:fe:c7:b2:
+        7b:b3:34:60

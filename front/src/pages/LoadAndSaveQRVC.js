@@ -2,7 +2,6 @@ import { credentialsSave } from '../components/db';
 import { decodeJWT } from '../components/jwt';
 import { getOrCreateDidKey } from '../components/crypto'
 import PocketBase from '../components/pocketbase.es.mjs'
-const pb = new PocketBase("https://issuer.mycredential.eu")
 
 import { renderLEARCredentialCard } from '../components/renderLEAR';
 
@@ -30,7 +29,6 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         mylog(`LoadAndSaveQRVC: ${qrData}`)
 
         let html = this.html
-        mylog("LoadAndSaveQRVC received:", qrData)
 
         // We should have received a URL that was scanned as a QR code or as a redirection
         // Perform some sanity checks on the parameter
@@ -64,6 +62,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             // Retrieve the credential offer from the Issuer
             var credentialOffer = await getCredentialOffer(qrData);
             this.credentialOffer = credentialOffer
+            // Save temporarily for redirections (with page reloads)
             await storage.settingsPut("credentialOffer", credentialOffer)
             console.log("credentialOffer", credentialOffer)
 
@@ -90,9 +89,10 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
                 return
             }
 
+            // TODO: check if 'authorization_server' is required or optional
             var authorizationServer = issuerMetaData["authorization_server"]
             if (!authorizationServer) {
-                let msg = "authorizationServer object not found in issuerMetaData"
+                let msg = "'authorizationServer' object not found in issuerMetaData"
                 myerror(msg)
                 gotoPage("ErrorPage", { "title": "Invalid issuerMetaData", "msg": msg })
                 return
@@ -132,7 +132,10 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             // This is a non-standard nechanism to issue credentials (easier in controlled environments).
             // We have received a URL that was scanned as a QR code.
             // First we should do a GET to the URL to retrieve the VC.
-            var result = await doFetchJSON(qrData)
+
+            const theurl = new URL(qrData)
+            this.OriginServer = theurl.origin
+            var result = await doGETJSON(qrData)
             this.VC = result["credential"]
             this.VCId = result["id"]
             this.VCType = result["type"]
@@ -275,8 +278,37 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             }
     
         } else if (this.VCType == "jwt_vc") {
+
+            if (this.VCStatus == "offered") {
+                // We should update the credential offer with the did of the user
+
+                var myDid = await getOrCreateDidKey()
+
+                // Update the credential with the did:key
+                var sendidRequest = {
+                    did: myDid.did
+                }
+
+                // Send the DID to the Issuer
+                const senddidURL = `${this.OriginServer}/apiuser/senddid/${this.VCId}`
+                var result = await doPOST(senddidURL, sendidRequest)
+                if (!result) {
+                    return
+                }
+                console.log("after doPOST sending the DID")
+
+                // We received back the updated credential. Status must be 'tobesigned'
+                this.VC = result["credential"]
+                this.VCId = result["id"]
+                this.VCType = result["type"]
+                this.VCStatus = result["status"]
+
+            }
+
+            // The credential is in JWT format, lets decode it
             const decoded = decodeJWT(this.VC)
-    
+
+            // Prepare for saving the credential in the local storage
             var credStruct = {
                 type: this.VCType,
                 status: this.VCStatus,
@@ -285,30 +317,12 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
                 id: decoded.body.id
             }
 
+            // If the credential already exists, we only replace it if it is 'signed'
             if (this.VCStatus == "signed") {
                 replace = true
             }
             var saved = await credentialsSave(credStruct, replace)
             if (!saved) {
-                return
-            }
-        
-            // Get my did:key
-            var myDid = await getOrCreateDidKey()
-
-            // Update the credential with the did:key
-            try {
-                var result = await pb.send(`/apiuser/senddid/${this.VCId}`,
-                {
-                    method: "POST",
-                    body: {did: myDid.did},
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                })
-                console.log(result)            
-            } catch (error) {
-                gotoPage("ErrorPage", {title: "Error updating credential", msg: error.message})
                 return
             }
     
@@ -330,7 +344,6 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         
         }
         
-
         // Reload the application with a clean URL
         location = window.location.origin + window.location.pathname
         return
@@ -390,6 +403,11 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         }
         let html = this.html
 
+        var saveButtonText = T("Save credential")
+        if (vcstatus == "offered") {
+            saveButtonText = T("Save credential offer")
+        }
+
         const vc = decoded.body
         const div = html`
         <ion-card>
@@ -403,7 +421,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
                 <ion-button @click=${() => this.saveVC()}>
                     <ion-icon slot="start" name="person-add"></ion-icon>
-                    ${T("Save credential")}
+                    ${saveButtonText}
                 </ion-button>
             </div>
         </ion-card>
@@ -499,6 +517,7 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
         'code_challenge_method': 'S256',
         'client_metadata': JSON.stringify(client_metadata),
     }
+    // Encode in urlForm
     var formBody = [];
     for (var property in formAttributes) {
         var encodedKey = encodeURIComponent(property);
@@ -524,7 +543,7 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
 
     // The redirected URL contains the authorization type in the response_type. The URL can be of two types:
     //
-    // Type 1: with response_type=vp_token, the AuthServer is expecting a VP. The credentials requires are specified
+    // Type 1: with response_type=vp_token, the AuthServer expects that the wallet sends a VP. The credentials required are specified
     // in the presentation_definition parameter. This URL looks like:
     //
     // https://wallet.mycredential.eu/?
@@ -538,7 +557,7 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
     // presentation_definition={....}&
     // request=eyJ0eXAiOiJKV1QiLCJhbGciOi
     //
-    // Type 2: with response_type=id_token, the AuthServer is expecting an ID Token. No credentials are needed.
+    // Type 2: with response_type=id_token, the AuthServer is expects that the wallet sends an ID Token. No credentials are needed.
     // The URL looks like:
     //
     // https://wallet.mycredential.eu/?
@@ -559,7 +578,7 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
     if (response_type == "vp_token") {
         throw new Error("Response type vp_token not implemented yet")
     } else if (response_type == "id_token") {
-
+        // Do nothing. This is for documentation purposes
     } else {
         throw new Error("Invalid response_type: " + response_type)
     }
@@ -1063,7 +1082,7 @@ async function getAuthServerMetadata(authServerAddress) {
 
 async function getVerifiableCredentialLD(backEndpoint) {
 
-    var vc = await doFetchText(backEndpoint)
+    var vc = await doGETText(backEndpoint)
 
 }
 
@@ -1443,37 +1462,80 @@ window.MHR.register("EBSIRedirectCode", class extends window.MHR.AbstractPage {
 })
 
 
-async function doFetchJSON(serverURL) {
-    mylog(`doFetchJSON: ${serverURL}`)
+async function doGETJSON(serverURL) {
 
     try {
         var response = await fetch(serverURL)      
     } catch (error) {
         myerror(error.message)
-        throw new Error("error performing fetch")
+        await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": error.message })
+        return
     }
     if (response.ok) {
         var responseJSON = await response.json();
-        mylog("doFetchJSON result:", responseJSON)
+        mylog(`doFetchJSON ${serverURL}:`, responseJSON)
         return responseJSON;
     } else {
-        myerror(`doFetchJSON: ${response.statusText}`)
-        throw new Error("error performing fetch")
+        const errormsg = `doFetchJSON ${serverURL}: ${response.statusText}`
+        myerror(errormsg)
+        await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": errormsg })
+        return
     }                
 
 }
 
-async function doFetchText(serverURL) {
+async function doGETText(serverURL) {
 
-    var response = await fetch(serverURL, {
-        cache: "no-cache",
-        mode: "cors"
-    });
+    try {
+        var response = await fetch(serverURL, {
+            cache: "no-cache",
+            mode: "cors"
+        });            
+    } catch (error) {
+        myerror(error.message)
+        await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": error.message })
+        return        
+    }
     if (response.ok) {
-        var responseJSON = await response.text();
+        var responseText = await response.text();
+        mylog(`doFetchText ${serverURL}:`, responseText)
+        return responseText;
+    } else {
+        const errormsg = `doFetchText ${serverURL}: ${response.statusText}`
+        myerror(errormsg)
+        await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": errormsg })
+        return
+    }                
+
+}
+
+async function doPOST(serverURL, body) {
+    try {
+        var response = await fetch(serverURL,
+        {
+            method: "POST",
+            body: JSON.stringify(body),
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cache: "no-cache",
+        })
+        console.log(response)            
+    } catch (error) {
+        myerror(error.message)
+        await gotoPage("ErrorPage", { "title": "Error sending data", "msg": error.message })
+        return
+    }
+    if (response.ok) {
+        var responseJSON = await response.json();
+        console.log(responseJSON)
+        mylog(`doPOST ${serverURL}:`, responseJSON)
         return responseJSON;
     } else {
-        throw new Error("error performing fetch")
+        const errormsg = `doPOST ${serverURL}: ${response.statusText}`
+        myerror(errormsg)
+        await gotoPage("ErrorPage", { "title": "Error sending data", "msg": errormsg })
+        return
     }                
 
 }

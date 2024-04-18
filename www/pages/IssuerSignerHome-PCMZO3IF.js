@@ -76,7 +76,7 @@ async function requestVerification(email) {
 async function logonScreen() {
   var certInfo;
   try {
-    certInfo = await pb.send("/apiadmin/getcertinfo");
+    certInfo = await pb.send("/apisigner/getcertinfo");
     var commonName = certInfo.common_name;
     console.log(certInfo);
   } catch (error) {

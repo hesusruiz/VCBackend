@@ -3,7 +3,7 @@ import {
 } from "../chunks/chunk-R7I7M3B4.js";
 import {
   renderLEARCredentialCard
-} from "../chunks/chunk-KACC3JEQ.js";
+} from "../chunks/chunk-PI7RY6L6.js";
 import {
   Client
 } from "../chunks/chunk-J6D2DG7T.js";

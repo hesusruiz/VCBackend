@@ -290,7 +290,7 @@ async function createCredentialOffer() {
 
     // Create the JSON structure of the credential but do not store anything yet in the server
     try {
-        var jsonCredential = await pb.send('/apiadmin/createjsoncredential', 
+        var jsonCredential = await pb.send('/apisigner/createjsoncredential', 
         {
             method: "POST",
             body: JSON.stringify(data),
@@ -365,7 +365,7 @@ async function storeOfferingInServer(jsonCredential) {
 
     // Sign the credential in the server with the x509 certificate
     try {
-        var result = await pb.send('/apiadmin/signcredential', 
+        var result = await pb.send('/apisigner/signcredential', 
         {
             method: "POST",
             body: learcred,
@@ -420,7 +420,7 @@ async function storeOfferingInServer(jsonCredential) {
 
     // // Sign the credential in the server with the x509 certificate
     // try {
-    //     var result = await pb.send('/apiadmin/signcredential', 
+    //     var result = await pb.send('/apisigner/signcredential', 
     //     {
     //         method: "POST",
     //         body: learcred,

@@ -68,7 +68,7 @@ func SetupServer(verifierUrl string, storage Storage, logger *slog.Logger, wrapS
 		}),
 	))
 
-	fs := http.FileServer(http.Dir("cmd/verifier/static"))
+	fs := http.FileServer(http.Dir("verifiernew/static"))
 	router.Handle("/static/*", http.StripPrefix("/static/", fs))
 
 	// for simplicity, we provide a very small default page for users who have signed out

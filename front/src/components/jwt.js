@@ -1,5 +1,11 @@
 let log = window.MHR.log
 
+/**
+ * decodeJWT decodes the JWT without checking the signature.
+ * But we will perform some important validations like expiration
+ * @param {string}  jwt - The encoded JWT as a string with the three components separated by a dot.
+ * @returns {{error: boolean, header: JSONObject, body: JSONObject, signature: string}} 
+ */
 export function decodeJWT(jwt) {
     // We will decode the JWT without checking the signature
     // But we will perform some important validations like expiration

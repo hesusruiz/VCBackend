@@ -15,10 +15,10 @@ import (
 func (is *IssuerServer) addSignerRoutes(e *core.ServeEvent) {
 	// Add special Issuer routes with a common prefix
 	// All requests for this group should be authenticated as Admin or with x509 certificate
-	adminApiGroup := e.Router.Group(adminApiGroupPrefix, RequireAdminOrX509Auth())
+	signerApiGroup := e.Router.Group(signerApiGroupPrefix, RequireAdminOrX509Auth())
 
 	// Get the x509 certificate that was used to do client authentication
-	adminApiGroup.GET("/getcertinfo", func(c echo.Context) error {
+	signerApiGroup.GET("/getcertinfo", func(c echo.Context) error {
 		_, subject, err := getX509UserFromHeader(c.Request())
 		if err != nil {
 			return err
@@ -29,17 +29,27 @@ func (is *IssuerServer) addSignerRoutes(e *core.ServeEvent) {
 	})
 
 	// Create a LEARCredential with the info in the request
-	adminApiGroup.POST("/createjsoncredential", func(c echo.Context) error {
+	signerApiGroup.POST("/createjsoncredential", func(c echo.Context) error {
 		return is.createJSONCredential(c)
 	})
 
 	// Sign in the server the credential passed in the request
-	adminApiGroup.POST("/signcredential", func(c echo.Context) error {
+	signerApiGroup.POST("/signcredential", func(c echo.Context) error {
 		return is.signCredential(c)
 	})
 
+	// Retrieve all credentials, applying the proper access control depending on the status
+	signerApiGroup.GET("/retrievecredentials", func(c echo.Context) error {
+		return is.retrieveAllCredentials(c)
+	})
+
+	// Update the credential
+	signerApiGroup.POST("/updatesignedcredential", func(c echo.Context) error {
+		return is.updateSignedCredential(c)
+	})
+
 	// Send a reminder to the user that there is a credential waiting
-	adminApiGroup.GET("/sendreminder/:credid", func(c echo.Context) error {
+	signerApiGroup.GET("/sendreminder/:credid", func(c echo.Context) error {
 		return is.sendReminder(c)
 	})
 
@@ -83,11 +93,11 @@ func (is *IssuerServer) createJSONCredential(c echo.Context) error {
 	mandate.LifeSpan.StartDateTime = nowUTC
 	mandate.LifeSpan.EndDateTime = nowPlusOneYearUTC
 
-	didkey, _, err := GenDIDKey()
-	if err != nil {
-		return err
-	}
-	mandate.Mandatee.Id = didkey
+	// didkey, _, err := GenDIDKey()
+	// if err != nil {
+	// 	return err
+	// }
+	// mandate.Mandatee.Id = didkey
 
 	// Print the Mandate struct to check it is OK
 	raw, err = json.MarshalIndent(mandate, "", "  ")
@@ -152,4 +162,49 @@ func (is *IssuerServer) sendReminder(c echo.Context) error {
 
 	return is.sendEmailReminder(id)
 
+}
+
+type updateSignedCredentialRequest struct {
+	Id     string
+	Status string
+	Raw    string
+}
+
+func (is *IssuerServer) updateSignedCredential(c echo.Context) error {
+	app := is.App
+
+	var request updateSignedCredentialRequest
+	err := echo.BindBody(c, &request)
+	if err != nil {
+		return err
+	}
+
+	out, err := json.MarshalIndent(request, "", "  ")
+	if err != nil {
+		return err
+	}
+	log.Println(string(out))
+
+	record, err := app.Dao().FindRecordById("credentials", request.Id)
+	if err != nil {
+		return err
+	}
+
+	// set individual fields
+	// or bulk load with record.Load(map[string]any{...})
+	record.Set("title", "Lorem ipsum")
+	record.Set("status", request.Status)
+	record.Set("raw", request.Raw)
+
+	if err := app.Dao().SaveRecord(record); err != nil {
+		return err
+	}
+
+	// Send an email to the user
+	err = is.sendEmailReminder(record.Id)
+	if err != nil {
+		log.Printf("error sending reminder %s", err.Error())
+	}
+
+	return c.JSONPretty(http.StatusOK, map[string]any{"result": "OK"}, "  ")
 }

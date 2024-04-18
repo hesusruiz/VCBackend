@@ -34,7 +34,7 @@ function renderLEARCredentialCard(vc, status) {
                     <ion-thumbnail slot="start">
                         <img alt="Avatar" src=${avatar} />
                     </ion-thumbnail>
-                    ${status == "offered" ? html`<ion-label color="danger"><b>Status: signature pending</b></ion-label>` : null}
+                    ${status != "signed" ? html`<ion-label color="danger"><b>Status: signature pending</b></ion-label>` : null}
                 </ion-item>
             
                 ${powers.map((pow) => {
@@ -42,7 +42,6 @@ function renderLEARCredentialCard(vc, status) {
   })}
             </ion-list>
             </div>
-
 
         </ion-card-content>
         `;

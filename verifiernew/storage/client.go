@@ -174,7 +174,7 @@ func NativeClient(id string, redirectURIs ...string) *Client {
 func WebClient(id, secret string, redirectURIs ...string) *Client {
 	if len(redirectURIs) == 0 {
 		redirectURIs = []string{
-			"https://verifier.mycredential.eu/auth/callback",
+			"https://demo.mycredential.eu/auth/callback",
 		}
 	}
 	return &Client{

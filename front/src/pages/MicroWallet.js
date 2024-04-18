@@ -1,8 +1,5 @@
-import PocketBase from '../components/pocketbase.es.mjs'
 import { renderLEARCredentialCard } from '../components/renderLEAR'
 import { getOrCreateDidKey } from '../components/crypto'
-
-const pb = new PocketBase(window.location.origin)
 
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
@@ -47,7 +44,6 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             return;
         }
         
-
         // QR code found in URL. Process and display it
         let scope = params.get("scope")
         if (scope !== null) {
@@ -95,7 +91,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             return
         }
 
-        // Display the certificate
+        // Display the credentials
         const theDivs = []
 
         for (const vcraw of credentials) {
@@ -232,31 +228,4 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
     }
 
 })
-
-async function createUser() {
-
-    var body = {
-        email: "hesus.ruiz@gmail.com",
-        name: "Jesus Ruiz"
-    }
-
-    let response = await fetch("/createnaturalperson", {
-        method: "POST",
-        cache: "no-cache",
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body),
-        mode: "cors"
-    });
-    if (response.ok) {
-        const jres = await response.json();
-        mylog(jres)
-        await window.MHR.storage.didSave(jres)
-        return jres
-    } else {
-        throw new Error(response.statusText)
-    }
-
-}
 

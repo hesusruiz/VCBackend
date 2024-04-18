@@ -3,7 +3,7 @@ import {
 } from "../chunks/chunk-R7I7M3B4.js";
 import {
   renderLEARCredentialCard
-} from "../chunks/chunk-KACC3JEQ.js";
+} from "../chunks/chunk-PI7RY6L6.js";
 import {
   decodeJWT
 } from "../chunks/chunk-4DGWCCCP.js";
@@ -11,14 +11,11 @@ import {
   credentialsSave
 } from "../chunks/chunk-YTTLZ6I3.js";
 import "../chunks/chunk-BFXLU5VG.js";
-import {
-  Client
-} from "../chunks/chunk-J6D2DG7T.js";
+import "../chunks/chunk-J6D2DG7T.js";
 import "../chunks/chunk-U2D4LOFI.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
 // front/src/pages/LoadAndSaveQRVC.js
-var pb = new Client("https://issuer.mycredential.eu");
 var gotoPage = window.MHR.gotoPage;
 var goHome = window.MHR.goHome;
 var html = window.MHR.html;
@@ -80,7 +77,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
       }
       var authorizationServer = issuerMetaData["authorization_server"];
       if (!authorizationServer) {
-        let msg = "authorizationServer object not found in issuerMetaData";
+        let msg = "'authorizationServer' object not found in issuerMetaData";
         myerror(msg);
         gotoPage("ErrorPage", { "title": "Invalid issuerMetaData", "msg": msg });
         return;
@@ -110,7 +107,9 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
       }
     } else {
       mylog("Non-standard issuance");
-      var result = await doFetchJSON(qrData);
+      const theurl = new URL(qrData);
+      this.OriginServer = theurl.origin;
+      var result = await doGETJSON(qrData);
       this.VC = result["credential"];
       this.VCId = result["id"];
       this.VCType = result["type"];
@@ -230,6 +229,22 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         return;
       }
     } else if (this.VCType == "jwt_vc") {
+      if (this.VCStatus == "offered") {
+        var myDid = await getOrCreateDidKey();
+        var sendidRequest = {
+          did: myDid.did
+        };
+        const senddidURL = `${this.OriginServer}/apiuser/senddid/${this.VCId}`;
+        var result = await doPOST(senddidURL, sendidRequest);
+        if (!result) {
+          return;
+        }
+        console.log("after doPOST sending the DID");
+        this.VC = result["credential"];
+        this.VCId = result["id"];
+        this.VCType = result["type"];
+        this.VCStatus = result["status"];
+      }
       const decoded = decodeJWT(this.VC);
       var credStruct = {
         type: this.VCType,
@@ -243,23 +258,6 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
       }
       var saved = await credentialsSave(credStruct, replace);
       if (!saved) {
-        return;
-      }
-      var myDid = await getOrCreateDidKey();
-      try {
-        var result = await pb.send(
-          `/apiuser/senddid/${this.VCId}`,
-          {
-            method: "POST",
-            body: { did: myDid.did },
-            headers: {
-              "Content-Type": "application/json"
-            }
-          }
-        );
-        console.log(result);
-      } catch (error) {
-        gotoPage("ErrorPage", { title: "Error updating credential", msg: error.message });
         return;
       }
       alert("Credential succesfully updated");
@@ -325,6 +323,10 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
       decoded = vcencoded;
     }
     let html2 = this.html;
+    var saveButtonText = T("Save credential");
+    if (vcstatus == "offered") {
+      saveButtonText = T("Save credential offer");
+    }
     const vc = decoded.body;
     const div = html2`
         <ion-card>
@@ -338,7 +340,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
                 <ion-button @click=${() => this.saveVC()}>
                     <ion-icon slot="start" name="person-add"></ion-icon>
-                    ${T("Save credential")}
+                    ${saveButtonText}
                 </ion-button>
             </div>
         </ion-card>
@@ -866,20 +868,53 @@ window.MHR.register("EBSIRedirectCode", class extends window.MHR.AbstractPage {
     }
   }
 });
-async function doFetchJSON(serverURL) {
-  mylog(`doFetchJSON: ${serverURL}`);
+async function doGETJSON(serverURL) {
   try {
     var response = await fetch(serverURL);
   } catch (error) {
     myerror(error.message);
-    throw new Error("error performing fetch");
+    await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": error.message });
+    return;
   }
   if (response.ok) {
     var responseJSON = await response.json();
-    mylog("doFetchJSON result:", responseJSON);
+    mylog(`doFetchJSON ${serverURL}:`, responseJSON);
     return responseJSON;
   } else {
-    myerror(`doFetchJSON: ${response.statusText}`);
-    throw new Error("error performing fetch");
+    const errormsg = `doFetchJSON ${serverURL}: ${response.statusText}`;
+    myerror(errormsg);
+    await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": errormsg });
+    return;
+  }
+}
+async function doPOST(serverURL, body) {
+  try {
+    var response = await fetch(
+      serverURL,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        cache: "no-cache"
+      }
+    );
+    console.log(response);
+  } catch (error) {
+    myerror(error.message);
+    await gotoPage("ErrorPage", { "title": "Error sending data", "msg": error.message });
+    return;
+  }
+  if (response.ok) {
+    var responseJSON = await response.json();
+    console.log(responseJSON);
+    mylog(`doPOST ${serverURL}:`, responseJSON);
+    return responseJSON;
+  } else {
+    const errormsg = `doPOST ${serverURL}: ${response.statusText}`;
+    myerror(errormsg);
+    await gotoPage("ErrorPage", { "title": "Error sending data", "msg": errormsg });
+    return;
   }
 }

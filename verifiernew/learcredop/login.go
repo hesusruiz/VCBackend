@@ -36,7 +36,7 @@ func NewLogin(authenticate authenticate,
 	l.createRouter(issuerInterceptor)
 
 	gv := goview.New(goview.Config{
-		Root:         "cmd/verifier/views",
+		Root:         "verifiernew/views",
 		Extension:    ".html",
 		Master:       "layouts/master",
 		DisableCache: true,
@@ -90,7 +90,7 @@ func (l *login) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 func renderLogin(w http.ResponseWriter, authRequestID string, formError error) {
 
-	request_uri := "https://verifiertest.mycredential.eu/login/authenticationrequest" + "?jar=yes&state=" + authRequestID
+	request_uri := "https://verifier.mycredential.eu/login/authenticationrequest" + "?jar=yes&state=" + authRequestID
 
 	escaped_request_uri := url.QueryEscape(request_uri)
 
