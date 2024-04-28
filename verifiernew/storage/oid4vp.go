@@ -61,6 +61,7 @@ func createJWTSecuredAuthenticationRequest(response_uri string, state string) (s
 	claims.Audience = jwt.ClaimStrings{"self-issued"}
 	claims.ID = GenerateNonce()
 
+	// TODO: use the did:elsi method and sign with the private key associated to the certificate
 	// Generate a raw EC key with the P-256 curve
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {

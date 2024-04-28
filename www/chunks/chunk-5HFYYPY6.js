@@ -13000,6 +13000,34 @@ async function getOrCreateDidKey() {
   }
   return myDid;
 }
+async function signWithJWK(signingString, keyJWK) {
+  const privateKey = await importFromJWK(keyJWK);
+  if (privateKey.type != "private") {
+    throw new Error("Not a private key");
+  }
+  const hashBuffer = new TextEncoder().encode(signingString);
+  let signature = await window.crypto.subtle.sign(
+    {
+      name: "ECDSA",
+      hash: { name: "SHA-256" }
+    },
+    privateKey,
+    hashBuffer
+  );
+  let astr = btoa(String.fromCharCode(...new Uint8Array(signature)));
+  astr = astr.replace(/=+$/, "");
+  astr = astr.replace(/\+/g, "-").replace(/\//g, "_");
+  return astr;
+}
+async function signJWT(header, payload, keyJWK) {
+  const stringifiedHeader = JSON.stringify(header);
+  const stringifiedPayload = JSON.stringify(payload);
+  const headerBase64 = UTF8StringToBase64Url(stringifiedHeader);
+  const payloadBase64 = UTF8StringToBase64Url(stringifiedPayload);
+  const headerAndPayload = `${headerBase64}.${payloadBase64}`;
+  const signature = await signWithJWK(headerAndPayload, keyJWK);
+  return `${headerAndPayload}.${signature}`;
+}
 async function generateECDSAKeyPair() {
   const extractable = true;
   const algorithm = {
@@ -13018,15 +13046,57 @@ async function exportToJWK(key) {
   let keyJWK = await crypto.subtle.exportKey("jwk", key);
   return keyJWK;
 }
+async function importFromJWK(jwk) {
+  jwk["use"] = "sig";
+  const extractable = true;
+  const format2 = "jwk";
+  const keyType = jwk["kty"];
+  let algorithm;
+  if (keyType == "EC") {
+    algorithm = {
+      name: "ECDSA",
+      namedCurve: "P-256"
+    };
+  } else if (keyType == "RSA") {
+    algorithm = {
+      name: "RSA-PSS",
+      hash: "SHA-256"
+    };
+  } else {
+    throw new Error(`Invalid key type specified: ${jwk["kty"]}`);
+  }
+  let keyUsages = jwk["d"] ? ["sign"] : ["verify"];
+  let key = await crypto.subtle.importKey(
+    format2,
+    jwk,
+    algorithm,
+    extractable,
+    keyUsages
+  );
+  return key;
+}
 var aCode = "a".charCodeAt(0);
 var fCode = "f".charCodeAt(0);
 var ACode = "A".charCodeAt(0);
 var FCode = "F".charCodeAt(0);
 var zeroCode = "0".charCodeAt(0);
 var nineCode = "9".charCodeAt(0);
+function bytesToBase64(bytes) {
+  const binString = Array.from(
+    bytes,
+    (byte) => String.fromCodePoint(byte)
+  ).join("");
+  return btoa(binString);
+}
+function UTF8StringToBase64Url(string) {
+  var encoded = bytesToBase64(new TextEncoder().encode(string));
+  encoded = encoded.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  return encoded;
+}
 
 export {
-  getOrCreateDidKey
+  getOrCreateDidKey,
+  signJWT
 };
 /*! Bundled license information:
 

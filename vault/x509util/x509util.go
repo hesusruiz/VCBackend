@@ -319,6 +319,7 @@ func NewCAELSICertificate(subAttrs ELSIName, keyparams KeyParams) (subPrivKey jw
 		keyUsage |= x509.KeyUsageKeyEncipherment
 	}
 
+	// By default, the certificate is valid since it is created
 	var notBefore time.Time
 	if len(keyparams.ValidFrom) == 0 {
 		notBefore = time.Now()
@@ -329,20 +330,26 @@ func NewCAELSICertificate(subAttrs ELSIName, keyparams KeyParams) (subPrivKey jw
 		}
 	}
 
+	// Set validity if not specified
+	if keyparams.ValidFor == 0 {
+		keyparams.ValidFor = 365 * 24 * time.Hour
+	}
 	notAfter := notBefore.Add(keyparams.ValidFor)
 
+	// Generate a new random SerialNumber for the certificate
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
 		log.Fatalf("Failed to generate serial number: %v", err)
 	}
 
+	// Convert the subject attributes to the proper format
 	extraNames := subAttrs.ToATVSequence()
-
 	subject := pkix.Name{
 		ExtraNames: extraNames,
 	}
 
+	// Create the template with all the required data
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject:      subject,
@@ -354,14 +361,17 @@ func NewCAELSICertificate(subAttrs ELSIName, keyparams KeyParams) (subPrivKey jw
 		BasicConstraintsValid: true,
 	}
 
+	// This certificate can be used to sign (issue) other certificates
 	template.IsCA = true
 	template.KeyUsage |= x509.KeyUsageCertSign
 
+	// Create the certificate and receive a DER-encoded byte array.
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
 	if err != nil {
 		log.Fatalf("Failed to create certificate: %v", err)
 	}
 
+	// Encode the DER buffer into PEM, so it can be stored on disk or database
 	var buf bytes.Buffer
 	if err := pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
 		log.Fatalf("Failed to encode in PEM the certificate: %v", err)

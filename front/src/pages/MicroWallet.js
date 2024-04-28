@@ -14,9 +14,12 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
     }
 
     async enter() {
+        alert("ready to debug")
 
         // Create a new did:key (ECDSA/P-256) if it was not already created
-        await getOrCreateDidKey()
+        const mydid = await getOrCreateDidKey()
+
+        console.log("My DID", mydid.did)
 
         let html = this.html
 
@@ -29,17 +32,17 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         //     retrieve the QR from local storage and display it
 
         let params = new URL(document.location).searchParams
-        console.log(document.location)
+        console.log("MicroWallet", document.location)
 
         // Check for redirect during the authentication flow
         if (document.URL.includes("state=") && document.URL.includes("auth-mock")) {
-            console.log("************Redirected with state**************")
+            console.log("MicroWallet ************Redirected with state**************")
             gotoPage("LoadAndSaveQRVC", document.URL)
             return;
         }
         
         if (document.URL.includes("code=")) {
-            console.log("************Redirected with code**************")
+            console.log("MicroWallet ************Redirected with code**************")
             gotoPage("LoadAndSaveQRVC", document.URL)
             return;
         }
@@ -47,6 +50,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         // QR code found in URL. Process and display it
         let scope = params.get("scope")
         if (scope !== null) {
+            console.log("detected scope")
             gotoPage("SIOPSelectCredential", document.URL)
             return;
         }
@@ -56,14 +60,16 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         if (request_uri !== null) {
             // Unescape the query parameter
             request_uri = decodeURIComponent(request_uri)
-            console.log(request_uri)
-            gotoPage("SIOPSelectCredential", request_uri)
+            console.log("MicroWallet request_uri", request_uri)
+            console.log("Going to SIOPSelectCredential with", document.URL)
+            gotoPage("SIOPSelectCredential", document.URL)
             return;
         }
 
         // Check if we are in a credential issuance scenario
         let credential_offer_uri = params.get("credential_offer_uri")
         if (credential_offer_uri) {
+            console.log("MicroWallet", credential_offer_uri)
             await gotoPage("LoadAndSaveQRVC", document.location.href)
             return;
         }

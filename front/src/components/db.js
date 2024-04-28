@@ -351,6 +351,11 @@ async function showError(_text) {
 // DID storage, including associated private keys
 // **************************************************
 
+/**
+ * 
+ * @param {{did: string, privateKey: CryptoKey}} _didObject 
+ * @returns {Promise<{did: string, privateKey: string, timestamp: number}>}
+ */
 async function didSave(_didObject) {
 
     // Check if did already exists
@@ -375,16 +380,29 @@ async function didSave(_didObject) {
 
 }
 
+/**
+ * 
+ * @returns {Promise<{did: string, privateKey: string, timestamp: number}>}
+ */
 async function didGet(did) {
     const oldDID = await db.dids.get(did)
     return oldDID
 }
 
+/**
+ * 
+ * @returns {Promise<{did: string, privateKey: string, timestamp: number}>}
+ */
 async function didFirst() {
     const firstDID = await db.dids.toCollection().first()
     return firstDID
 }
 
+/**
+ * 
+ * @param {string} inputString 
+ * @returns {string}
+ */
 async function hash(inputString) {
     var data = new TextEncoder().encode(inputString);
     var hash = await crypto.subtle.digest('SHA-256', data)

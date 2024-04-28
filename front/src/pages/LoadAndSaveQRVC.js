@@ -1,6 +1,6 @@
 import { credentialsSave } from '../components/db';
 import { decodeJWT } from '../components/jwt';
-import { getOrCreateDidKey } from '../components/crypto'
+import { getOrCreateDidKey, signWithJWK, signJWT } from '../components/crypto'
 import PocketBase from '../components/pocketbase.es.mjs'
 
 import { renderLEARCredentialCard } from '../components/renderLEAR';
@@ -27,6 +27,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
     async enter(qrData) {
 
         mylog(`LoadAndSaveQRVC: ${qrData}`)
+        debugger
 
         let html = this.html
 
@@ -135,7 +136,13 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
             const theurl = new URL(qrData)
             this.OriginServer = theurl.origin
-            var result = await doGETJSON(qrData)
+
+            var myDid = await getOrCreateDidKey()
+            const theProof = await generateDIDKeyProof(myDid, "https://issuer.mycredential.eu", "1234567890")
+            debugger
+            var result = await this.retrieveCredentialPOST(theProof, qrData)
+
+            // var result = await doGETJSON(qrData)
             this.VC = result["credential"]
             this.VCId = result["id"]
             this.VCType = result["type"]
@@ -159,6 +166,46 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         `
         this.render(theHtml)
     }
+
+    async retrieveCredentialPOST(proof, credentialEndpoint) {
+
+        var credentialReq = {
+            // types: credentialTypes,
+            format: 'jwt_vc',
+            proof: {
+                proof_type: 'jwt',
+                jwt: proof
+            }
+        }
+    
+        console.log("Body " + JSON.stringify(credentialReq))
+        let response = await fetch(credentialEndpoint, {
+            method: "POST",
+            cache: "no-cache",
+            headers: {
+                'Content-Type': 'application/json',
+                // 'Authorization': 'Bearer ' + accessToken
+            },
+            body: JSON.stringify(credentialReq),
+            mode: "cors"
+        });
+    
+    
+        if (response.ok) {
+            // The reply is the complete JWT
+            const credentialResponse = await response.json();
+            mylog(credentialResponse)
+            return credentialResponse
+        } else {
+            if (response.status == 400) {
+                throw new Error("Bad request 400 retrieving credential")
+            } else {
+                throw new Error(response.statusText)            
+            }
+        }
+    
+    }
+    
 
     // startPreAuthorizedCodeFlow asks the user for the PIN (required) and then processes the flow
     async startPreAuthorizedCodeFlow() {
@@ -528,6 +575,7 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
 
     // There will be an HTTP 302 Redirection after this
     // We will receive the url to invoke as a result from the POST
+    debugger
     console.log("AuthRequest", authorization_endpoint + "?" + formBody)
     let resp = await fetch(authorization_endpoint + "?" + formBody, {
         cache: "no-cache",
@@ -576,6 +624,8 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
 
     const response_type = decodeURIComponent(urlParams.get('response_type'))
     if (response_type == "vp_token") {
+        const pd = decodeURIComponent(urlParams.get('presentation_definition'))
+        console.log("Presentation Definition", pd)
         throw new Error("Response type vp_token not implemented yet")
     } else if (response_type == "id_token") {
         // Do nothing. This is for documentation purposes
@@ -601,8 +651,7 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
     var nonce = decodeURIComponent(urlParams.get('nonce'))
 
     // Generate the ID Token according to the request from the authorization server
-    const signedstring = await generateEBSIIDToken(myDID.did, client_id, state, nonce)
-    const IDToken = signedstring.signedString
+    const IDToken = await generateEBSIIDToken(myDID, client_id, state, nonce)
     console.log("IDToken", IDToken)
 
     // **************************************
@@ -751,8 +800,7 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
     console.log("Step 7: Send a Credential Request")
 
     // Get the proof object that we have to include in the Credential Request
-    const proofObject = await generateEBSIProof(myDID.did, issuerMetaData.credential_issuer, nonce)
-    const proof = proofObject.signedString
+    const proof = await generateDIDKeyProof(myDID, issuerMetaData.credential_issuer, nonce)
 
     // Get the credential from EBSI
     var credentialResponse = await requestEBSICredential(proof, access_token, issuerMetaData.credential_endpoint, credentialTypes)
@@ -769,10 +817,17 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
 
         // Get the credential from EBSI
         
-        var credentialResponse = await requestDeferredEBSICredential(acceptance_token, issuerMetaData["deferred_credential_endpoint"])
-        var acceptance_token = credentialResponse["acceptance_token"]
+        credentialResponse = await requestDeferredEBSICredential(acceptance_token, issuerMetaData["deferred_credential_endpoint"])
+        // credentialResponse = await requestEBSICredential(proof, acceptance_token, issuerMetaData.credential_endpoint, credentialTypes)
+        console.log("CredentialResponse", credentialResponse)
+        acceptance_token = credentialResponse["acceptance_token"]
+
+        iterations = iterations + 1
     }
 
+    if (!credentialResponse.credential) {
+        throw new Error("No credential after all retries")
+    }
 
     // **************************************
     // **************************************
@@ -824,8 +879,7 @@ async function performPreAuthorizedCodeFlow(credentialOffer, issuerMetaData, aut
     const myDID = await window.MHR.storage.didFirst()
 
     // Get the proof object that we have to include in the Credential Request
-    const proofObject = await generateEBSIProof(myDID.did, issuerMetaData.credential_issuer, nonce)
-    const proof = proofObject.signedString
+    const proof = await generateDIDKeyProof(myDID, issuerMetaData.credential_issuer, nonce)
 
     // Get the credential from EBSI
     const credentialResponse = await requestEBSICredential(proof, access_token, issuerMetaData.credential_endpoint, credentialTypes)
@@ -881,67 +935,10 @@ async function getPreAuthToken(tokenEndpoint, preAuthCode, user_pin) {
     return tokenBody;
 }
 
-async function generateEBSIProof(subjectDID, issuerID, nonce) {
-
-    const keyStr = subjectDID.replace("did:key:", "")
-    const subjectKid = subjectDID + "#" + keyStr
-
-    // Create the request proof for authenticating this request
-    var jwtHeaders = {
-        typ: 'openid4vci-proof+jwt',
-        alg: 'ES256',
-        kid: subjectKid
-    }
-    const encodedHeaders = JSON.stringify(jwtHeaders)
-
-    const iat = Math.floor(Date.now()/1000) - 2
-    const exp = iat + 86500
-
-    var jwtPayload = {
-        iss: subjectDID,
-        aud: issuerID,
-        iat: iat,
-        exp: exp,
-        nonce: nonce
-    }
-    const encodedPayload = JSON.stringify(jwtPayload)
-
-    // Build the string to be signed
-    // const stringToSign = `${encodedHeaders}.${encodedPayload}`
-
-    var requestBody = {
-        subjectDID: subjectDID,
-        headers: encodedHeaders,
-        payload: encodedPayload
-    }
-    const body = JSON.stringify(requestBody)
-    mylog("generateEBSICredentialRequest")
-    mylog(body)
-
-    // Sign the token in the server with the associated private key
-    let response = await fetch("/signtoken", {
-        method: "POST",
-        cache: "no-cache",
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: body,
-        mode: "cors"
-    });
-    if (response.ok) {
-        // The reply is the complete JWT
-        const jwt = await response.json();
-        mylog(jwt)
-        return jwt
-    } else {
-        throw new Error(response.statusText)
-    }
-
-}
 
 
 async function requestEBSICredential(proof, accessToken, credentialEndpoint, credentialTypes) {
-    debugger
+
     var credentialReq = {
         types: credentialTypes,
         format: 'jwt_vc',
@@ -1105,6 +1102,12 @@ async function getCredentialOffer(url) {
     }
 }
 
+
+/**
+ * Returns the string representation of the SHA-256 hash of a string
+ * @param {string} string 
+ * @returns {Promise<string>}
+ */
 async function hashFromString(string) {
     const hash = await crypto.subtle.digest("SHA-256", (new TextEncoder()).encode(string))
     let astr = btoa(String.fromCharCode(...new Uint8Array(hash)))
@@ -1299,8 +1302,7 @@ window.MHR.register("EBSIRedirect", class extends window.MHR.AbstractPage {
         // Get my DID
         const myDID = await window.MHR.storage.didFirst()
 
-        const signedstring = await generateEBSIIDToken(myDID.did, client_id, state, nonce)
-        const IDToken = signedstring.signedString
+        const IDToken = await generateEBSIIDToken(myDID, client_id, state, nonce)
         console.log("IDToken", IDToken)
 
         var formAttributes = {
@@ -1342,10 +1344,54 @@ window.MHR.register("EBSIRedirect", class extends window.MHR.AbstractPage {
     }
 })
 
+/**
+ * generateDIDKeyProof creates a JWT which is used as a proof that the creator (the signer of the JWT) contrrols the
+ * private key associated to the did:key (which is essentially the public key).
+ * This concrete proof is specialised for OIDC4VCI flows, as indicated by the 'typ' field in the header.
+ * @param {{did: string, privateKey: JsonWebKey}} subjectDID The did and associated private key object for the Subject
+ * @param {string} issuerID The did for the Issuer in the OID4VCI flow. Do not confuse with the issuer of the JWT, 
+ * which should be the person who will be receiving the Verifiable Credential.
+ * @param {string} nonce The challenge received from the Issuer that we have to sign as a proof of possession
+ * @returns {Promise<string>} The JWT in compact string form
+ */
+async function generateDIDKeyProof(subjectDID, issuerID, nonce) {
+
+    const keyStr = subjectDID.did.replace("did:key:", "")
+    const subjectKid = subjectDID.did + "#" + keyStr
+
+    // Create the headers of the JWT
+    var jwtHeaders = {
+        typ: 'openid4vci-proof+jwt',
+        alg: 'ES256',
+        kid: subjectKid
+    }
+
+    // It expires in one day (it could be much shorter in many flows)
+    const iat = Math.floor(Date.now()/1000) - 2
+    const exp = iat + 86500
+
+    // The issuer of the JWT is the person who will receive the Verifiable Credential at the end of the OID4VCI flow.
+    // This is why the 'iss' claim is set to the did:key of the Subject.
+    // The JWT is intended for the entity that is issuing the Verifiable Credential in the OID4VCI flow. This is the
+    // reason why the 'aud' claim is set to the did (whatever did method is used) of the VC Issuer. 
+    var jwtPayload = {
+        iss: subjectDID.did,
+        aud: issuerID,
+        iat: iat,
+        exp: exp,
+        nonce: nonce
+    }
+
+    // The JWT is signed with the private key associated to the did:key of the creator of the JWT.
+    const jwt = await signJWT(jwtHeaders, jwtPayload, subjectDID.privateKey)
+    return jwt
+
+}
+
 async function generateEBSIIDToken(subjectDID, issuerID, state, nonce) {
 
-    const keyStr = subjectDID.replace("did:key:", "")
-    const subjectKid = subjectDID + "#" + keyStr
+    const keyStr = subjectDID.did.replace("did:key:", "")
+    const subjectKid = subjectDID.did + "#" + keyStr
 
     // Create the request proof for authenticating this request
     var jwtHeaders = {
@@ -1353,52 +1399,22 @@ async function generateEBSIIDToken(subjectDID, issuerID, state, nonce) {
         alg: 'ES256',
         kid: subjectKid
     }
-    const encodedHeaders = JSON.stringify(jwtHeaders)
 
     const iat = Math.floor(Date.now()/1000) - 2
     const exp = iat + 86500
 
     var jwtPayload = {
-        iss: subjectDID,
-        sub: subjectDID,
+        iss: subjectDID.did,
+        sub: subjectDID.did,
         aud: issuerID,
         iat: iat,
         exp: exp,
         state: state,
         nonce: nonce
     }
-    const encodedPayload = JSON.stringify(jwtPayload)
 
-    // Build the string to be signed
-    // const stringToSign = `${encodedHeaders}.${encodedPayload}`
-
-    var requestBody = {
-        subjectDID: subjectDID,
-        headers: encodedHeaders,
-        payload: encodedPayload
-    }
-    const body = JSON.stringify(requestBody)
-    mylog("generateEBSICredentialRequest")
-    mylog(body)
-
-    // Sign the token in the server with the associated private key
-    let response = await fetch("/signtoken", {
-        method: "POST",
-        cache: "no-cache",
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: body,
-        mode: "cors"
-    });
-    if (response.ok) {
-        // The reply is the complete JWT
-        const jwt = await response.json();
-        mylog(jwt)
-        return jwt
-    } else {
-        throw new Error(response.statusText)
-    }
+    const jwt = await signJWT(jwtHeaders, jwtPayload, subjectDID.privateKey)
+    return jwt
 
 }
 
@@ -1421,8 +1437,7 @@ window.MHR.register("EBSIRedirectCode", class extends window.MHR.AbstractPage {
         // Get my DID
         const myDID = await window.MHR.storage.didFirst()
 
-        const signedstring = await generateEBSIIDToken(myDID.did, client_id, state, nonce)
-        const IDToken = signedstring.signedString
+        const IDToken = await generateEBSIIDToken(myDID, client_id, state, nonce)
         console.log("IDToken", IDToken)
         debugger        
 

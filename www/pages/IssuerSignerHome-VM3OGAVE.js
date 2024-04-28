@@ -1,4 +1,3 @@
-import "../chunks/chunk-BFXLU5VG.js";
 import {
   Client
 } from "../chunks/chunk-J6D2DG7T.js";
@@ -12,6 +11,7 @@ var storage = window.MHR.storage;
 var myerror = window.MHR.storage.myerror;
 var mylog = window.MHR.storage.mylog;
 var html = window.MHR.html;
+var cleanReload = window.MHR.cleanReload;
 window.MHR.register("IssuerSignerHome", class extends window.MHR.AbstractPage {
   constructor(id) {
     super(id);
@@ -43,29 +43,32 @@ function validateEmailScreen() {
     verified = pb.authStore.model.verified;
   }
   return html`
-    <ion-card>
-        <ion-card-header>
-            <ion-card-title>Welcome back ${email}</ion-card-title>
-        </ion-card-header>
-
-        <ion-card-content>
-
-            <div class="ion-margin-top">
-            <ion-text class="ion-margin-top">You need to verify your email before being able to use this system.</ion-text>
+    <div>
+    
+        <ion-card>
+            <ion-card-header>
+                <ion-card-title>Welcome back ${email}</ion-card-title>
+            </ion-card-header>
+    
+            <ion-card-content>
+    
+                <div class="ion-margin-top">
+                    <ion-text class="ion-margin-top">You need to verify your email before being able to use this system.</ion-text>
+                </div>
+    
+            </ion-card-content>
+    
+            <div class="ion-margin-start ion-margin-bottom">
+                <ion-button @click=${() => requestVerification(email)}>
+                    ${T("Request verification")}
+                </ion-button>
+                <ion-button @click=${() => pb.authStore.clear()}>
+                    ${T("Logoff")}
+                </ion-button>
             </div>
-
-        </ion-card-content>
-
-        <div class="ion-margin-start ion-margin-bottom">
-        <ion-button @click=${() => requestVerification(email)}>
-                ${T("Request verification")}
-            </ion-button>
-            <ion-button @click=${() => pb.authStore.clear()}>
-                ${T("Logoff")}
-            </ion-button>
-        </div>
-
-    </ion-card>
+    
+        </ion-card>
+    </div>
     `;
 }
 async function requestVerification(email) {
@@ -79,51 +82,78 @@ async function logonScreen() {
     certInfo = await pb.send("/apisigner/getcertinfo");
     var commonName = certInfo.common_name;
     console.log(certInfo);
+    if (!certInfo.common_name) {
+      myerror("eIDAS certificate does not have Common Name");
+      gotoPage("ErrorPage", { title: "Error retrieving eIDAS certificate info", msg: "eIDAS certificate does not have Common Name" });
+      return;
+    }
   } catch (error) {
-    console.error(error);
+    myerror(error);
+    gotoPage("ErrorPage", { title: "Error retrieving eIDAS certificate info", msg: error.message });
+    return;
   }
   return html`
-    <ion-card>
-        <ion-card-header>
-            <ion-card-title>Logon with your registered email</ion-card-title>
-        </ion-card-header>
+    <div>
+        <style>
+            me {margin:auto;max-width: 800px;}
+        </style>
     
-        <ion-card-content>
-    
+        <div class="w3-panel w3-card-2">
+            <h1>Welcome ${commonName}</h1>
+
+            <p>The information above is coming directly from your eIDAS certificate.</p>
+            <p>
+                If this is your first time here, you can type your company email and click the <b>Register</b> button.
+                We will use the email and some information inside your certificate to register you in the platform, so you will be able to start issuing LEARCredentials to one or more of your employees or contractors.
+            </p>
+            <p>If you have already registered your email, just enter it and click the <b>Logon</b> button.</p>
+
+            <h3>Enter your email to logon or to register</h3>
+
+            <ion-loading id="loadingmsg" message="Logging on..."></ion-loading>
+
             <ion-list>
-    
+
                 <ion-item>
-                    <ion-input id="email" type="email" label="Email:" helperText="Enter a valid email" placeholder="email@domain.com"></ion-input>
+                    <ion-input id="email" type="email" label="Email:"></ion-input>
                 </ion-item>
-    
+
             </ion-list>
+
+
+            <div class="ion-margin">
+                <ion-text color="danger"><p id="errortext"></p></ion-text>
     
-            <div class="ion-margin-top">
-                ${commonName ? html`<h2>Welcome ${commonName}</h2>` : null}
-                <h2>You need to register and verify your email before being able to logon and use this system.<h2>
+                <ion-button id="login" @click=${() => logonWithEmail()}>
+                    ${T("Logon (if you are already registered)")}
+                </ion-button>
+
+                <ion-button color="secondary" @click=${() => registerEmail()}>
+                    ${T("Register (if this is the first time)")}
+                </ion-button>
+
             </div>
-    
-        </ion-card-content>
-    
-        <div class="ion-margin-start ion-margin-bottom">
-            <ion-button @click=${() => logonWithEmail()}>
-                ${T("Logon")}
-            </ion-button>
-            <ion-button @click=${() => registerEmail()}>
-                ${T("Register")}
-            </ion-button>
+
+
         </div>
-    
-    </ion-card>
+
+
+    </div>
     `;
 }
 async function logonWithEmail() {
-  const email = document.getElementById("email").value;
+  document.getElementById("errortext").innerText = "";
+  const input = document.getElementById("email");
+  const email = input.value;
   console.log(email);
   if (email.length == 0) {
+    console.log("empty field");
+    document.getElementById("errortext").innerText = "Enter your email";
     return;
   }
   pb.authStore.clear();
+  const loader = me("#loadingmsg");
+  loader.present();
   try {
     const authData = await pb.collection("signers").authWithPassword(
       email,
@@ -133,13 +163,19 @@ async function logonWithEmail() {
   } catch (error) {
     gotoPage("ErrorPage", { title: "Error in logon", msg: error.message });
     return;
+  } finally {
+    loader.dismiss();
   }
-  window.MHR.cleanReload();
+  cleanReload();
 }
 async function registerEmail() {
-  const email = document.getElementById("email").value;
+  document.getElementById("errortext").innerText = "";
+  const input = document.getElementById("email");
+  const email = input.value;
   console.log(email);
   if (email.length == 0) {
+    console.log("empty field");
+    document.getElementById("errortext").innerText = "Enter your email";
     return;
   }
   const data = {
@@ -164,7 +200,7 @@ async function registerEmail() {
     return;
   }
   alert("Registration requested. Please check your email for confirmation.");
-  window.MHR.cleanReload();
+  cleanReload();
 }
 window.MHR.register("LogoffPage", class extends window.MHR.AbstractPage {
   constructor(id) {

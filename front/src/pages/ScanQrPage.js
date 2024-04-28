@@ -321,7 +321,7 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
             // A multi-piece JWT
             return QR_MULTI;
 
-        } else if (qrData.startsWith("openid:")) {
+        } else if (qrData.startsWith("openid4vp:")) {
             // A SIOP Authentication Request, URL-encoded
             return QR_SIOP_URL;
 

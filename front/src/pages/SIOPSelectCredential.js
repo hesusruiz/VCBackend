@@ -49,7 +49,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         }
 
         // Derive from the received URL a simple one ready for parsing
-        openIdUrl = openIdUrl.replace("openid://?", "")
+        openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.mycredential.eu//?")
 
         // Convert the input string to a URL object
         const inputURL = new URL(openIdUrl)
@@ -65,30 +65,33 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
 
         // Get the relevant parameters from the query string
         const params = new URLSearchParams(inputURL.search)
-        var response_uri = params.get("response_uri")
-        var state = params.get("state")
-        var scope = params.get("scope")
-        var jar = params.get("jar")
+        var request_uri = params.get("request_uri")
+        if (!request_uri) {
+            gotoPage("ErrorPage", {
+                title: "Error",
+                msg: "'request_uri' parameter not found in URL"
+            });
+            return
+        }
+
+        request_uri = decodeURIComponent(request_uri)
+
+        const authRequestJWT = await getAuthRequest(request_uri)
+        console.log(authRequestJWT)
+        if (authRequestJWT == "error") {
+            this.showError("Error", "Error fetching Authorization Request")
+            return    
+        }
+        const authRequest = decodeJWT(authRequestJWT)
+        console.log("Decoded authRequest", authRequest)
+
+        const scope = authRequest.body.scope
+        const response_uri = authRequest.body.response_uri
+        const state = authRequest.body.state
 
         mylog("state", state)
-        mylog("response_uri", response_uri)
+        mylog("request_uri", request_uri)
         mylog("scope", scope)
-        mylog("jar", jar)
-
-        if (jar == "yes") {
-            const authRequestJWT = await getAuthRequest(openIdUrl)
-            console.log(authRequestJWT)
-            if (authRequestJWT == "error") {
-                this.showError("Error", "Error fetching Authorization Request")
-                return    
-            }
-            const authRequest = decodeJWT(authRequestJWT)
-            console.log(authRequest)
-
-            scope = authRequest.body.scope
-            response_uri = authRequest.body.response_uri
-            state = authRequest.body.state
-        }
 
         // Get the last segment of the credential type in 'scope'
         const scopeParts = scope.split(".")
@@ -210,12 +213,12 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
         verifiableCredential: credentials,
         holder: holder
     }
-    mylog("The encoded credential ", Base64.encodeURI(JSON.stringify(vpToken)))
+    mylog("The encoded vpToken ", Base64.encodeURI(JSON.stringify(vpToken)))
 
     // Create the top-level structure for the Authentication Response
     var formAttributes = {
         'vp_token': Base64.encodeURI(JSON.stringify(vpToken)),
-        'presentation_submission': Base64.encodeURI(JSON.stringify(presentationSubmission()))
+        'presentation_submission': Base64.encodeURI(JSON.stringify(presentationSubmissionJWT()))
     }
     // var formBody = [];
     // for (var property in formAttributes) {
@@ -520,6 +523,23 @@ function presentationSubmission() {
         }]
     }
 }
+
+function presentationSubmissionJWT() {
+    return {
+        "definition_id": "SingleCredentialPresentation",
+        "id": "SingleCredentialSubmission",
+        "descriptor_map": [{
+            "id": "single_credential",
+            "path": "$",
+            "format": "jwt_vp_json",
+            "path_nested": {
+                "format": "jwt_vc_json",
+                "path": "$.verifiableCredential[0]"
+            }
+        }]
+    }
+}
+
 
 // Base64 to ArrayBuffer
 function bufferDecode(value) {

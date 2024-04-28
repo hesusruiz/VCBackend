@@ -187,7 +187,7 @@ func (v *Verifier) PageDisplaySimpleQR(c *fiber.Ctx) error {
 
 	v.stateSession.Set(stateKey, status.Bytes(), handlers.StateExpirationDuration)
 
-	request_uri := httpLocation(c) + "/authenticationrequest" + "/?jar=yes&state=" + stateKey
+	request_uri := httpLocation(c) + "/authenticationrequest" + "/?state=" + stateKey
 
 	escaped_request_uri := url.QueryEscape(request_uri)
 
@@ -196,7 +196,7 @@ func (v *Verifier) PageDisplaySimpleQR(c *fiber.Ctx) error {
 	redirected_uri := sameDeviceWallet + "?request_uri=" + escaped_request_uri
 
 	// Create the QR code for cross-device SIOP
-	png, err := qrcode.Encode(request_uri, qrcode.Medium, 256)
+	png, err := qrcode.Encode(redirected_uri, qrcode.Medium, 256)
 	if err != nil {
 		return err
 	}

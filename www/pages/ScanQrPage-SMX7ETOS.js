@@ -223,7 +223,7 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
       return QR_HC1;
     } else if (qrData.startsWith("multi|w3cvc|")) {
       return QR_MULTI;
-    } else if (qrData.startsWith("openid:")) {
+    } else if (qrData.startsWith("openid4vp:")) {
       return QR_SIOP_URL;
     } else if (qrData.startsWith("openid-credential-offer://")) {
       return QR_OIDC4VCI;

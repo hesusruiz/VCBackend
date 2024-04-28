@@ -90,16 +90,18 @@ func (l *login) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 func renderLogin(w http.ResponseWriter, authRequestID string, formError error) {
 
-	request_uri := "https://verifier.mycredential.eu/login/authenticationrequest" + "?jar=yes&state=" + authRequestID
+	request_uri := "https://verifier.mycredential.eu/login/authenticationrequest" + "?state=" + authRequestID
 
 	escaped_request_uri := url.QueryEscape(request_uri)
 
 	sameDeviceWallet := "https://wallet.mycredential.eu"
+	openid4PVURL := "openid4vp://"
 
 	redirected_uri := sameDeviceWallet + "?request_uri=" + escaped_request_uri
+	qr_uri := openid4PVURL + "?request_uri=" + escaped_request_uri
 
 	// Create the QR code for cross-device SIOP
-	png, err := qrcode.Encode(request_uri, qrcode.Medium, 256)
+	png, err := qrcode.Encode(qr_uri, qrcode.Medium, 256)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("cannot create QR code:%s", err), http.StatusInternalServerError)
 		return

@@ -4,6 +4,10 @@
 
 import { util } from "@cef-ebsi/key-did-resolver";
 
+/**
+ * 
+ * @returns {Promise<{did: string, privateKey: JsonWebKey}>}
+ */
 export async function createDidKey() {
     var keyPair = await generateECDSAKeyPair()
     var publicJWK = await exportToJWK(keyPair.publicKey)
@@ -12,6 +16,10 @@ export async function createDidKey() {
     return {did: did, privateKey: privateJWK}
 }
 
+/**
+ * 
+ * @returns {Promise<{did: string, privateKey: JsonWebKey, timestamp: number}>}
+ */
 export async function getOrCreateDidKey() {
     // Create a did:key (ECDSA/P-256) if it was not already created
     var myDid = await window.MHR.storage.didFirst()
@@ -25,7 +33,70 @@ export async function getOrCreateDidKey() {
 // Import support for x509 certificates
 import * as x509 from "@peculiar/x509";
 
-// Create an ECDSA/P-256 CryptoKey
+/**
+ * 
+ * @param {string} signingString The string to sign
+ * @param {JsonWebKey} keyJWK The private key in JWK format to use for signature
+ * @returns {Promise<string>}
+ */
+export async function signWithJWK(signingString, keyJWK) {
+    const privateKey = await importFromJWK(keyJWK)
+
+    if (privateKey.type != "private") {
+        throw new Error("Not a private key");
+    }
+
+    const hashBuffer = new TextEncoder().encode(signingString)
+
+    let signature = await window.crypto.subtle.sign(
+        {
+            name: "ECDSA",
+            hash: { name: "SHA-256" },
+        },
+        privateKey,
+        hashBuffer
+    );
+
+    let astr = btoa(String.fromCharCode(...new Uint8Array(signature)))
+
+    // Remove padding equal characters
+    astr = astr.replace(/=+$/, '');
+
+    // Replace non-url compatible chars with base64 standard chars
+    astr = astr.replace(/\+/g, '-').replace(/\//g, '_');
+
+    return astr;
+
+}
+
+/**
+ * 
+ * @param {{typ: string, alg: string, kid: string}} header
+ * @param {Object} payload
+ * @param {JsonWebKey} keyJWK 
+ * @returns {Promise<string>}
+ */
+export async function signJWT(header, payload, keyJWK) {
+
+    // ASCII(BASE64URL(Header)) || '.' || BASE64URL(Payload))
+
+    const stringifiedHeader = JSON.stringify(header);
+    const stringifiedPayload = JSON.stringify(payload);
+  
+    const headerBase64 = UTF8StringToBase64Url(stringifiedHeader)
+    const payloadBase64 = UTF8StringToBase64Url(stringifiedPayload)
+    const headerAndPayload = `${headerBase64}.${payloadBase64}`
+    
+    const signature = await signWithJWK(headerAndPayload, keyJWK)
+  
+    return `${headerAndPayload}.${signature}`;
+  }
+
+
+/**
+ * Create an ECDSA/P-256 CryptoKey
+ * @returns {Promise<CryptoKey>}
+ */
 export async function generateECDSAKeyPair() {
 
     const extractable = true;
@@ -45,7 +116,11 @@ export async function generateECDSAKeyPair() {
     return keyPair;
 }
 
-// Convert a key from CryptoKey (native) format to JWK format
+/**
+ * Convert a key from CryptoKey (native) format to JWK format
+ * @param {CryptoKey} key 
+ * @returns {Promise<JsonWebKey>}
+ */
 export async function exportToJWK(key) {
     
     // Export the key to the JWK format (see spec for details)
@@ -53,7 +128,12 @@ export async function exportToJWK(key) {
     return keyJWK;
 }
 
-// Import from JWK (JSON Web Key) format
+
+/**
+ * Import from JWK (JSON Web Key) format
+ * @param {JsonWebKey} jwk 
+ * @returns {Promise<CryptoKey>}
+ */
 export async function importFromJWK(jwk) {
     // Create a CryptoKey from JWK format
 
@@ -593,5 +673,43 @@ function bytes2hexStr(bytes) {
     }
 
     return hexStr;
+}
+
+
+
+// ****************************************************************
+
+function base64ToBytes(base64) {
+    const binString = atob(base64);
+    return Uint8Array.from(binString, (m) => m.codePointAt(0));
+}
+
+function bytesToBase64(bytes) {
+    const binString = Array.from(bytes, (byte) =>
+        String.fromCodePoint(byte),
+    ).join("");
+    return btoa(binString);
+}
+
+/**
+ * 
+ * @param {string} string Text in UTF8 to encode in Base64Url
+ * @returns {string}
+ */
+function UTF8StringToBase64Url(string) {
+    var encoded = bytesToBase64(new TextEncoder().encode(string))
+    encoded = encoded.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+    return encoded
+}
+
+/**
+ * 
+ * @param {string} b64urlString Text in Base64Url format to decode to string
+ * @returns {string}
+ */
+function Base64UrlToUTF8String(b64urlString) {
+    b64urlString = b64urlString.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '')
+    var decoded = new TextDecoder().decode(base64ToBytes(b64urlString))
+    return decoded
 }
 

@@ -1,6 +1,7 @@
 import {
-  getOrCreateDidKey
-} from "../chunks/chunk-R7I7M3B4.js";
+  getOrCreateDidKey,
+  signJWT
+} from "../chunks/chunk-5HFYYPY6.js";
 import {
   renderLEARCredentialCard
 } from "../chunks/chunk-PI7RY6L6.js";
@@ -32,8 +33,8 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
   }
   async enter(qrData) {
     mylog(`LoadAndSaveQRVC: ${qrData}`);
+    debugger;
     let html2 = this.html;
-    mylog("LoadAndSaveQRVC received:", qrData);
     if (qrData == null || !qrData.startsWith) {
       console.log("The scanned QR does not contain a valid URL");
       gotoPage("ErrorPage", { "title": "No data received", "msg": "The scanned QR does not contain a valid URL" });
@@ -109,7 +110,10 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
       mylog("Non-standard issuance");
       const theurl = new URL(qrData);
       this.OriginServer = theurl.origin;
-      var result = await doGETJSON(qrData);
+      var myDid = await getOrCreateDidKey();
+      const theProof = await generateDIDKeyProof(myDid, "https://issuer.mycredential.eu", "1234567890");
+      debugger;
+      var result = await this.retrieveCredentialPOST(theProof, qrData);
       this.VC = result["credential"];
       this.VCId = result["id"];
       this.VCType = result["type"];
@@ -130,6 +134,38 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         ${this.renderedVC}
         `;
     this.render(theHtml);
+  }
+  async retrieveCredentialPOST(proof, credentialEndpoint) {
+    var credentialReq = {
+      // types: credentialTypes,
+      format: "jwt_vc",
+      proof: {
+        proof_type: "jwt",
+        jwt: proof
+      }
+    };
+    console.log("Body " + JSON.stringify(credentialReq));
+    let response = await fetch(credentialEndpoint, {
+      method: "POST",
+      cache: "no-cache",
+      headers: {
+        "Content-Type": "application/json"
+        // 'Authorization': 'Bearer ' + accessToken
+      },
+      body: JSON.stringify(credentialReq),
+      mode: "cors"
+    });
+    if (response.ok) {
+      const credentialResponse = await response.json();
+      mylog(credentialResponse);
+      return credentialResponse;
+    } else {
+      if (response.status == 400) {
+        throw new Error("Bad request 400 retrieving credential");
+      } else {
+        throw new Error(response.statusText);
+      }
+    }
   }
   // startPreAuthorizedCodeFlow asks the user for the PIN (required) and then processes the flow
   async startPreAuthorizedCodeFlow() {
@@ -397,6 +433,7 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
     formBody.push(encodedKey + "=" + encodedValue);
   }
   formBody = formBody.join("&");
+  debugger;
   console.log("AuthRequest", authorization_endpoint + "?" + formBody);
   let resp = await fetch(authorization_endpoint + "?" + formBody, {
     cache: "no-cache",
@@ -410,6 +447,8 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
   var urlParams = new URL(redirectedURL).searchParams;
   const response_type = decodeURIComponent(urlParams.get("response_type"));
   if (response_type == "vp_token") {
+    const pd = decodeURIComponent(urlParams.get("presentation_definition"));
+    console.log("Presentation Definition", pd);
     throw new Error("Response type vp_token not implemented yet");
   } else if (response_type == "id_token") {
   } else {
@@ -421,8 +460,7 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
   const client_id2 = decodeURIComponent(urlParams.get("client_id"));
   const state2 = decodeURIComponent(urlParams.get("state"));
   var nonce2 = decodeURIComponent(urlParams.get("nonce"));
-  const signedstring = await generateEBSIIDToken(myDID.did, client_id2, state2, nonce2);
-  const IDToken = signedstring.signedString;
+  const IDToken = await generateEBSIIDToken(myDID, client_id2, state2, nonce2);
   console.log("IDToken", IDToken);
   console.log("Step 2: ID Token Request");
   var formAttributes = {
@@ -486,8 +524,7 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
   var nonce2 = authTokenObject.c_nonce;
   const access_token = authTokenObject.access_token;
   console.log("Step 7: Send a Credential Request");
-  const proofObject = await generateEBSIProof(myDID.did, issuerMetaData.credential_issuer, nonce2);
-  const proof = proofObject.signedString;
+  const proof = await generateDIDKeyProof(myDID, issuerMetaData.credential_issuer, nonce2);
   var credentialResponse = await requestEBSICredential(proof, access_token, issuerMetaData.credential_endpoint, credentialTypes);
   var acceptance_token = credentialResponse["acceptance_token"];
   const max_iterations = 10;
@@ -496,8 +533,13 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
     console.log("Waiting for credential ...");
     await delay(1e3);
     console.log("Finished waiting for credential");
-    var credentialResponse = await requestDeferredEBSICredential(acceptance_token, issuerMetaData["deferred_credential_endpoint"]);
-    var acceptance_token = credentialResponse["acceptance_token"];
+    credentialResponse = await requestDeferredEBSICredential(acceptance_token, issuerMetaData["deferred_credential_endpoint"]);
+    console.log("CredentialResponse", credentialResponse);
+    acceptance_token = credentialResponse["acceptance_token"];
+    iterations = iterations + 1;
+  }
+  if (!credentialResponse.credential) {
+    throw new Error("No credential after all retries");
   }
   console.log("Step 8: Receive the credential");
   return credentialResponse.credential;
@@ -519,8 +561,7 @@ async function performPreAuthorizedCodeFlow(credentialOffer, issuerMetaData, aut
   const nonce2 = authTokenObject.c_nonce;
   const access_token = authTokenObject.access_token;
   const myDID = await window.MHR.storage.didFirst();
-  const proofObject = await generateEBSIProof(myDID.did, issuerMetaData.credential_issuer, nonce2);
-  const proof = proofObject.signedString;
+  const proof = await generateDIDKeyProof(myDID, issuerMetaData.credential_issuer, nonce2);
   const credentialResponse = await requestEBSICredential(proof, access_token, issuerMetaData.credential_endpoint, credentialTypes);
   return credentialResponse.credential;
 }
@@ -570,52 +611,7 @@ async function getPreAuthToken(tokenEndpoint, preAuthCode, user_pin) {
   console.log(tokenBody);
   return tokenBody;
 }
-async function generateEBSIProof(subjectDID, issuerID, nonce2) {
-  const keyStr = subjectDID.replace("did:key:", "");
-  const subjectKid = subjectDID + "#" + keyStr;
-  var jwtHeaders = {
-    typ: "openid4vci-proof+jwt",
-    alg: "ES256",
-    kid: subjectKid
-  };
-  const encodedHeaders = JSON.stringify(jwtHeaders);
-  const iat = Math.floor(Date.now() / 1e3) - 2;
-  const exp = iat + 86500;
-  var jwtPayload = {
-    iss: subjectDID,
-    aud: issuerID,
-    iat,
-    exp,
-    nonce: nonce2
-  };
-  const encodedPayload = JSON.stringify(jwtPayload);
-  var requestBody = {
-    subjectDID,
-    headers: encodedHeaders,
-    payload: encodedPayload
-  };
-  const body = JSON.stringify(requestBody);
-  mylog("generateEBSICredentialRequest");
-  mylog(body);
-  let response = await fetch("/signtoken", {
-    method: "POST",
-    cache: "no-cache",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body,
-    mode: "cors"
-  });
-  if (response.ok) {
-    const jwt = await response.json();
-    mylog(jwt);
-    return jwt;
-  } else {
-    throw new Error(response.statusText);
-  }
-}
 async function requestEBSICredential(proof, accessToken, credentialEndpoint, credentialTypes) {
-  debugger;
   var credentialReq = {
     types: credentialTypes,
     format: "jwt_vc",
@@ -743,8 +739,7 @@ window.MHR.register("EBSIRedirect", class extends window.MHR.AbstractPage {
     const state2 = decodeURIComponent(urlParams.get("state"));
     const nonce2 = decodeURIComponent(urlParams.get("nonce"));
     const myDID = await window.MHR.storage.didFirst();
-    const signedstring = await generateEBSIIDToken(myDID.did, client_id2, state2, nonce2);
-    const IDToken = signedstring.signedString;
+    const IDToken = await generateEBSIIDToken(myDID, client_id2, state2, nonce2);
     console.log("IDToken", IDToken);
     var formAttributes = {
       id_token: IDToken,
@@ -778,51 +773,47 @@ window.MHR.register("EBSIRedirect", class extends window.MHR.AbstractPage {
     }
   }
 });
+async function generateDIDKeyProof(subjectDID, issuerID, nonce2) {
+  const keyStr = subjectDID.did.replace("did:key:", "");
+  const subjectKid = subjectDID.did + "#" + keyStr;
+  var jwtHeaders = {
+    typ: "openid4vci-proof+jwt",
+    alg: "ES256",
+    kid: subjectKid
+  };
+  const iat = Math.floor(Date.now() / 1e3) - 2;
+  const exp = iat + 86500;
+  var jwtPayload = {
+    iss: subjectDID.did,
+    aud: issuerID,
+    iat,
+    exp,
+    nonce: nonce2
+  };
+  const jwt = await signJWT(jwtHeaders, jwtPayload, subjectDID.privateKey);
+  return jwt;
+}
 async function generateEBSIIDToken(subjectDID, issuerID, state2, nonce2) {
-  const keyStr = subjectDID.replace("did:key:", "");
-  const subjectKid = subjectDID + "#" + keyStr;
+  const keyStr = subjectDID.did.replace("did:key:", "");
+  const subjectKid = subjectDID.did + "#" + keyStr;
   var jwtHeaders = {
     typ: "JWT",
     alg: "ES256",
     kid: subjectKid
   };
-  const encodedHeaders = JSON.stringify(jwtHeaders);
   const iat = Math.floor(Date.now() / 1e3) - 2;
   const exp = iat + 86500;
   var jwtPayload = {
-    iss: subjectDID,
-    sub: subjectDID,
+    iss: subjectDID.did,
+    sub: subjectDID.did,
     aud: issuerID,
     iat,
     exp,
     state: state2,
     nonce: nonce2
   };
-  const encodedPayload = JSON.stringify(jwtPayload);
-  var requestBody = {
-    subjectDID,
-    headers: encodedHeaders,
-    payload: encodedPayload
-  };
-  const body = JSON.stringify(requestBody);
-  mylog("generateEBSICredentialRequest");
-  mylog(body);
-  let response = await fetch("/signtoken", {
-    method: "POST",
-    cache: "no-cache",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body,
-    mode: "cors"
-  });
-  if (response.ok) {
-    const jwt = await response.json();
-    mylog(jwt);
-    return jwt;
-  } else {
-    throw new Error(response.statusText);
-  }
+  const jwt = await signJWT(jwtHeaders, jwtPayload, subjectDID.privateKey);
+  return jwt;
 }
 window.MHR.register("EBSIRedirectCode", class extends window.MHR.AbstractPage {
   constructor(id) {
@@ -836,8 +827,7 @@ window.MHR.register("EBSIRedirectCode", class extends window.MHR.AbstractPage {
     const code = decodeURIComponent(urlParams.get("code"));
     console.log("redirect_uri", redirect_uri);
     const myDID = await window.MHR.storage.didFirst();
-    const signedstring = await generateEBSIIDToken(myDID.did, client_id, state, nonce);
-    const IDToken = signedstring.signedString;
+    const IDToken = await generateEBSIIDToken(myDID, client_id, state, nonce);
     console.log("IDToken", IDToken);
     debugger;
     var formAttributes = {
@@ -868,25 +858,6 @@ window.MHR.register("EBSIRedirectCode", class extends window.MHR.AbstractPage {
     }
   }
 });
-async function doGETJSON(serverURL) {
-  try {
-    var response = await fetch(serverURL);
-  } catch (error) {
-    myerror(error.message);
-    await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": error.message });
-    return;
-  }
-  if (response.ok) {
-    var responseJSON = await response.json();
-    mylog(`doFetchJSON ${serverURL}:`, responseJSON);
-    return responseJSON;
-  } else {
-    const errormsg = `doFetchJSON ${serverURL}: ${response.statusText}`;
-    myerror(errormsg);
-    await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": errormsg });
-    return;
-  }
-}
 async function doPOST(serverURL, body) {
   try {
     var response = await fetch(

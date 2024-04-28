@@ -33,6 +33,10 @@ func (is *IssuerServer) addUserRoutes(e *core.ServeEvent) {
 		return is.retrieveCredential(c)
 	})
 
+	userGroup.POST("/retrievecredential/:credid", func(c echo.Context) error {
+		return is.retrieveCredentialPOST(c)
+	})
+
 	// Update a credential, applying the proper access control depending on the status
 	userGroup.POST("/senddid/:credid", func(c echo.Context) error {
 		return is.sendDid(c)
@@ -111,6 +115,12 @@ func (is *IssuerServer) retrieveCredential(c echo.Context) error {
 func (is *IssuerServer) retrieveAllCredentials(c echo.Context) error {
 	app := is.App
 
+	// Get the info about the holder of the X509 certificate used to authenticate the request
+	_, _, err := getX509UserFromHeader(c.Request())
+	if err != nil {
+		return err
+	}
+
 	expr1 := dbx.HashExp{"status": "tobesigned"}
 	records, err := app.Dao().FindRecordsByExpr("credentials", expr1)
 	if err != nil {
@@ -171,6 +181,107 @@ func (is *IssuerServer) sendDid(c echo.Context) error {
 	// Replace the Mandatee id with the did that the user specified
 	learCred.CredentialSubject.Mandate.Mandatee.Id = didKey
 	log.Println("Updated Mandate with didKey", didKey)
+
+	// Get the private key from the configured x509 certificate
+	privateKey, err := getConfigPrivateKey()
+	if err != nil {
+		return err
+	}
+
+	// Sign the credential with the server certificate
+	credential, err := CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
+	if err != nil {
+		return err
+	}
+
+	// Update the record in the db
+	status := "tobesigned"
+	record.Set("raw", credential)
+	record.Set("status", status)
+	if err := app.Dao().SaveRecord(record); err != nil {
+		return err
+	}
+
+	credType := record.GetString("type")
+
+	return c.JSON(http.StatusOK, map[string]any{"credential": credential, "type": credType, "status": status, "id": id})
+
+}
+
+type proofClaims struct {
+	jwt.RegisteredClaims
+	Nonce string `json:"nonce,omitempty"`
+}
+
+func (o *proofClaims) String() string {
+	out, _ := json.MarshalIndent(o, "", "  ")
+	return string(out)
+}
+
+func (is *IssuerServer) retrieveCredentialPOST(c echo.Context) error {
+	type retrieveCredentialPOSTRequest struct {
+		Format string `json:"format,omitempty"`
+		Proof  struct {
+			Proof_type string `json:"proof_type,omitempty"`
+			JWT        string `json:"jwt,omitempty"`
+		} `json:"proof,omitempty"`
+	}
+
+	app := is.App
+
+	id := c.PathParam("credid")
+
+	record, err := app.Dao().FindRecordById("credentials", id)
+	if err != nil {
+		return err
+	}
+
+	var request retrieveCredentialPOSTRequest
+	err = c.Bind(&request)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "bad request")
+	}
+
+	proofString := request.Proof.JWT
+
+	var pc = proofClaims{}
+	tokenParser := jwt.NewParser()
+	proof, _, err := tokenParser.ParseUnverified(proofString, &pc)
+	if err != nil {
+		return err
+	}
+
+	fmt.Print(proof.Claims)
+
+	// Decode the payload of the JWT, which is the actual credential in JSON
+	tokenString := record.GetString("raw")
+	parts := strings.Split(tokenString, ".")
+	if len(parts) != 3 {
+		return fmt.Errorf("token contains an invalid number of segments")
+	}
+
+	encoding := base64.RawURLEncoding
+
+	claimsDecoded, err := encoding.DecodeString(parts[1])
+	if err != nil {
+		return err
+	}
+
+	// Build the Go struct from the JSON credential
+	var learCred LEARCredentialEmployee
+	err = json.Unmarshal(claimsDecoded, &learCred)
+	if err != nil {
+		return err
+	}
+
+	issuerDID, err := proof.Claims.GetIssuer()
+	if err != nil {
+		return err
+	}
+
+	// Replace the Mandatee id with the did that the user specified
+	learCred.CredentialSubject.Mandate.Mandatee.Id = issuerDID
+	log.Println("Updated Mandate with didKey", issuerDID)
 
 	// Get the private key from the configured x509 certificate
 	privateKey, err := getConfigPrivateKey()

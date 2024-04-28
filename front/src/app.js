@@ -16,22 +16,38 @@ import logo_img from './img/logo.png'
 
 // The database operations
 import { storage } from "./components/db"
-let myerror = storage.myerror
-let mylog = storage.mylog
+const myerror = storage.myerror
+const mylog = storage.mylog
 
-// Prepare for lazy-loading the pages
+// Prepare for lazy-loading the pages composing the application.
+// Typically, the window.pageModules variable is set in the HTML page importing us, but
+// it could be overriden (manually) here. It has a structure like this:
+//
+// window.pageModules = {
+//     "DisplayQR": "/pages/DisplayQR-PIO5OPZ6.js",
+//     "DisplayVC": "/pages/DisplayVC-7FJXVKLF.js",
+//     "LogsPage": "/pages/LogsPage-DHLVIEZ4.js",
+//     "MenuPage": "/pages/MenuPage-A455MOK2.js",
+//     "MicroWallet": "/pages/MicroWallet-FGPE6TBO.js",
+//     "SIOPSelectCredential": "/pages/SIOPSelectCredential-2XT6ESFD.js",
+//     "SWNotify": "/pages/SWNotify-GLIQS6YO.js",
+//     "ScanQrPage": "/pages/ScanQrPage-SMX7ETOS.js",
+//     "SelectCamera": "/pages/SelectCamera-PXJHLD5U.js",
+// }
+  
 // @ts-ignore
 const pageModulesMap = window.pageModules
 
-// get the base path of the application in runtime
-var parsedUrl  = new URL(import.meta.url)
-var fullPath = parsedUrl.pathname
+// Get the base path of the application in runtime
+const parsedUrl  = new URL(import.meta.url)
+const fullPath = parsedUrl.pathname
 console.log("Fullpath of app:", fullPath)
-var basePath = fullPath.substring(0, fullPath.lastIndexOf('/'))
+const basePath = fullPath.substring(0, fullPath.lastIndexOf('/'))
 console.log("Base path:", basePath)
 
 // Prepend the base path of the application to each page module name
-// We do it only if the base path contains more than a '/'
+// We do it only if the base path contains more than a '/', which means we are running under a base path
+// and the actual JavaScript modules should be loaded under that path
 if (basePath.length > 1) {
     for (const path in pageModulesMap) {
         pageModulesMap[path] = basePath + pageModulesMap[path]
@@ -57,7 +73,7 @@ if (!homePage) {
 // The name of the page when we try to go to a non-existent page
 var name404 = "Page404"
 
-// This will hold all pages in a ("pageName", pageClass) structure
+// This will hold all pages in a ("pageName", pageClass) structure, to facilitate page routing
 var pageNameToClass = new Map()
 
 /**
@@ -66,7 +82,7 @@ var pageNameToClass = new Map()
  * @param {any} classInstance
  */
 function route(pageName, classInstance) {
-    // Populate the map
+    // Just populate the map
     pageNameToClass.set(pageName, classInstance)
 }
 
@@ -94,14 +110,11 @@ async function goHome() {
  */
 async function gotoPage(pageName, pageData) {
     mylog("Inside gotoPage:", pageName)
-    // if (pageName == "EBSIRedirect") {
-    //     debugger
-    // }
 
     // Catch any exceptions and present an error page in case of error
     try {
 
-        // First we look if the page class is already instantiated
+        // We load dynamically the page if it is not yet loaded
         var pageClass = pageNameToClass.get(pageName)
         if (!pageClass) {
 
@@ -109,7 +122,7 @@ async function gotoPage(pageName, pageData) {
             await import(pageModulesMap[pageName])            
 
             // If pageName still does not exist, go to the 404 error page
-            // passing the target page as pageData
+            // passing the target page name as pageData
             if (!pageNameToClass.get(pageName)) {
                 myerror("Target page does not exist: ", pageName);
                 pageData = pageName
@@ -139,6 +152,7 @@ async function gotoPage(pageName, pageData) {
 
 // Handle page transition
 /**
+ * @param {Map<string, any>} pageNameToClass
  * @param {string} pageName
  * @param {any} pageData
  * @param {boolean} historyData
@@ -152,7 +166,8 @@ async function processPageEntered(pageNameToClass, pageName, pageData, historyDa
     for (let [name, classInstance] of pageNameToClass) {
         // Hide the page
         classInstance.domElem.style.display = "none"
-        // Call the page exit() method for all except the target page, so it can perform any cleanup 
+        // Call the page exit() method for all pages except the target page, so they can perform any cleanup
+        // Implementation of the exit() function is optional, so we check for its existence
         if ((name !== pageName) && classInstance.exit) {
             try {
                 await classInstance.exit()
@@ -173,11 +188,13 @@ async function processPageEntered(pageNameToClass, pageName, pageData, historyDa
     }
 
     // Reset scroll position to make sure the page is at the top
-    // window.scrollTo(0, 0);
+    // Special treatment is done if we are using Ionic Framework
     const content = document.querySelector('ion-content')
     if (content) {
         // @ts-ignore
         content.scrollToTop(500)
+    } else {
+        window.scrollTo(0, 0);
     }
 
     // Invoke the page enter() function to enter the page
@@ -228,7 +245,7 @@ window.addEventListener("popstate", async function (event) {
 async function getAndUpdateVersion() {
     // @ts-ignore
     // let version = import.meta.env.VITE_APP_VERSION
-    let version = "1.1.1"
+    let version = "1.1.2"
 
     // Store the version in global Window object and in local storage
     // @ts-ignore
@@ -374,7 +391,7 @@ function resetAndGoHome(e) {
 
 
 /**
- * @param {boolean} backButton
+ * @param {boolean} backButton - If true, a back button is shown in the header
  */
 function HeaderBar(backButton = true) {
 
@@ -460,7 +477,7 @@ class AbstractPage {
     headerBar = HeaderBar
 
     /**
-     * @param {string} id
+     * @param {string} id - The name of the page to be registered. This will be used for page routing
      */
     constructor(id) {
         if (!id) { throw "A page name is needed"}
@@ -482,7 +499,7 @@ class AbstractPage {
         // The page starts hidden
         this.domElem.style.display = "none"
 
-        // Insert into the DOM inside the <main> element
+        // Insert into the DOM inside the <main> element and after pages registered before
         var mainElem = document.querySelector('main')
         if (mainElem) {
             mainElem.appendChild(this.domElem)
@@ -492,6 +509,7 @@ class AbstractPage {
 
     /**
      * @param {(() => import("uhtml").Renderable) | import("uhtml").Renderable} theHtml
+     * @param {boolean} [backButton=true] 
      */
     render(theHtml, backButton = true) {
         // This is called by subclasses to render its contents
@@ -502,10 +520,11 @@ class AbstractPage {
             elem.style.display = "none"
         }    
 
-        // Show the page
+        // Mark the page as visible
         this.domElem.style.display = "block"
 
         // Redraw the header just in case the menu was active
+        // The caller can specify if the back button has to be displayed in the header
         let header = document.getElementById('the_header')
         if (header) {
             render(header, HeaderBar(backButton))
@@ -551,7 +570,7 @@ register("Page404", class extends AbstractPage {
     }
 
     /**
-     * @param {any} pageData
+     * @param {string} pageData
      */
     enter(pageData) {
 
@@ -619,8 +638,6 @@ register("ErrorPage", class extends AbstractPage {
         this.render(theHtml)
     }
 })
-
-
 
 
 /**

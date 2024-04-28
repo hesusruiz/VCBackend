@@ -18,6 +18,7 @@ import (
 	"github.com/evidenceledger/vcdemo/verifiernew"
 	"github.com/hesusruiz/vcutils/yaml"
 	"github.com/labstack/echo/v5"
+	echomiddle "github.com/labstack/echo/v5/middleware"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/spf13/cobra"
@@ -243,6 +244,7 @@ func StartServices(cfg *yaml.YAML) {
 	// Start the server for static Wallet assets
 	go func() {
 		staticServer := echo.New()
+		staticServer.Use(echomiddle.CORS())
 		staticServer.Static("/*", "www")
 		log.Println("Serving static assets from", cfg.String("server.staticDir", defaultStaticDir))
 		log.Fatal(staticServer.Start(":3030"))

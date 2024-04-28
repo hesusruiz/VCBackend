@@ -243,7 +243,6 @@
 }
 
 
-
 .container {
   display: flex;
 
@@ -260,6 +259,7 @@
 }
 
 .half-centered{margin:auto;max-width: 1100px;}
+.small-centered{margin:auto;max-width: 900px;}
 .w3-responsive{display:block;overflow-x:auto}
 .w3-table,.w3-table-all{border-collapse:collapse;border-spacing:0;width:100%;display:table}.w3-table-all{border:1px solid #ccc}
 .w3-bordered tr,.w3-table-all tr{border-bottom:1px solid #ddd}.w3-striped tbody tr:nth-child(even){background-color:#f1f1f1}
@@ -272,3 +272,25 @@
 .w3-container,.w3-panel{padding:1rem 1rem}.w3-panel{margin-top:16px;margin-bottom:16px}
 .w3-margin{margin:16px!important}.w3-margin-top{margin-top:16px!important}.w3-margin-bottom{margin-bottom:16px!important}
 .w3-margin-left{margin-left:16px!important}.w3-margin-right{margin-right:16px!important}
+
+
+    .text-large {
+        font-size: large;
+    }
+    .text-menu {
+        font-size: large;
+        font-weight: 500;
+    }
+    .text-larger {
+        font-size: 1.3rem;
+    }
+    .text-medium {
+        font-size: medium;
+    }
+    .text-small {
+        font-size: small;
+    }
+
+    ion-toolbar {
+        --min-height: 55px;
+    }

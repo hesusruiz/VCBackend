@@ -17,7 +17,7 @@ func (is *IssuerServer) addSignerRoutes(e *core.ServeEvent) {
 	// All requests for this group should be authenticated as Admin or with x509 certificate
 	signerApiGroup := e.Router.Group(signerApiGroupPrefix, RequireAdminOrX509Auth())
 
-	// Get the x509 certificate that was used to do client authentication
+	// Return to caller the x509 certificate that was used to do client authentication
 	signerApiGroup.GET("/getcertinfo", func(c echo.Context) error {
 		_, subject, err := getX509UserFromHeader(c.Request())
 		if err != nil {

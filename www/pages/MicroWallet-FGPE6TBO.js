@@ -1,17 +1,13 @@
 import {
   getOrCreateDidKey
-} from "../chunks/chunk-R7I7M3B4.js";
+} from "../chunks/chunk-5HFYYPY6.js";
 import {
   renderLEARCredentialCard
 } from "../chunks/chunk-PI7RY6L6.js";
-import {
-  Client
-} from "../chunks/chunk-J6D2DG7T.js";
 import "../chunks/chunk-U2D4LOFI.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
 // front/src/pages/MicroWallet.js
-var pb = new Client(window.location.origin);
 var gotoPage = window.MHR.gotoPage;
 var goHome = window.MHR.goHome;
 var storage = window.MHR.storage;
@@ -22,34 +18,39 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
     super(id);
   }
   async enter() {
-    await getOrCreateDidKey();
+    alert("ready to debug");
+    const mydid = await getOrCreateDidKey();
+    console.log("My DID", mydid.did);
     let html = this.html;
     let params = new URL(document.location).searchParams;
-    console.log(document.location);
+    console.log("MicroWallet", document.location);
     if (document.URL.includes("state=") && document.URL.includes("auth-mock")) {
-      console.log("************Redirected with state**************");
+      console.log("MicroWallet ************Redirected with state**************");
       gotoPage("LoadAndSaveQRVC", document.URL);
       return;
     }
     if (document.URL.includes("code=")) {
-      console.log("************Redirected with code**************");
+      console.log("MicroWallet ************Redirected with code**************");
       gotoPage("LoadAndSaveQRVC", document.URL);
       return;
     }
     let scope = params.get("scope");
     if (scope !== null) {
+      console.log("detected scope");
       gotoPage("SIOPSelectCredential", document.URL);
       return;
     }
     let request_uri = params.get("request_uri");
     if (request_uri !== null) {
       request_uri = decodeURIComponent(request_uri);
-      console.log(request_uri);
-      gotoPage("SIOPSelectCredential", request_uri);
+      console.log("MicroWallet request_uri", request_uri);
+      console.log("Going to SIOPSelectCredential with", document.URL);
+      gotoPage("SIOPSelectCredential", document.URL);
       return;
     }
     let credential_offer_uri = params.get("credential_offer_uri");
     if (credential_offer_uri) {
+      console.log("MicroWallet", credential_offer_uri);
       await gotoPage("LoadAndSaveQRVC", document.location.href);
       return;
     }

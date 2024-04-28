@@ -196,30 +196,32 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         this.PlatformAuthenticatorSupported = true;
       }
     }
-    openIdUrl = openIdUrl.replace("openid://?", "");
+    openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.mycredential.eu//?");
     const inputURL = new URL(openIdUrl);
     const params = new URLSearchParams(inputURL.search);
-    var response_uri = params.get("response_uri");
-    var state = params.get("state");
-    var scope = params.get("scope");
-    var jar = params.get("jar");
-    mylog("state", state);
-    mylog("response_uri", response_uri);
-    mylog("scope", scope);
-    mylog("jar", jar);
-    if (jar == "yes") {
-      const authRequestJWT = await getAuthRequest(openIdUrl);
-      console.log(authRequestJWT);
-      if (authRequestJWT == "error") {
-        this.showError("Error", "Error fetching Authorization Request");
-        return;
-      }
-      const authRequest = decodeJWT(authRequestJWT);
-      console.log(authRequest);
-      scope = authRequest.body.scope;
-      response_uri = authRequest.body.response_uri;
-      state = authRequest.body.state;
+    var request_uri = params.get("request_uri");
+    if (!request_uri) {
+      gotoPage("ErrorPage", {
+        title: "Error",
+        msg: "'request_uri' parameter not found in URL"
+      });
+      return;
     }
+    request_uri = decodeURIComponent(request_uri);
+    const authRequestJWT = await getAuthRequest(request_uri);
+    console.log(authRequestJWT);
+    if (authRequestJWT == "error") {
+      this.showError("Error", "Error fetching Authorization Request");
+      return;
+    }
+    const authRequest = decodeJWT(authRequestJWT);
+    console.log("Decoded authRequest", authRequest);
+    const scope = authRequest.body.scope;
+    const response_uri = authRequest.body.response_uri;
+    const state = authRequest.body.state;
+    mylog("state", state);
+    mylog("request_uri", request_uri);
+    mylog("scope", scope);
     const scopeParts = scope.split(".");
     if (scopeParts.length == 0) {
       myerror("Invalid scope specified");
@@ -308,10 +310,10 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
     verifiableCredential: credentials,
     holder
   };
-  mylog("The encoded credential ", gBase64.encodeURI(JSON.stringify(vpToken)));
+  mylog("The encoded vpToken ", gBase64.encodeURI(JSON.stringify(vpToken)));
   var formAttributes = {
     "vp_token": gBase64.encodeURI(JSON.stringify(vpToken)),
-    "presentation_submission": gBase64.encodeURI(JSON.stringify(presentationSubmission()))
+    "presentation_submission": gBase64.encodeURI(JSON.stringify(presentationSubmissionJWT()))
   };
   var formBody = JSON.stringify(formAttributes);
   mylog("The body: " + formBody);
@@ -363,16 +365,16 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
     return;
   }
 }
-function presentationSubmission() {
+function presentationSubmissionJWT() {
   return {
     "definition_id": "SingleCredentialPresentation",
     "id": "SingleCredentialSubmission",
     "descriptor_map": [{
       "id": "single_credential",
       "path": "$",
-      "format": "ldp_vp",
+      "format": "jwt_vp_json",
       "path_nested": {
-        "format": "ldp_vc",
+        "format": "jwt_vc_json",
         "path": "$.verifiableCredential[0]"
       }
     }]

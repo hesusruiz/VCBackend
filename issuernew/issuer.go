@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -168,6 +169,14 @@ func (is *IssuerServer) Start() error {
 		}
 		log.Println(subject)
 
+		// Perform some verifications of the certificate
+		if len(subject.SerialNumber) == 0 {
+			return fmt.Errorf("invalid certificate, Subject SerialNumber does not exist")
+		}
+		if len(subject.CommonName) == 0 {
+			return fmt.Errorf("invalid certificate, Subject CommonName does not exist")
+		}
+
 		// Enrich the incoming Record with the subject info in the certificate
 		e.Record.Set("commonName", subject.CommonName)
 		e.Record.Set("serialNumber", subject.SerialNumber)
@@ -189,8 +198,8 @@ func (is *IssuerServer) Start() error {
 		// TODO: generate the key params dynamically
 		keyparams := x509util.KeyParams{
 			Ed25519Key: true,
-			ValidFrom:  "Jan 1 15:04:05 2024",
-			ValidFor:   365 * 24 * time.Hour,
+			// ValidFrom:  "Jan 1 15:04:05 2024",
+			ValidFor: 365 * 24 * time.Hour,
 		}
 
 		// Create a CA Certificate based on the info in the incoming certificate
@@ -199,7 +208,7 @@ func (is *IssuerServer) Start() error {
 			return err
 		}
 
-		// Serialize the private key
+		// Serialize the private key so it can be stored in the database
 		serializedPrivateKey, err := json.Marshal(privateKey)
 		if err != nil {
 			return err
