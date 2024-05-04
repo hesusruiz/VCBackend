@@ -388,7 +388,7 @@ func NewCAELSICertificate(subAttrs ELSIName, keyparams KeyParams) (subPrivKey jw
 
 }
 
-func NewCAELSICertificateRaw(subAttrs ELSIName, keyparams KeyParams) (subPrivKey jwk.Key, subCert *x509.Certificate, err error) {
+func NewCAELSICertificateRaw(subAttrs ELSIName, keyparams KeyParams) (subPrivKey any, subCert *x509.Certificate, err error) {
 	var priv any
 	switch keyparams.EcdsaCurve {
 	case "":
@@ -479,13 +479,7 @@ func NewCAELSICertificateRaw(subAttrs ELSIName, keyparams KeyParams) (subPrivKey
 		return nil, nil, err
 	}
 
-	// Create the JWK for the private and public pair
-	subPrivKey, err = jwk.FromRaw(priv)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return subPrivKey, newCert, nil
+	return priv, newCert, nil
 
 }
 
