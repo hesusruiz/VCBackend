@@ -121,6 +121,8 @@ async function processPageEntered(pageNameToClass2, pageName, pageData, historyD
   const content = document.querySelector("ion-content");
   if (content) {
     content.scrollToTop(500);
+  } else {
+    window.scrollTo(0, 0);
   }
   if (targetPage.enter) {
     await targetPage.enter(pageData, historyData);
@@ -144,7 +146,7 @@ window.addEventListener("popstate", async function(event) {
   }
 });
 async function getAndUpdateVersion() {
-  let version = "1.1.1";
+  let version = "1.1.2";
   window.appVersion = version;
   window.localStorage.setItem("VERSION", version);
   console.log("Version:", version);
@@ -271,7 +273,7 @@ var AbstractPage = class {
   // The name of the page for routing
   headerBar = HeaderBar;
   /**
-   * @param {string} id
+   * @param {string} id - The name of the page to be registered. This will be used for page routing
    */
   constructor(id) {
     if (!id) {
@@ -291,6 +293,7 @@ var AbstractPage = class {
   }
   /**
    * @param {(() => import("uhtml").Renderable) | import("uhtml").Renderable} theHtml
+   * @param {boolean} [backButton=true] 
    */
   render(theHtml, backButton = true) {
     let elem = document.getElementById("SplashScreen");
@@ -327,7 +330,7 @@ register("Page404", class extends AbstractPage {
     super(id);
   }
   /**
-   * @param {any} pageData
+   * @param {string} pageData
    */
   enter(pageData) {
     this.showError("Page not found", `The requested page does not exist: ${pageData}`);

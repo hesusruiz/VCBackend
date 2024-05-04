@@ -17,25 +17,80 @@ window.MHR.register("IssuerSignerHome", class extends window.MHR.AbstractPage {
     super(id);
   }
   async enter() {
-    var email, verified;
-    if (pb.authStore.isValid) {
-      email = pb.authStore.model.email;
-      verified = pb.authStore.model.verified;
-    }
     var theHtml;
-    if (!pb.authStore.isValid) {
-      theHtml = await logonScreen();
-    } else {
-      if (!verified) {
-        theHtml = validateEmailScreen();
-      } else {
+    if (pb.authStore.isValid) {
+      if (pb.authStore.model.verified) {
         gotoPage("ListOfferingsPage");
-        return;
+      } else {
+        theHtml = validateEmailScreen();
+        this.render(theHtml, false);
       }
+    } else {
+      theHtml = await logonScreen();
+      this.render(theHtml, false);
     }
-    this.render(theHtml, false);
   }
 });
+async function logonScreen() {
+  var certInfo;
+  try {
+    certInfo = await pb.send("/apisigner/getcertinfo");
+    var commonName = certInfo.common_name;
+    mylog(certInfo);
+    if (!certInfo.common_name) {
+      myerror("eIDAS certificate does not have Common Name");
+      gotoPage("ErrorPage", { title: "Error retrieving eIDAS certificate info", msg: "eIDAS certificate does not have Common Name" });
+      return;
+    }
+  } catch (error) {
+    myerror(error);
+    gotoPage("ErrorPage", { title: "Error retrieving eIDAS certificate info", msg: error.message });
+    return;
+  }
+  return html`
+    <div>
+        <style>
+            me {margin:auto;max-width: 800px;}
+        </style>
+    
+        <div class="w3-panel w3-card-2">
+            <h1>Welcome ${commonName}</h1>
+
+            <p>The information above is coming directly from your eIDAS certificate.</p>
+            <p>
+                If this is your first time here, you can type your company email and click the <b>Register</b> button.
+                We will use the email and some information inside your certificate to register you in the platform, so you will be able to start issuing LEARCredentials to one or more of your employees or contractors.
+            </p>
+            <p>If you have already registered your email, just enter it and click the <b>Logon</b> button.</p>
+
+            <h3>Enter your email to logon or to register</h3>
+
+            <ion-loading id="loadingmsg" message="Logging on..."></ion-loading>
+
+            <ion-list>
+
+                <ion-item>
+                    <ion-input id="email" type="email" label="Email:"></ion-input>
+                </ion-item>
+
+            </ion-list>
+
+            <div class="ion-margin">
+                <ion-text color="danger"><p id="errortext"></p></ion-text>
+    
+                <ion-button id="login" @click=${() => logonWithEmail()}>
+                    ${T("Logon (if you are already registered)")}
+                </ion-button>
+
+                <ion-button color="secondary" @click=${() => registerEmail()}>
+                    ${T("Register (if this is the first time)")}
+                </ion-button>
+
+            </div>
+        </div>
+    </div>
+    `;
+}
 function validateEmailScreen() {
   var email, verified;
   if (pb.authStore.isValid) {
@@ -75,71 +130,6 @@ async function requestVerification(email) {
   console.log("Requesting verification");
   const result = await pb.collection("signers").requestVerification(email);
   console.log("After requesting verification:", result);
-}
-async function logonScreen() {
-  var certInfo;
-  try {
-    certInfo = await pb.send("/apisigner/getcertinfo");
-    var commonName = certInfo.common_name;
-    console.log(certInfo);
-    if (!certInfo.common_name) {
-      myerror("eIDAS certificate does not have Common Name");
-      gotoPage("ErrorPage", { title: "Error retrieving eIDAS certificate info", msg: "eIDAS certificate does not have Common Name" });
-      return;
-    }
-  } catch (error) {
-    myerror(error);
-    gotoPage("ErrorPage", { title: "Error retrieving eIDAS certificate info", msg: error.message });
-    return;
-  }
-  return html`
-    <div>
-        <style>
-            me {margin:auto;max-width: 800px;}
-        </style>
-    
-        <div class="w3-panel w3-card-2">
-            <h1>Welcome ${commonName}</h1>
-
-            <p>The information above is coming directly from your eIDAS certificate.</p>
-            <p>
-                If this is your first time here, you can type your company email and click the <b>Register</b> button.
-                We will use the email and some information inside your certificate to register you in the platform, so you will be able to start issuing LEARCredentials to one or more of your employees or contractors.
-            </p>
-            <p>If you have already registered your email, just enter it and click the <b>Logon</b> button.</p>
-
-            <h3>Enter your email to logon or to register</h3>
-
-            <ion-loading id="loadingmsg" message="Logging on..."></ion-loading>
-
-            <ion-list>
-
-                <ion-item>
-                    <ion-input id="email" type="email" label="Email:"></ion-input>
-                </ion-item>
-
-            </ion-list>
-
-
-            <div class="ion-margin">
-                <ion-text color="danger"><p id="errortext"></p></ion-text>
-    
-                <ion-button id="login" @click=${() => logonWithEmail()}>
-                    ${T("Logon (if you are already registered)")}
-                </ion-button>
-
-                <ion-button color="secondary" @click=${() => registerEmail()}>
-                    ${T("Register (if this is the first time)")}
-                </ion-button>
-
-            </div>
-
-
-        </div>
-
-
-    </div>
-    `;
 }
 async function logonWithEmail() {
   document.getElementById("errortext").innerText = "";
@@ -188,6 +178,7 @@ async function registerEmail() {
     const record = await pb.collection("signers").create(data);
     console.log(record);
   } catch (error) {
+    myerror(error);
     gotoPage("ErrorPage", { title: "Error in registration", msg: error.message });
     return;
   }
@@ -196,6 +187,7 @@ async function registerEmail() {
     var result = await pb.collection("signers").requestVerification(email);
     console.log("After requesting verification:", result);
   } catch (error) {
+    myerror(error);
     gotoPage("ErrorPage", { title: "Error requesting verification", msg: error.message });
     return;
   }
