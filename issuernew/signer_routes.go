@@ -1,6 +1,8 @@
 package issuernew
 
 import (
+	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -8,6 +10,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -18,8 +21,9 @@ func (is *IssuerServer) addSignerRoutes(e *core.ServeEvent) {
 	signerApiGroup := e.Router.Group(signerApiGroupPrefix, RequireAdminOrX509Auth())
 
 	// Return to caller the x509 certificate that was used to do client authentication
+	// This call is a helper to the client and does not touch the database
 	signerApiGroup.GET("/getcertinfo", func(c echo.Context) error {
-		_, subject, err := getX509UserFromHeader(c.Request())
+		_, _, subject, err := getX509UserFromHeader(c.Request())
 		if err != nil {
 			return err
 		}
@@ -52,6 +56,39 @@ func (is *IssuerServer) addSignerRoutes(e *core.ServeEvent) {
 	signerApiGroup.GET("/sendreminder/:credid", func(c echo.Context) error {
 		return is.sendReminder(c)
 	})
+
+}
+
+func (is *IssuerServer) retrieveAllCredentials(c echo.Context) error {
+	app := is.App
+
+	// Get the info about the holder of the X509 certificate used to authenticate the request
+	cert, _, _, err := getX509UserFromHeader(c.Request())
+	if err != nil {
+		return err
+	}
+
+	// Retrieve the caller user record using the unique SubjectKeyIdentifier
+	receivedSki := hex.EncodeToString(cert.SubjectKeyId)
+	userRecord, err := app.Dao().FindFirstRecordByData("signers", "ski", receivedSki)
+	if err == sql.ErrNoRows {
+		return echo.NewHTTPError(http.StatusForbidden, "Please provide valid credentials")
+	}
+	if err != nil {
+		return err
+	}
+
+	// Get the email of the caller
+	creatorEmail := userRecord.Email()
+
+	// Retrieve all records which can be signed by the user and in the state 'tobesigned'
+	expr1 := dbx.HashExp{"creator_email": creatorEmail, "status": "tobesigned"}
+	records, err := app.Dao().FindRecordsByExpr("credentials", expr1)
+	if err != nil {
+		return err
+	}
+
+	return c.JSONPretty(http.StatusOK, records, "  ")
 
 }
 

@@ -175,200 +175,11 @@ func NewCertificate(issCert PEMCert, issPrivKey jwk.Key, subAttrs ELSIName, keyp
 
 }
 
-func NewCACertificate(subAttrs ELSIName, keyparams KeyParams) (subPrivKey jwk.Key, subCert PEMCert, err error) {
-	var priv any
-	switch keyparams.EcdsaCurve {
-	case "":
-		if keyparams.Ed25519Key {
-			_, priv, err = ed25519.GenerateKey(rand.Reader)
-		} else {
-			priv, err = rsa.GenerateKey(rand.Reader, keyparams.RsaBits)
-		}
-	case "P224":
-		priv, err = ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
-	case "P256":
-		priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	case "P384":
-		priv, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	case "P521":
-		priv, err = ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	default:
-		log.Fatalf("Unrecognized elliptic curve: %q", keyparams.EcdsaCurve)
-	}
-	if err != nil {
-		log.Fatalf("Failed to generate private key: %v", err)
-	}
+func NewCAELSICertificatePEM(subAttrs ELSIName, keyparams KeyParams) (subPrivKey jwk.Key, subCert PEMCert, err error) {
 
-	// ECDSA, ED25519 and RSA subject keys should have the DigitalSignature
-	// KeyUsage bits set in the x509.Certificate template
-	keyUsage := x509.KeyUsageDigitalSignature
-	// Only RSA subject keys should have the KeyEncipherment KeyUsage bits set. In
-	// the context of TLS this KeyUsage is particular to RSA key exchange and
-	// authentication.
-	if _, isRSA := priv.(*rsa.PrivateKey); isRSA {
-		keyUsage |= x509.KeyUsageKeyEncipherment
-	}
-
-	var notBefore time.Time
-	if len(keyparams.ValidFrom) == 0 {
-		notBefore = time.Now()
-	} else {
-		notBefore, err = time.Parse("Jan 2 15:04:05 2006", keyparams.ValidFrom)
-		if err != nil {
-			log.Fatalf("Failed to parse creation date: %v", err)
-		}
-	}
-
-	notAfter := notBefore.Add(keyparams.ValidFor)
-
-	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-	if err != nil {
-		log.Fatalf("Failed to generate serial number: %v", err)
-	}
-
-	organizationIdentifier := pkix.AttributeTypeAndValue{
-		Type:  []int{2, 5, 4, 97},
-		Value: subAttrs.OrganizationIdentifier,
-	}
-	surname := pkix.AttributeTypeAndValue{
-		Type:  []int{2, 5, 4, 4},
-		Value: subAttrs.Surname,
-	}
-	givenname := pkix.AttributeTypeAndValue{
-		Type:  []int{2, 5, 4, 42},
-		Value: subAttrs.GivenName,
-	}
-
-	extraNames := []pkix.AttributeTypeAndValue{organizationIdentifier, surname, givenname}
-
-	subject := pkix.Name{
-		CommonName:   subAttrs.CommonName,
-		SerialNumber: subAttrs.SerialNumber,
-		Organization: []string{subAttrs.Organization},
-		Country:      []string{subAttrs.Country},
-		ExtraNames:   extraNames,
-	}
-
-	template := x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject:      subject,
-		NotBefore:    notBefore,
-		NotAfter:     notAfter,
-
-		KeyUsage:              keyUsage,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-	}
-
-	template.IsCA = true
-	template.KeyUsage |= x509.KeyUsageCertSign
-
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
-	if err != nil {
-		log.Fatalf("Failed to create certificate: %v", err)
-	}
-
-	var buf bytes.Buffer
-	if err := pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
-		log.Fatalf("Failed to encode in PEM the certificate: %v", err)
-	}
-	subCert = buf.Bytes()
-
-	// Create the JWK for the native private key
-	subPrivKey, err = jwk.FromRaw(priv)
+	priv, derBytes, err := NewCAELSICertificateDER(subAttrs, keyparams)
 	if err != nil {
 		return nil, nil, err
-	}
-
-	return subPrivKey, subCert, nil
-
-}
-
-func NewCAELSICertificate(subAttrs ELSIName, keyparams KeyParams) (subPrivKey jwk.Key, subCert PEMCert, err error) {
-	var priv any
-	switch keyparams.EcdsaCurve {
-	case "":
-		if keyparams.Ed25519Key {
-			_, priv, err = ed25519.GenerateKey(rand.Reader)
-		} else {
-			priv, err = rsa.GenerateKey(rand.Reader, keyparams.RsaBits)
-		}
-	case "P224":
-		priv, err = ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
-	case "P256":
-		priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	case "P384":
-		priv, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	case "P521":
-		priv, err = ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	default:
-		log.Fatalf("Unrecognized elliptic curve: %q", keyparams.EcdsaCurve)
-	}
-	if err != nil {
-		log.Fatalf("Failed to generate private key: %v", err)
-	}
-
-	// ECDSA, ED25519 and RSA subject keys should have the DigitalSignature
-	// KeyUsage bits set in the x509.Certificate template
-	keyUsage := x509.KeyUsageDigitalSignature
-	// Only RSA subject keys should have the KeyEncipherment KeyUsage bits set. In
-	// the context of TLS this KeyUsage is particular to RSA key exchange and
-	// authentication.
-	if _, isRSA := priv.(*rsa.PrivateKey); isRSA {
-		keyUsage |= x509.KeyUsageKeyEncipherment
-	}
-
-	// By default, the certificate is valid since it is created
-	var notBefore time.Time
-	if len(keyparams.ValidFrom) == 0 {
-		notBefore = time.Now()
-	} else {
-		notBefore, err = time.Parse("Jan 2 15:04:05 2006", keyparams.ValidFrom)
-		if err != nil {
-			log.Fatalf("Failed to parse creation date: %v", err)
-		}
-	}
-
-	// Set validity if not specified
-	if keyparams.ValidFor == 0 {
-		keyparams.ValidFor = 365 * 24 * time.Hour
-	}
-	notAfter := notBefore.Add(keyparams.ValidFor)
-
-	// Generate a new random SerialNumber for the certificate
-	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-	if err != nil {
-		log.Fatalf("Failed to generate serial number: %v", err)
-	}
-
-	// Convert the subject attributes to the proper format
-	extraNames := subAttrs.ToATVSequence()
-	subject := pkix.Name{
-		ExtraNames: extraNames,
-	}
-
-	// Create the template with all the required data
-	template := x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject:      subject,
-		NotBefore:    notBefore,
-		NotAfter:     notAfter,
-
-		KeyUsage:              keyUsage,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-	}
-
-	// This certificate can be used to sign (issue) other certificates
-	template.IsCA = true
-	template.KeyUsage |= x509.KeyUsageCertSign
-
-	// Create the certificate and receive a DER-encoded byte array.
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
-	if err != nil {
-		log.Fatalf("Failed to create certificate: %v", err)
 	}
 
 	// Encode the DER buffer into PEM, so it can be stored on disk or database
@@ -389,6 +200,22 @@ func NewCAELSICertificate(subAttrs ELSIName, keyparams KeyParams) (subPrivKey jw
 }
 
 func NewCAELSICertificateRaw(subAttrs ELSIName, keyparams KeyParams) (subPrivKey any, subCert *x509.Certificate, err error) {
+
+	priv, derBytes, err := NewCAELSICertificateDER(subAttrs, keyparams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	newCert, err := x509.ParseCertificate(derBytes)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return priv, newCert, nil
+
+}
+
+func NewCAELSICertificateDER(subAttrs ELSIName, keyparams KeyParams) (subPrivKey any, DERCert []byte, err error) {
 	var priv any
 	switch keyparams.EcdsaCurve {
 	case "":
@@ -429,7 +256,7 @@ func NewCAELSICertificateRaw(subAttrs ELSIName, keyparams KeyParams) (subPrivKey
 	} else {
 		notBefore, err = time.Parse("Jan 2 15:04:05 2006", keyparams.ValidFrom)
 		if err != nil {
-			log.Fatalf("Failed to parse creation date: %v", err)
+			return nil, nil, err
 		}
 	}
 
@@ -443,7 +270,7 @@ func NewCAELSICertificateRaw(subAttrs ELSIName, keyparams KeyParams) (subPrivKey
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		log.Fatalf("Failed to generate serial number: %v", err)
+		return nil, nil, fmt.Errorf("Failed to generate serial number: %v", err)
 	}
 
 	// Convert the subject attributes to the proper format
@@ -460,7 +287,7 @@ func NewCAELSICertificateRaw(subAttrs ELSIName, keyparams KeyParams) (subPrivKey
 		NotAfter:     notAfter,
 
 		KeyUsage:              keyUsage,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageEmailProtection},
 		BasicConstraintsValid: true,
 	}
 
@@ -471,15 +298,10 @@ func NewCAELSICertificateRaw(subAttrs ELSIName, keyparams KeyParams) (subPrivKey
 	// Create the certificate and receive a DER-encoded byte array.
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
 	if err != nil {
-		log.Fatalf("Failed to create certificate: %v", err)
-	}
-
-	newCert, err := x509.ParseCertificate(derBytes)
-	if err != nil {
 		return nil, nil, err
 	}
 
-	return priv, newCert, nil
+	return priv, derBytes, nil
 
 }
 
@@ -633,20 +455,42 @@ var (
 
 func (n ELSIName) ToATVSequence() (ret []pkix.AttributeTypeAndValue) {
 
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidCommonName, Value: n.CommonName})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidSurname, Value: n.Surname})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidGivenName, Value: n.GivenName})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidSerialNumber, Value: n.SerialNumber})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidOrganization, Value: n.Organization})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidOrganizationIdentifier, Value: n.OrganizationIdentifier})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidCountry, Value: n.Country})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidLocality, Value: n.Locality})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidProvince, Value: n.Province})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidStreetAddress, Value: n.StreetAddress})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidProvince, Value: n.Province})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidOrganizationalUnit, Value: n.OrganizationalUnit})
-	ret = append(ret, pkix.AttributeTypeAndValue{Type: oidPostalCode, Value: n.PostalCode})
-
+	if len(n.CommonName) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidCommonName, Value: n.CommonName})
+	}
+	if len(n.Surname) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidSurname, Value: n.Surname})
+	}
+	if len(n.GivenName) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidGivenName, Value: n.GivenName})
+	}
+	if len(n.SerialNumber) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidSerialNumber, Value: n.SerialNumber})
+	}
+	if len(n.Organization) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidOrganization, Value: n.Organization})
+	}
+	if len(n.OrganizationIdentifier) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidOrganizationIdentifier, Value: n.OrganizationIdentifier})
+	}
+	if len(n.Country) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidCountry, Value: n.Country})
+	}
+	if len(n.Locality) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidLocality, Value: n.Locality})
+	}
+	if len(n.StreetAddress) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidStreetAddress, Value: n.StreetAddress})
+	}
+	if len(n.Province) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidProvince, Value: n.Province})
+	}
+	if len(n.OrganizationalUnit) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidOrganizationalUnit, Value: n.OrganizationalUnit})
+	}
+	if len(n.PostalCode) > 0 {
+		ret = append(ret, pkix.AttributeTypeAndValue{Type: oidPostalCode, Value: n.PostalCode})
+	}
 	return ret
 
 }

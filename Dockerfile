@@ -1,5 +1,5 @@
 # Stage for building the golang app
-FROM golang:1.20 AS buildgo
+FROM golang:1.21 AS buildgo
 
 WORKDIR /app
 

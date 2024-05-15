@@ -11,7 +11,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/skip2/go-qrcode"
 	"github.com/valyala/fasttemplate"
@@ -109,25 +108,6 @@ func (is *IssuerServer) retrieveCredential(c echo.Context) error {
 	status := record.GetString("status")
 
 	return c.JSON(http.StatusOK, map[string]any{"credential": credential, "type": credType, "status": status, "id": id})
-
-}
-
-func (is *IssuerServer) retrieveAllCredentials(c echo.Context) error {
-	app := is.App
-
-	// Get the info about the holder of the X509 certificate used to authenticate the request
-	_, _, err := getX509UserFromHeader(c.Request())
-	if err != nil {
-		return err
-	}
-
-	expr1 := dbx.HashExp{"status": "tobesigned"}
-	records, err := app.Dao().FindRecordsByExpr("credentials", expr1)
-	if err != nil {
-		return err
-	}
-
-	return c.JSONPretty(http.StatusOK, records, "  ")
 
 }
 

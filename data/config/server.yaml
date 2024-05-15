@@ -9,30 +9,6 @@ server:
     buildConfigFile: "data/config/buildfront.yaml"
 
 issuer:
-  id: HappyPets
-  name: HappyPets
-  password: ThePassword
-  x509:
-    ELSIName:
-      OrganizationIdentifier: "VATES-12345678"
-      CommonName:             "56565656V Beppe Cafiso"
-      GivenName:              "Beppe"
-      Surname:                "Cafiso"
-      EmailAddress:           "beppe@goodair.com"
-      SerialNumber:           "56565656V"
-      Organization:           "GoodAir"
-      Country:                "IT"
-
-  store:
-    driverName: "sqlite3"
-    dataSourceName: "issuer.sqlite?mode=rwc&cache=shared&_fk=1"
-    dataSourceLocation: "storage"
-  samedeviceWallet: "https://wallet.mycredential.eu"
-  credentialTemplatesDir: "data/credential_templates"
-  credentialInputDataFile: "data/example_data/employee_data.yaml"
-
-
-issuernew:
   listenAddress: ":8090"
   Meta:
     appName: "DOME Issuer"

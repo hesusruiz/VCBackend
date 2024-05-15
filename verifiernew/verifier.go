@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	exampleop "github.com/evidenceledger/vcdemo/verifiernew/learcredop"
+	"github.com/evidenceledger/vcdemo/verifiernew/learcredop"
+
 	"github.com/evidenceledger/vcdemo/verifiernew/storage"
 )
 
@@ -16,9 +17,9 @@ func Setup() {
 
 	verifierUrl := "https://verifier.mycredential.eu"
 
-	// the OpenIDProvider interface needs a Storage interface handling various checks and state manipulations
-	// this might be the layer for accessing your database
-	// in this example it will be handled in-memory
+	// The OpenIDProvider interface needs a Storage interface handling various checks and state manipulations.
+	// This is normally used as the layer for accessing a database, but we do not need permanent storage for users
+	// and it will be handled in-memory because the user data is coming from the Verifiable Credential presented.
 	storage := storage.NewStorage(storage.NewUserStore(verifierUrl))
 
 	logger := slog.New(
@@ -27,7 +28,7 @@ func Setup() {
 			Level:     slog.LevelDebug,
 		}),
 	)
-	router := exampleop.SetupServer(verifierUrl, storage, logger, false)
+	router := learcredop.SetupServer(verifierUrl, storage, logger, false)
 
 	server := &http.Server{
 		Addr:    ":" + port,

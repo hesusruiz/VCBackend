@@ -1,4 +1,4 @@
-package exampleop
+package learcredop
 
 import (
 	"crypto/sha256"
@@ -44,8 +44,6 @@ var counter atomic.Int64
 var pdp *PDP
 
 // SetupServer creates an OIDC server with the verifier URL passed
-//
-// Use one of the pre-made clients in storage/clients.go or register a new one.
 func SetupServer(verifierUrl string, storage Storage, logger *slog.Logger, wrapServer bool, extraOptions ...op.Option) chi.Router {
 	var err error
 
@@ -57,7 +55,7 @@ func SetupServer(verifierUrl string, storage Storage, logger *slog.Logger, wrapS
 
 	// the OpenID Provider requires a 32-byte verifierKey for (token) encryption
 	// be sure to create a proper crypto random verifierKey and manage it securely!
-	// TODO: use Pocketbase secred management for the Verifier verifierKey
+	// TODO: use Pocketbase secret management for the Verifier verifierKey
 	verifierKey := sha256.Sum256([]byte("test"))
 
 	router := chi.NewRouter()

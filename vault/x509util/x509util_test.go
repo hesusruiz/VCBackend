@@ -80,7 +80,7 @@ func TestNewCAELSICertificate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			// Create a new certificate in PEM format
-			_, gotSubCert, err := NewCAELSICertificate(tt.args.subAttrs, tt.args.keyparams)
+			_, gotSubCert, err := NewCAELSICertificatePEM(tt.args.subAttrs, tt.args.keyparams)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewCAELSICertificate() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -1,4 +1,4 @@
-package exampleop
+package learcredop
 
 import (
 	"context"
@@ -62,7 +62,7 @@ func (l *login) createRouter(issuerInterceptor *op.IssuerInterceptor) {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
-	l.router.Get("/username", l.loginHandler)
+	l.router.Get("/username", l.loginPageRender)
 	l.router.Get("/authenticationrequest", l.APIWalletAuthenticationRequest)
 	l.router.Get("/poll", l.APIWalletPoll)
 	l.router.Post("/authenticationresponse", l.APIWalletAuthenticationResponse)
@@ -77,7 +77,7 @@ type authenticate interface {
 	CheckLoginDone(id string) bool
 }
 
-func (l *login) loginHandler(w http.ResponseWriter, r *http.Request) {
+func (l *login) loginPageRender(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
@@ -124,8 +124,6 @@ func renderLogin(w http.ResponseWriter, authRequestID string, formError error) {
 	}
 
 	err = goview.Render(w, http.StatusOK, "login", data)
-
-	// err = templates.ExecuteTemplate(w, "login", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

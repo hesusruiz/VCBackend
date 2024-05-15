@@ -109,6 +109,8 @@ async function webAuthn(authType, origin, username, state) {
 // and sends the new credential to the server, which will store it associated to the user+device 
 async function registerUser(origin, username, state) {
 
+    
+
     try {
 
         // Get from the server the CredentialCreationOptions

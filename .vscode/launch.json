@@ -5,15 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "VerifNew",
-            "type": "go",
-            "request": "launch",
-            "mode": "debug",
-            "program": "cmd/verifier/main.go",
-            "cwd": "."
-        },
-        {
-            "name": "Faster",
+            "name": "VCDemo",
             "type": "go",
             "request": "launch",
             "mode": "auto",

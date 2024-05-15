@@ -7,14 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/sprig/v3"
-	"github.com/evidenceledger/vcdemo/back/handlers"
 	"github.com/evidenceledger/vcdemo/client"
 	"github.com/evidenceledger/vcdemo/faster"
 	"github.com/evidenceledger/vcdemo/issuer"
 	"github.com/evidenceledger/vcdemo/issuernew"
 	"github.com/evidenceledger/vcdemo/vault"
-	"github.com/evidenceledger/vcdemo/verifier"
 	"github.com/evidenceledger/vcdemo/verifiernew"
 	"github.com/hesusruiz/vcutils/yaml"
 	"github.com/labstack/echo/v5"
@@ -25,12 +22,6 @@ import (
 
 	"flag"
 	"log"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/storage/memory"
-	"github.com/gofiber/template/html"
 )
 
 const dataDirectory = "data"
@@ -79,18 +70,12 @@ func main() {
 	// Get the configurations for the individual services
 	icfg := cfg.Map("issuer")
 	if len(icfg) == 0 {
-		panic("no configuration for Issuer found")
+		panic("no configuration for new Issuer found")
 	}
 	issuerCfg := yaml.New(icfg)
 
-	icfgnew := cfg.Map("issuernew")
-	if len(icfg) == 0 {
-		panic("no configuration for new Issuer found")
-	}
-	issuerCfgNew := yaml.New(icfgnew)
-
 	// Create a new Issuer with its configuration
-	iss := issuernew.New(issuerCfgNew)
+	iss := issuernew.New(issuerCfg)
 	app := iss.App
 
 	// loosely check if it was executed using "go run"
@@ -156,90 +141,11 @@ func StartServices(cfg *yaml.YAML) {
 	buildConfigFile := cfg.String("server.buildFront.buildConfigFile", defaultBuildConfigFile)
 	buildConfigFile = LookupEnvOrString("BUILD_CONFIG_FILE", buildConfigFile)
 
-	// Check that the configuration entries for Issuer, Verifier and Wallet do exist
-	icfg := cfg.Map("issuer")
-	if len(icfg) == 0 {
-		panic("no configuration for Issuer found")
-	}
-	issuerCfg := yaml.New(icfg)
-
-	vcfg := cfg.Map("verifier")
-	if len(vcfg) == 0 {
-		panic("no configuration for Verifier found")
-	}
-	verifierCfg := yaml.New(vcfg)
-
-	// wcfg := cfg.Map("wallet")
-	// if len(wcfg) == 0 {
-	// 	panic("no configuration for Wallet found")
-	// }
-	// walletCfg := yaml.New(wcfg)
-
-	// Create the HTTP server
-	s := handlers.NewServer(cfg)
-
-	// Create default credentials if not already created
-	issuer.BatchGenerateLEARCredentials(issuerCfg)
-
-	// Create the template engine using the templates in the configured directory
-	templateDir := cfg.String("server.templateDir", defaultTemplateDir)
-	templateEngine := html.New(templateDir, ".html").AddFuncMap(sprig.FuncMap())
-
-	if cfg.String("server.environment") == "development" {
-		// Just for development time. Disable when in production
-		templateEngine.Reload(true)
-	}
-
-	// Define the configuration for Fiber
-	fiberCfg := fiber.Config{
-		Views:       templateEngine,
-		ViewsLayout: "layouts/main",
-		Prefork:     *prod,
-	}
-
-	// Create a Fiber instance and set it in our Server struct
-	s.App = fiber.New(fiberCfg)
-	s.Cfg = cfg
-
-	// Recover panics from the HTTP handlers so the server continues running
-	s.Use(recover.New(recover.Config{EnableStackTrace: true}))
-
-	// CORS
-	s.Use(cors.New())
-
-	// Create a storage entry for logon expiration
-	s.SessionStorage = memory.New()
-	defer s.SessionStorage.Close()
-
-	// Application Home pages
-	s.Get("/", s.HandleHome)
-	s.Get("/walletprovider", s.HandleWalletProviderHome)
-
-	// WARNING! This is just for development. Disable this in production by using the config file setting
-	if cfg.String("server.environment") == "development" {
-		s.Get("/stop", s.HandleStop)
-	}
-
-	// Setup the Issuer, Wallet and Verifier routes
-	issuer.Setup(s, issuerCfg)
-	verifier.Setup(s, verifierCfg)
-
-	// Setup static files
-	s.Static("/static", cfg.String("server.staticDir", defaultStaticDir))
-
-	// Start the Wallet backend server
-	//		wallet.Start(walletCfg)
-
 	// Start the new Verifier
 	go verifiernew.Setup()
 
 	// Start the watcher
 	go faster.WatchAndBuild(buildConfigFile)
-
-	// Start the Verifier server
-	go func() {
-		log.Fatal(s.Listen(cfg.String("server.listenAddress")))
-	}()
 
 	// Start the server for static Wallet assets
 	go func() {
@@ -247,6 +153,15 @@ func StartServices(cfg *yaml.YAML) {
 		staticServer.Use(echomiddle.CORS())
 		staticServer.Static("/*", "www")
 		log.Println("Serving static assets from", cfg.String("server.staticDir", defaultStaticDir))
+
+		if cfg.String("server.environment") == "development" {
+			// Just for development time. Disable when in production
+			staticServer.GET("/stopserver", func(c echo.Context) error {
+				os.Exit(0)
+				return nil
+			})
+		}
+
 		log.Fatal(staticServer.Start(":3030"))
 	}()
 
@@ -254,6 +169,110 @@ func StartServices(cfg *yaml.YAML) {
 	go client.Setup()
 
 }
+
+// func StartServicesOld(cfg *yaml.YAML) {
+
+// 	buildConfigFile := cfg.String("server.buildFront.buildConfigFile", defaultBuildConfigFile)
+// 	buildConfigFile = LookupEnvOrString("BUILD_CONFIG_FILE", buildConfigFile)
+
+// 	// // Check that the configuration entries for Issuer, Verifier and Wallet do exist
+// 	// icfg := cfg.Map("issuer")
+// 	// if len(icfg) == 0 {
+// 	// 	panic("no configuration for Issuer found")
+// 	// }
+// 	// issuerCfg := yaml.New(icfg)
+
+// 	// vcfg := cfg.Map("verifier")
+// 	// if len(vcfg) == 0 {
+// 	// 	panic("no configuration for Verifier found")
+// 	// }
+// 	// verifierCfg := yaml.New(vcfg)
+
+// 	// wcfg := cfg.Map("wallet")
+// 	// if len(wcfg) == 0 {
+// 	// 	panic("no configuration for Wallet found")
+// 	// }
+// 	// walletCfg := yaml.New(wcfg)
+
+// 	// Create the HTTP server
+// 	s := handlers.NewServer(cfg)
+
+// 	// // Create default credentials if not already created
+// 	// issuer.BatchGenerateLEARCredentials(issuerCfg)
+
+// 	// Create the template engine using the templates in the configured directory
+// 	templateDir := cfg.String("server.templateDir", defaultTemplateDir)
+// 	templateEngine := html.New(templateDir, ".html").AddFuncMap(sprig.FuncMap())
+
+// 	if cfg.String("server.environment") == "development" {
+// 		// Just for development time. Disable when in production
+// 		templateEngine.Reload(true)
+// 	}
+
+// 	// Define the configuration for Fiber
+// 	fiberCfg := fiber.Config{
+// 		Views:       templateEngine,
+// 		ViewsLayout: "layouts/main",
+// 		Prefork:     *prod,
+// 	}
+
+// 	// Create a Fiber instance and set it in our Server struct
+// 	s.App = fiber.New(fiberCfg)
+// 	s.Cfg = cfg
+
+// 	// Recover panics from the HTTP handlers so the server continues running
+// 	s.Use(recover.New(recover.Config{EnableStackTrace: true}))
+
+// 	// CORS
+// 	s.Use(cors.New())
+
+// 	// Create a storage entry for logon expiration
+// 	s.SessionStorage = memory.New()
+// 	defer s.SessionStorage.Close()
+
+// 	// Application Home pages
+// 	s.Get("/", s.HandleHome)
+// 	s.Get("/walletprovider", s.HandleWalletProviderHome)
+
+// 	// WARNING! This is just for development. Disable this in production by using the config file setting
+// 	if cfg.String("server.environment") == "development" {
+// 		s.Get("/stop", s.HandleStop)
+// 	}
+
+// 	// Setup the Issuer, Wallet and Verifier routes
+// 	// issuer.Setup(s, issuerCfg)
+// 	// verifier.Setup(s, verifierCfg)
+
+// 	// Setup static files
+// 	s.Static("/static", cfg.String("server.staticDir", defaultStaticDir))
+
+// 	// Start the Wallet backend server
+// 	//		wallet.Start(walletCfg)
+
+// 	// Start the new Verifier
+// 	go verifiernew.Setup()
+
+// 	// Start the watcher
+// 	go faster.WatchAndBuild(buildConfigFile)
+
+// 	// Start the Verifier server
+// 	go func() {
+// 		log.Fatal(s.Listen(cfg.String("server.listenAddress")))
+// 	}()
+
+// 	// Start the server for static Wallet assets
+// 	go func() {
+// 		staticServer := echo.New()
+// 		staticServer.Use(echomiddle.CORS())
+// 		staticServer.Static("/*", "www")
+// 		log.Println("Serving static assets from", cfg.String("server.staticDir", defaultStaticDir))
+// 		log.Fatal(staticServer.Start(":3030"))
+// 	}()
+
+// 	time.Sleep(2 * time.Second)
+// 	go client.Setup()
+
+// }
 
 // readConfiguration reads a YAML file and creates an easy-to navigate structure
 func readConfiguration(configFile string) *yaml.YAML {

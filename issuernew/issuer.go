@@ -5,10 +5,13 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
 	"database/sql"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"html/template"
 	"log"
@@ -16,7 +19,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"time"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/evidenceledger/vcdemo/vault/x509util"
@@ -163,13 +165,15 @@ func (is *IssuerServer) Start() error {
 	app.OnRecordBeforeCreateRequest("signers").Add(func(e *core.RecordCreateEvent) error {
 
 		// The request must have information about the x509 certificate used for client auth
-		_, subject, err := getX509UserFromHeader(e.HttpContext.Request())
+		receivedCert, _, subject, err := getX509UserFromHeader(e.HttpContext.Request())
 		if err != nil {
 			return err
 		}
-		log.Println(subject)
 
 		// Perform some verifications of the certificate
+		if len(receivedCert.SubjectKeyId) == 0 {
+			return fmt.Errorf("invalid certificate, Subject Key Identifier does not exist")
+		}
 		if len(subject.SerialNumber) == 0 {
 			return fmt.Errorf("invalid certificate, Subject SerialNumber does not exist")
 		}
@@ -178,6 +182,7 @@ func (is *IssuerServer) Start() error {
 		}
 
 		// Enrich the incoming Record with the subject info in the certificate
+		e.Record.Set("ski", hex.EncodeToString(receivedCert.SubjectKeyId))
 		e.Record.Set("commonName", subject.CommonName)
 		e.Record.Set("serialNumber", subject.SerialNumber)
 		e.Record.Set("country", subject.Country)
@@ -195,30 +200,13 @@ func (is *IssuerServer) Start() error {
 			e.Record.Set("organizationIdentifier", subject.SerialNumber)
 		}
 
-		// TODO: generate the key params dynamically
-		keyparams := x509util.KeyParams{
-			Ed25519Key: true,
-			// ValidFrom:  "Jan 1 15:04:05 2024",
-			ValidFor: 365 * 24 * time.Hour,
-		}
-
-		// Create a CA Certificate based on the info in the incoming certificate
-		privateKey, cert, err := x509util.NewCAELSICertificate(*subject, keyparams)
-		if err != nil {
-			return err
-		}
-
-		// Serialize the private key so it can be stored in the database
-		serializedPrivateKey, err := json.Marshal(privateKey)
+		cert, err := getCertPEMFromHeader(e.HttpContext.Request())
 		if err != nil {
 			return err
 		}
 
 		// Enrich the Record with the new CA certificate, which will be used to sign
-		log.Println("NewCertificate", string(cert))
-		log.Println("NewKey", serializedPrivateKey)
 		e.Record.Set("certificatePem", string(cert))
-		e.Record.Set("privatekeyPem", serializedPrivateKey)
 
 		return nil
 	})
@@ -226,11 +214,28 @@ func (is *IssuerServer) Start() error {
 	// Hook to ensure that authorization for "signers" requires a client x509 certificate
 	app.OnRecordBeforeAuthWithPasswordRequest("signers").Add(func(e *core.RecordAuthWithPasswordEvent) error {
 
-		_, subject, err := getX509UserFromHeader(e.HttpContext.Request())
+		receivedCert, _, subject, err := getX509UserFromHeader(e.HttpContext.Request())
 		if err != nil {
 			return err
 		}
+		log.Println("OnRecordBeforeAuthWithPasswordRequest")
 		log.Println(subject)
+
+		// Check if an auth record was found (based only on the email send by the user)
+		if e.Record == nil {
+			return apis.NewUnauthorizedError("Please register your email before", nil)
+		}
+
+		// Check if the Subject Key Identifier are the same in the received certificate and in the registered one
+		receivedSKI := hex.EncodeToString(receivedCert.SubjectKeyId)
+		log.Printf("SubjectKeyId: %s", receivedCert.SubjectKeyId)
+
+		registeredSKI := e.Record.GetString("ski")
+		log.Printf("ReceivedSKI: %s - RegisteredSKI: %s", receivedSKI, registeredSKI)
+
+		if receivedSKI != registeredSKI {
+			return fmt.Errorf("invalid SKI")
+		}
 
 		return nil
 	})
@@ -239,7 +244,7 @@ func (is *IssuerServer) Start() error {
 	app.OnRecordBeforeCreateRequest("credentials").Add(func(e *core.RecordCreateEvent) error {
 		log.Println("OnRecordBeforeCreateRequest(credentials)")
 
-		_, subject, err := getX509UserFromHeader(e.HttpContext.Request())
+		_, _, subject, err := getX509UserFromHeader(e.HttpContext.Request())
 		if err != nil {
 			return err
 		}
@@ -248,59 +253,17 @@ func (is *IssuerServer) Start() error {
 		return nil
 	})
 
+	// Hook to send an email reminder to the subject when a new credential is created
 	app.OnRecordAfterCreateRequest("credentials").Add(func(e *core.RecordCreateEvent) error {
 		log.Println("OnRecordAfterCreateRequest(credentials)")
 
 		status := e.Record.GetString("status")
-		switch status {
-		case "offered":
-			log.Println("Status is OFFERED")
-		case "tobesigned":
-			log.Println("Status is TOBESIGNED")
-		case "signed":
-			log.Println("Status is SIGNED")
-		}
-
 		if status == "offered" {
 
 			// Send an email to the user
 			return is.sendEmailReminder(e.Record.Id)
 
 		}
-
-		// // Check if the user already exists, to create a new one if needed
-		// user, err := app.Dao().FindAuthRecordByEmail("users", e.Record.Email())
-
-		// pass := security.RandomString(10)
-
-		// if err == sql.ErrNoRows {
-		// 	// The user does not exist, must create it
-		// 	collection, err := app.Dao().FindCollectionByNameOrId("users")
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	user = models.NewRecord(collection)
-
-		// 	user.SetPassword(pass)
-		// 	user.SetEmail(e.Record.Email())
-		// 	user.SetUsername(pass)
-
-		// 	// TODO: we will later require verification process
-		// 	user.SetVerified(true)
-
-		// 	tokenKey := user.TokenKey()
-		// 	log.Println("Token key", tokenKey)
-
-		// 	if err := app.Dao().SaveRecord(user); err != nil {
-		// 		return err
-		// 	}
-
-		// } else if err != nil {
-		// 	// An error occurred (different from sql.ErrNoRows)
-		// 	return err
-		// }
-
-		// log.Println(user.Email())
 
 		return nil
 	})
@@ -385,24 +348,46 @@ func selectHomePage(next echo.HandlerFunc) echo.HandlerFunc {
 
 // getX509UserFromHeader retrieves the 'issuer' and 'subject' information from the
 // incoming x509 client certificate
-func getX509UserFromHeader(r *http.Request) (issuer *x509util.ELSIName, subject *x509util.ELSIName, err error) {
+func getX509UserFromHeader(r *http.Request) (cert *x509.Certificate, issuer *x509util.ELSIName, subject *x509util.ELSIName, err error) {
 
 	// Get the clientCertDer value before processing the request
 	// This HTTP request header has been set by the reverse proxy in front of the application
 	clientCertDer := r.Header.Get("Tls-Client-Certificate")
 	if clientCertDer == "" {
 		log.Println("Client certificate not provided")
-		return nil, nil, apis.NewBadRequestError("Invalid request", nil)
+		return nil, nil, nil, apis.NewBadRequestError("Invalid request", nil)
 	}
 
-	_, issuer, subject, err = x509util.ParseEIDASCertB64Der(clientCertDer)
+	cert, issuer, subject, err = x509util.ParseEIDASCertB64Der(clientCertDer)
 	if err != nil {
 		log.Println("parsing eIDAS certificate", err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return issuer, subject, nil
+	return cert, issuer, subject, nil
 
+}
+
+func getCertPEMFromHeader(r *http.Request) (cert x509util.PEMCert, err error) {
+
+	// Get the clientCertDer value
+	// This HTTP request header has been set by the reverse proxy in front of the application
+	clientCertDer := r.Header.Get("Tls-Client-Certificate")
+	if clientCertDer == "" {
+		return nil, fmt.Errorf("no x509 certificate in request header")
+	}
+
+	rawCert, err := base64.StdEncoding.DecodeString(clientCertDer)
+	if err != nil {
+		return nil, err
+	}
+
+	// Encode the DER buffer into PEM, so it can be stored on disk or database
+	var buf bytes.Buffer
+	if err := pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: rawCert}); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // RequireAdminOrX509Auth middleware requires a request to have
@@ -414,7 +399,7 @@ func RequireAdminOrX509Auth() echo.MiddlewareFunc {
 			if admin != nil {
 				return next(c)
 			}
-			_, _, err := getX509UserFromHeader(c.Request())
+			_, _, _, err := getX509UserFromHeader(c.Request())
 			if err != nil {
 				return apis.NewUnauthorizedError("The request requires admin or x509 authorization token to be set.", nil)
 			}
