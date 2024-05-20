@@ -44,12 +44,16 @@ FROM gcr.io/distroless/base-debian12
 WORKDIR /app
 
 # Copy the frontend built in previous stage
+COPY --from=buildfront /app/front /app/front
 COPY --from=buildfront /app/www /app/www/
 
 # Copy vcdemo binary and backend HTML resources from go build stage 
 COPY --from=buildgo /app/back/views /app/back/views
 COPY --from=buildgo /app/back/www /app/back/www
 COPY --from=buildgo /app/vcdemo /app/vcdemo
+COPY --from=buildgo /app/migrations /app/migrations
+COPY --from=buildgo /app/pb_data /app/pb_data
+COPY ./authn_policies.star /app/authn_policies.star
 
-# Run the image as a binary without parameters
-ENTRYPOINT ["/app/vcdemo"]
+# Run the image as a binary and start the server
+ENTRYPOINT ["/app/vcdemo", "serve"]

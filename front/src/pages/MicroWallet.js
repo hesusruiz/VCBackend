@@ -14,7 +14,6 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
     }
 
     async enter() {
-        alert("ready to debug")
 
         // Create a new did:key (ECDSA/P-256) if it was not already created
         const mydid = await getOrCreateDidKey()

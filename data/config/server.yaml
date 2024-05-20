@@ -25,7 +25,6 @@ issuer:
     Port: "465"
     Tls: true
     Username: "admin@mycredential.eu"
-    Password: "Lornac1100"
 
   x509:
     ELSIName:

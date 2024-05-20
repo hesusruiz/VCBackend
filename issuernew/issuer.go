@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"database/sql"
 	"encoding/base64"
@@ -18,7 +19,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/evidenceledger/vcdemo/vault/x509util"
@@ -36,7 +36,6 @@ import (
 	"github.com/pocketbase/pocketbase/tools/security"
 	pbtemplate "github.com/pocketbase/pocketbase/tools/template"
 	"github.com/skip2/go-qrcode"
-	"software.sslmate.com/src/go-pkcs12"
 )
 
 const defaultCredentialTemplatesDir = "vault/templates"
@@ -78,10 +77,10 @@ func (is *IssuerServer) Start() error {
 	app := is.App
 	cfg := is.cfg
 
-	// Check that we can access to the certificate
-	if _, err := getConfigPrivateKey(); err != nil {
-		return err
-	}
+	// // Check that we can access to the certificate
+	// if _, err := getConfigPrivateKey(); err != nil {
+	// 	return err
+	// }
 
 	// Create the HTML templates registry
 	is.treg = pbtemplate.NewRegistry()
@@ -114,7 +113,7 @@ func (is *IssuerServer) Start() error {
 		settings.Smtp.Port = cfg.Int("SMTP.Port", 465)
 		settings.Smtp.Tls = cfg.Bool("SMTP.Tls", true)
 		settings.Smtp.Username = cfg.String("SMTP.Username", "admin@mycredential.eu")
-		settings.Smtp.Password = cfg.String("SMTP.Password")
+		// settings.Smtp.Password = cfg.String("SMTP.Password")
 
 		// Write the settings to the database
 		err := dao.SaveSettings(settings)
@@ -411,33 +410,35 @@ func RequireAdminOrX509Auth() echo.MiddlewareFunc {
 
 func getConfigPrivateKey() (any, error) {
 
-	userHome, err := os.UserHomeDir()
-	if err != nil {
-		panic(err)
-	}
+	return rsa.GenerateKey(rand.Reader, 2048)
 
-	certFilePath := LookupEnvOrString("CERT_FILE_PATH", filepath.Join(userHome, ".certs", "testcert.pfx"))
-	password := LookupEnvOrString("CERT_PASSWORD", "")
-	if len(password) == 0 {
-		passwordFilePath := LookupEnvOrString("CERT_PASSWORD_FILE", filepath.Join(userHome, ".certs", "pass.txt"))
-		passwordBytes, err := os.ReadFile(passwordFilePath)
-		if err != nil {
-			return nil, err
-		}
-		password = string(bytes.TrimSpace(passwordBytes))
-	}
+	// userHome, err := os.UserHomeDir()
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	certBinary, err := os.ReadFile(certFilePath)
-	if err != nil {
-		return nil, err
-	}
+	// certFilePath := LookupEnvOrString("CERT_FILE_PATH", filepath.Join(userHome, ".certs", "testcert.pfx"))
+	// password := LookupEnvOrString("CERT_PASSWORD", "")
+	// if len(password) == 0 {
+	// 	passwordFilePath := LookupEnvOrString("CERT_PASSWORD_FILE", filepath.Join(userHome, ".certs", "pass.txt"))
+	// 	passwordBytes, err := os.ReadFile(passwordFilePath)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	password = string(bytes.TrimSpace(passwordBytes))
+	// }
 
-	privateKey, _, _, err := pkcs12.DecodeChain(certBinary, password)
-	if err != nil {
-		return nil, err
-	}
+	// certBinary, err := os.ReadFile(certFilePath)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	return privateKey, nil
+	// privateKey, _, _, err := pkcs12.DecodeChain(certBinary, password)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// return privateKey, nil
 }
 
 func newRandomString() string {

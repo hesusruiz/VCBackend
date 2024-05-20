@@ -216,6 +216,19 @@ func (is *IssuerServer) retrieveCredentialPOST(c echo.Context) error {
 		return err
 	}
 
+	// Check if the credential can not be modified
+	currentStatus := record.GetString("status")
+	if currentStatus == "signed" {
+		log.Println("retrieveCredentialPOST: credential already signed")
+		return c.JSON(http.StatusOK,
+			map[string]any{
+				"credential": record.GetString("raw"),
+				"type":       record.GetString("type"),
+				"status":     currentStatus,
+				"id":         id,
+			})
+	}
+
 	var request retrieveCredentialPOSTRequest
 	err = c.Bind(&request)
 	if err != nil {

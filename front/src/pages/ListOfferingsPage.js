@@ -336,15 +336,68 @@ async function signCredentialOfferingLocal(record) {
 
 }
 
-async function signCredentialOfferingInServer(credRecord) {
+async function signCredentialOfferingInServer(record) {
+
+    const serverURL = "https://dts-sign-engine-demo.pre-api.digitelts.com/api/v1/services/signworker/signjades"
+
+    var learcred = decodeJWT(record.raw).body
+
+    if (!learcred.credentialSubject) {
+        gotoPage("ErrorPage", { title: "Invalid credential", msg: "signCredentialOfferingLocal: Invalid credential received" })
+        return
+    }
+
+
+    // Create the payload in the body
+    var body = {
+        "document": learcred
+    }
+
+    console.log("The payload before stringify", body)
+    const strbody = JSON.stringify(body)
+    console.log("The payload after stringify", strbody)
+
+    // Sign the credential in the local machine, to be able to access the certificate store
+    try {
+        var response = await fetch(serverURL,
+            {
+                method: "POST",
+                body: strbody,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+        console.log(response)
+    } catch (error) {
+        await gotoPage("ErrorPage", { "title": "Error signing credential", "msg": error.message })
+        return
+    }
+
+    if (!response.ok) {
+        const errormsg = `POST ${serverURL}: ${response.statusText}`
+        myerror(errormsg)
+        await gotoPage("ErrorPage", { "title": "Error sending data", "msg": errormsg })
+        return
+    }                
+
+    var responseJSON = await response.json();
+    console.log(responseJSON)
+    mylog(`doPOST ${serverURL}:`, responseJSON)
+    const signedDocument = responseJSON.data.signedDocument
+
 
     // Store the signed credential with the status "signed"
+    record.status = "signed"
+    record.raw = signedDocument
+    record.signer_email = pb.authStore.model.email
+    console.log("Updating credential")
+    console.log(record)
     try {
-        console.log("Storing signed credential in Record", credRecord.id)
-        const record = await pb.collection('credentials').update(credRecord.id, credRecord);
-        console.log(record)            
+        console.log("Storing signed credential in Record", record.id)
+        const result = await pb.collection('credentials').update(record.id, record);
+        console.log(result)
     } catch (error) {
-        gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
+        gotoPage("ErrorPage", { title: "Error saving credential", msg: error.message })
         return
     }
 
@@ -352,6 +405,7 @@ async function signCredentialOfferingInServer(credRecord) {
 
     goHome()
 
-}
+    return
 
+}
 

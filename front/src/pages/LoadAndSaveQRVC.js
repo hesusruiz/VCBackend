@@ -25,6 +25,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
     }
 
     async enter(qrData) {
+        this.qrData = qrData
 
         mylog(`LoadAndSaveQRVC: ${qrData}`)
         debugger
@@ -137,37 +138,58 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             const theurl = new URL(qrData)
             this.OriginServer = theurl.origin
 
-            var myDid = await getOrCreateDidKey()
-            const theProof = await generateDIDKeyProof(myDid, "https://issuer.mycredential.eu", "1234567890")
-            debugger
-            var result = await this.retrieveCredentialPOST(theProof, qrData)
+            // var myDid = await getOrCreateDidKey()
+            // const theProof = await generateDIDKeyProof(myDid, "https://issuer.mycredential.eu", "1234567890")
+            // debugger
+            // var result = await this.updateCredentialPOST(theProof, qrData)
 
-            // var result = await doGETJSON(qrData)
+            var result = await doGETJSON(qrData)
             this.VC = result["credential"]
             this.VCId = result["id"]
             this.VCType = result["type"]
             this.VCStatus = result["status"]
             this.renderedVC = this.prerenderEmployeeCredential(this.VC, this.VCType, this.VCStatus)
+
+            if (this.VCStatus == "offered") {
+                // Ask the user if we should accept the credential offer
+                let theHtml = html`
+                <ion-card color="warning">
+                        
+                    <ion-card-content>
+                    <p><b>
+                    ${T("You received a proposal for a Verifiable Credential")}. ${T("You can accept it, or cancel the operation.")}
+                    </b></p>
+                    </ion-card-content>
+                    
+                </ion-card>
+
+                ${this.renderedVC}
+                `
+                this.render(theHtml)
+                return
+
+            }
+
+            // Ask the user if we should store the VC
+            let theHtml = html`
+            <ion-card color="warning">
+                    
+                <ion-card-content>
+                <p><b>
+                ${T("You received a Verifiable Credential")}. ${T("You can save it in this device for easy access later, or cancel the operation.")}
+                </b></p>
+                </ion-card-content>
+                
+            </ion-card>
+
+            ${this.renderedVC}
+            `
+            this.render(theHtml)
         }
 
-        // Ask the user if we should store the VC
-        let theHtml = html`
-        <ion-card color="warning">
-                
-            <ion-card-content>
-            <p><b>
-            ${T("You received a Verifiable Credential")}. ${T("You can save it in this device for easy access later, or cancel the operation.")}
-            </b></p>
-            </ion-card-content>
-            
-        </ion-card>
-
-        ${this.renderedVC}
-        `
-        this.render(theHtml)
     }
 
-    async retrieveCredentialPOST(proof, credentialEndpoint) {
+    async updateCredentialPOST(proof, credentialEndpoint) {
 
         var credentialReq = {
             // types: credentialTypes,
@@ -302,6 +324,24 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
     }
 
+    async acceptVC() {
+        console.log("Accept VC " + this.VC)
+        if (this.VCStatus == "offered") {
+            // We should update the credential offer with the did of the user
+
+            var myDid = await getOrCreateDidKey()
+            const theProof = await generateDIDKeyProof(myDid, "https://issuer.mycredential.eu", "1234567890")
+            debugger
+            var result = await this.updateCredentialPOST(theProof, qrData)
+            console.log("acceptVC", result)
+
+            // Reload the application with a clean URL
+            location = window.location.origin + window.location.pathname
+            return
+
+        }
+
+    }
 
     // Save the credential and perform any additional actions needed
     async saveVC() {
@@ -325,6 +365,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             }
     
         } else if (this.VCType == "jwt_vc") {
+            debugger
 
             if (this.VCStatus == "offered") {
                 // We should update the credential offer with the did of the user
@@ -373,7 +414,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
                 return
             }
     
-            alert("Credential succesfully updated")
+            alert("Credential succesfully saved")
 
         } else {
             const decoded = JSON.parse(this.VC)
@@ -450,9 +491,28 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         }
         let html = this.html
 
-        var saveButtonText = T("Save credential")
         if (vcstatus == "offered") {
-            saveButtonText = T("Save credential offer")
+
+            const vc = decoded.body
+            const div = html`
+            <ion-card>
+                ${renderLEARCredentialCard(vc, vcstatus)}
+    
+                <div class="ion-margin-start ion-margin-bottom">
+                    <ion-button @click=${() => this.cleanReload()}>
+                        <ion-icon slot="start" name="chevron-back"></ion-icon>
+                        ${T("Cancel")}
+                    </ion-button>
+    
+                    <ion-button @click=${() => this.acceptVC()}>
+                        <ion-icon slot="start" name="person-add"></ion-icon>
+                        ${T("Accept credential offer")}
+                    </ion-button>
+                </div>
+            </ion-card>
+            `
+            return div
+    
         }
 
         const vc = decoded.body
@@ -468,7 +528,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
                 <ion-button @click=${() => this.saveVC()}>
                     <ion-icon slot="start" name="person-add"></ion-icon>
-                    ${saveButtonText}
+                    ${T("Save credential")}
                 </ion-button>
             </div>
         </ion-card>

@@ -1,6 +1,7 @@
 package issuernew
 
 import (
+	"fmt"
 	"net/mail"
 
 	"github.com/pocketbase/pocketbase/tools/mailer"
@@ -134,6 +135,11 @@ func (is *IssuerServer) sendEmailReminder(credId string) error {
 		// bcc, cc, attachments and custom headers are also supported...
 	}
 
-	return app.NewMailClient().Send(message)
+	err = app.NewMailClient().Send(message)
+	if err != nil {
+		return fmt.Errorf("sendEmailReminder: %w", err)
+	}
+
+	return nil
 
 }
