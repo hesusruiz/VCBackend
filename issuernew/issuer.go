@@ -59,9 +59,10 @@ func LookupEnvOrString(key string, defaultVal string) string {
 }
 
 type IssuerServer struct {
-	App  *pocketbase.PocketBase
-	cfg  *my.YAML
-	treg *pbtemplate.Registry
+	App      *pocketbase.PocketBase
+	cfg      *my.YAML
+	settings Settings
+	treg     *pbtemplate.Registry
 }
 
 func New(cfg *my.YAML) *IssuerServer {
@@ -81,6 +82,8 @@ func (is *IssuerServer) Start() error {
 	// if _, err := getConfigPrivateKey(); err != nil {
 	// 	return err
 	// }
+
+	is.settings.SamedeviceWallet = is.cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
 
 	// Create the HTML templates registry
 	is.treg = pbtemplate.NewRegistry()
@@ -103,6 +106,7 @@ func (is *IssuerServer) Start() error {
 		settings, _ := dao.FindSettings()
 		settings.Meta.AppName = cfg.String("Meta.appName", "DOME Issuer")
 		settings.Meta.AppUrl = cfg.String("Meta.appUrl", "issuer.mycredential.eu")
+		is.settings.URL = settings.Meta.AppUrl
 		settings.Logs.MaxDays = 2
 
 		settings.Meta.SenderName = cfg.String("Meta.senderName", "Support")
@@ -220,7 +224,7 @@ func (is *IssuerServer) Start() error {
 		log.Println("OnRecordBeforeAuthWithPasswordRequest")
 		log.Println(subject)
 
-		// Check if an auth record was found (based only on the email send by the user)
+		// Check if an auth record was found (based only on the email sent by the user)
 		if e.Record == nil {
 			return apis.NewUnauthorizedError("Please register your email before", nil)
 		}
@@ -260,7 +264,7 @@ func (is *IssuerServer) Start() error {
 		if status == "offered" {
 
 			// Send an email to the user
-			return is.sendEmailReminder(e.Record.Id)
+			return is.sendLEARCredentialEmail(e.Record.Id)
 
 		}
 
@@ -317,7 +321,7 @@ func (is *IssuerServer) Start() error {
 		if status == "signed" {
 
 			// Send an email to the user
-			return is.sendEmailReminder(e.Record.Id)
+			return is.sendLEARCredentialEmail(e.Record.Id)
 
 		}
 
@@ -335,8 +339,10 @@ func selectHomePage(next echo.HandlerFunc) echo.HandlerFunc {
 			log.Println("My host is", c.Request().Host)
 			clientCertDer := c.Request().Header.Get("Tls-Client-Certificate")
 			if clientCertDer == "" {
+				// We did not receive a client certificate, serve the public pages
 				return c.File("www/issuerLandingPage.html")
 			} else {
+				// We received a client certificate identifying the user, who will act as Signer
 				return c.File("www/indexSigner.html")
 			}
 		}

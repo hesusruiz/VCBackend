@@ -47,7 +47,7 @@ function listCredentialOffers(records) {
     return html`
 <ion-card>
     <ion-card-header>
-        <ion-card-title>List of Offers</ion-card-title>
+        <ion-card-title>List of Credentials</ion-card-title>
     </ion-card-header>
 
     <ion-card-content>
@@ -88,7 +88,7 @@ function listCredentialOffers(records) {
 
     <div class="ion-margin-start ion-margin-bottom">
         <ion-button @click=${()=> gotoPage("CreateOfferingPage")}>
-            ${T("Create New Credential Offer")}
+            ${T("Create New Credential")}
         </ion-button>
     </div>
 

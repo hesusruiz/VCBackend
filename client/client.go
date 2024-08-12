@@ -2,8 +2,9 @@ package client
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
-	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,38 +12,66 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/foolin/goview"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
+	"github.com/hesusruiz/vcutils/yaml"
 
 	"github.com/zitadel/logging"
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-
-	g "github.com/maragudk/gomponents"
-	c "github.com/maragudk/gomponents/components"
-	. "github.com/maragudk/gomponents/html"
 )
+
+type stringMap map[string]any
 
 var (
-	callbackPath = "/auth/callback"
-	key          = []byte("test1234test1234")
+	key = GenerateRandomKey(16)
+	gv  *goview.ViewEngine
 )
 
-func Setup() {
-	http.HandleFunc("/", indexHandler)
-	http.Handle("/contact", createHandler(contactPage()))
-	http.Handle("/about", createHandler(aboutPage()))
+func Setup(cfg *yaml.YAML) {
 
+	gv = goview.New(goview.Config{
+		Root:         "client/views",
+		Extension:    ".html",
+		Master:       "layouts/master",
+		DisableCache: true,
+		Delims:       goview.Delims{Left: "{{", Right: "}}"},
+	})
+
+	// Serve the static assets
+	http.Handle("/static/", http.FileServer(http.Dir("client/")))
+
+	// The home page
+	http.HandleFunc("/", indexHandler)
+
+	http.HandleFunc("/example.html", func(w http.ResponseWriter, r *http.Request) {
+		err := gv.Render(w, http.StatusOK, "example", nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+
+	// Get my client ID to identify with the Verifier acting as OpenID Provider
 	clientID := LookupEnvOrString("CLIENT_ID", "domemarketplace")
 	clientSecret := LookupEnvOrString("CLIENT_SECRET", "secret")
+
+	// The URL that the Verifier will use to call us with the result of authentication
+	myURL := cfg.String("url", "https://demo.mycredential.eu")
+	callbackPath := cfg.String("callbackPath", "/auth/callback")
+	redirectURI := myURL + callbackPath
+
+	// The URL of the Verifier (acting as OpenID Provider, Issuer of tokens)
+	issuer := LookupEnvOrString("ISSUER", cfg.String("verifierURL", "https://verifier.mycredential.eu"))
+
 	keyPath := LookupEnvOrString("KEY_PATH", "")
-	issuer := LookupEnvOrString("ISSUER", "https://verifier.mycredential.eu")
-	port := LookupEnvOrString("PORT", "9999")
-	scopes := strings.Split(LookupEnvOrString("SCOPES", "openid learcred profile email"), " ")
+
+	// The OIDC scopes. Specify 'learcred' to receive the LEARCredential
+	scopes := strings.Split(LookupEnvOrString("SCOPES", cfg.String("scopes", "openid learcred profile email")), " ")
+
+	// Response mode for the OIDC flows
 	responseMode := LookupEnvOrString("RESPONSE_MODE", "")
 
-	redirectURI := fmt.Sprintf("https://demo.mycredential.eu%v", callbackPath)
 	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
 
 	logger := slog.New(
@@ -51,6 +80,7 @@ func Setup() {
 			Level:     slog.LevelDebug,
 		}),
 	)
+
 	client := &http.Client{
 		Timeout: time.Minute,
 	}
@@ -59,26 +89,34 @@ func Setup() {
 		logging.WithClientGroup("client"),
 	)
 
+	// The options used by the example application (acting as Relying Party)
 	options := []rp.Option{
 		rp.WithCookieHandler(cookieHandler),
 		rp.WithVerifierOpts(rp.WithIssuedAtOffset(5 * time.Second)),
 		rp.WithHTTPClient(client),
 		rp.WithLogger(logger),
 	}
+
+	// If no secret specified, we will use PKCE to talk to the Verifier
 	if clientSecret == "" {
 		options = append(options, rp.WithPKCE(cookieHandler))
 	}
+
+	// If we specified a file with a private key, create a signer for the JWT Profile Client Authentication on the token endpoint
 	if keyPath != "" {
 		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyPath(keyPath)))
 	}
 
-	// One can add a logger to the context,
-	// pre-defining log attributes as required.
+	// Add our logger to the context
 	ctx := logging.ToContext(context.TODO(), logger)
+
+	// Create the OIDC Relaying Party using the VC Verifier as OpenID Provider
 	provider, err := rp.NewRelyingPartyOIDC(ctx, issuer, clientID, clientSecret, redirectURI, scopes, options...)
 	if err != nil {
-		logrus.Fatalf("error creating provider %s", err.Error())
+		logger.Error("error creating provider", "error", err.Error())
+		os.Exit(1)
 	}
+	logger.Info("Relying Party created for the example application")
 
 	// generate some state (representing the state of the user in your application,
 	// e.g. the page where he was before sending him to login
@@ -90,6 +128,7 @@ func Setup() {
 		rp.WithPromptURLParam("Welcome back!"),
 	}
 
+	// Add the possible OIDC response modes, if specified
 	if responseMode != "" {
 		urlOptions = append(urlOptions, rp.WithResponseModeURLParam(oidc.ResponseMode(responseMode)))
 	}
@@ -119,27 +158,39 @@ func Setup() {
 	// 	w.Write(data)
 	// }
 
-	// you could also just take the access_token and id_token without calling the userinfo endpoint:
+	// in this example the callback function itself is wrapped by the UserinfoCallback which
+	// will call the Userinfo endpoint, check the sub and pass the info into the callback function
+	//http.Handle(callbackPath, rp.CodeExchangeHandler(rp.UserinfoCallback(marshalUserinfo), provider))
 	//
-	marshalToken := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, rp rp.RelyingParty) {
-		data, err := json.MarshalIndent(tokens, "", "  ")
+	//
+	//
+
+	// This function is called by the OIDC library when the Verifier calls the RP callback URL.
+	processOIDCTokens := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, rp rp.RelyingParty) {
+		idTokenClaims := tokens.IDTokenClaims
+		learCredential := idTokenClaims.Claims["learcred"]
+		data, err := json.MarshalIndent(learCredential, "", "  ")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Write(data)
+
+		err = gv.Render(
+			w, http.StatusOK, "after_login",
+			stringMap{
+				"learCredentialSerialised": string(data),
+				"learCredential":           learCredential,
+			})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
 	}
 
-	// register the CodeExchangeHandler at the callbackPath
-	// the CodeExchangeHandler handles the auth response, creates the token request and calls the callback function
+	// Register the CodeExchangeHandler at the callbackPath.
+	// The CodeExchangeHandler handles the auth response, creates the token request and calls the 'processOIDCTokens' function
 	// with the returned tokens from the token endpoint
-	// in this example the callback function itself is wrapped by the UserinfoCallback which
-	// will call the Userinfo endpoint, check the sub and pass the info into the callback function
-	//http.Handle(callbackPath, rp.CodeExchangeHandler(rp.UserinfoCallback(marshalUserinfo), provider))
-
-	// if you would use the callback without calling the userinfo endpoint, simply switch the callback handler for:
-	//
-	http.Handle(callbackPath, rp.CodeExchangeHandler(marshalToken, provider))
+	http.Handle(callbackPath, rp.CodeExchangeHandler(processOIDCTokens, provider))
 
 	// simple counter for request IDs
 	var counter atomic.Int64
@@ -152,9 +203,11 @@ func Setup() {
 		}),
 	)
 
-	lis := fmt.Sprintf("0.0.0.0:%s", port)
-	logger.Info("Application listening, press ctrl+c to stop", "addr", lis)
-	err = http.ListenAndServe(lis, mw(http.DefaultServeMux))
+	// Start the server at the configured address
+	listenAddress := cfg.String("listenAddress", ":9999")
+	logger.Info("Application listening, press ctrl+c to stop", "addr", listenAddress)
+
+	err = http.ListenAndServe(listenAddress, mw(http.DefaultServeMux))
 	if err != http.ErrServerClosed {
 		logger.Error("server terminated", "error", err)
 		os.Exit(1)
@@ -170,109 +223,18 @@ func LookupEnvOrString(key string, defaultVal string) string {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "client/index.html")
 
-}
-func createHandler(title string, body g.Node) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Rendering a Node is as simple as calling Render and passing an io.Writer
-		_ = Page(title, r.URL.Path, body).Render(w)
+	err := gv.Render(w, http.StatusOK, "index", nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+
 }
 
-func indexPage() (string, g.Node) {
-	return "Welcome!", Div(
-		H1(g.Text("Welcome to this example page")),
-		P(g.Text("I hope it will make you happy. 😄 It's using TailwindCSS for styling.")),
-	)
-}
-
-func contactPage() (string, g.Node) {
-	return "Contact", Div(
-		H1(g.Text("Contact us")),
-		P(g.Text("Just do it.")),
-	)
-}
-
-func aboutPage() (string, g.Node) {
-	return "About", Div(
-		H1(g.Text("About this site")),
-		P(g.Text("This is a site showing off gomponents.")),
-	)
-}
-
-func Page(title, path string, body g.Node) g.Node {
-	// HTML5 boilerplate document
-	return c.HTML5(c.HTML5Props{
-		Title:    title,
-		Language: "en",
-		Head: []g.Node{
-			Script(Src("https://cdn.tailwindcss.com?plugins=typography")),
-		},
-		Body: []g.Node{
-			Navbar(path, []PageLink{
-				{Path: "/contact", Name: "Contact"},
-				{Path: "/about", Name: "About"},
-			}),
-			Container(
-				Prose(body),
-				PageFooter(),
-			),
-		},
-	})
-}
-
-type PageLink struct {
-	Path string
-	Name string
-}
-
-func Navbar(currentPath string, links []PageLink) g.Node {
-	return Nav(Class("bg-gray-700 mb-4"),
-		Container(
-			Div(Class("flex items-center space-x-4 h-16"),
-				NavbarLink("/", "Home", currentPath == "/"),
-
-				// We can Map custom slices to Nodes
-				g.Group(g.Map(links, func(l PageLink) g.Node {
-					return NavbarLink(l.Path, l.Name, currentPath == l.Path)
-				})),
-			),
-		),
-	)
-}
-
-// NavbarLink is a link in the Navbar.
-func NavbarLink(path, text string, active bool) g.Node {
-	return A(Href(path), g.Text(text),
-		// Apply CSS classes conditionally
-		c.Classes{
-			"px-3 py-2 rounded-md text-sm font-medium focus:outline-none focus:text-white focus:bg-gray-700": true,
-			"text-white bg-gray-900":                           active,
-			"text-gray-300 hover:text-white hover:bg-gray-700": !active,
-		},
-	)
-}
-
-func Container(children ...g.Node) g.Node {
-	return Div(Class("max-w-7xl mx-auto px-2 sm:px-6 lg:px-8"), g.Group(children))
-}
-
-func Prose(children ...g.Node) g.Node {
-	return Div(Class("prose"), g.Group(children))
-}
-
-func PageFooter() g.Node {
-	return Footer(Class("prose prose-sm prose-indigo"),
-		P(
-			// We can use string interpolation directly, like fmt.Sprintf.
-			g.Textf("Rendered %v. ", time.Now().Format(time.RFC3339)),
-
-			// Conditional inclusion
-			g.If(time.Now().Second()%2 == 0, g.Text("It's an even second.")),
-			g.If(time.Now().Second()%2 == 1, g.Text("It's an odd second.")),
-		),
-
-		P(A(Href("https://www.gomponents.com"), g.Text("gomponents"))),
-	)
+func GenerateRandomKey(length int) []byte {
+	k := make([]byte, length)
+	if _, err := io.ReadFull(rand.Reader, k); err != nil {
+		return nil
+	}
+	return k
 }

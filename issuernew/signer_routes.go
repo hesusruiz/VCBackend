@@ -197,7 +197,7 @@ func (is *IssuerServer) sendReminder(c echo.Context) error {
 
 	id := c.PathParam("credid")
 
-	return is.sendEmailReminder(id)
+	return is.sendLEARCredentialEmail(id)
 
 }
 
@@ -238,7 +238,7 @@ func (is *IssuerServer) updateSignedCredential(c echo.Context) error {
 	}
 
 	// Send an email to the user
-	err = is.sendEmailReminder(record.Id)
+	err = is.sendLEARCredentialEmail(record.Id)
 	if err != nil {
 		log.Printf("error sending reminder %s", err.Error())
 	}
