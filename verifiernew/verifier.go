@@ -7,20 +7,23 @@ import (
 	"os"
 
 	"github.com/evidenceledger/vcdemo/verifiernew/learcredop"
+	"github.com/hesusruiz/vcutils/yaml"
 
 	"github.com/evidenceledger/vcdemo/verifiernew/storage"
 )
 
-func Setup() {
-	//we will run on :9998
-	port := "9998"
+func Start(cfg *yaml.YAML) error {
+	listenAddress := cfg.String("listenAddress", ":9998")
 
-	verifierUrl := "https://verifier.mycredential.eu"
+	verifierURL := cfg.String("verifierURL")
+	if len(verifierURL) == 0 {
+		return fmt.Errorf("verifierURL not specified in config")
+	}
 
 	// The OpenIDProvider interface needs a Storage interface handling various checks and state manipulations.
 	// This is normally used as the layer for accessing a database, but we do not need permanent storage for users
 	// and it will be handled in-memory because the user data is coming from the Verifiable Credential presented.
-	storage := storage.NewStorage(storage.NewUserStore(verifierUrl))
+	storage := storage.NewStorage(storage.NewUserStore(verifierURL))
 
 	logger := slog.New(
 		slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
@@ -28,16 +31,25 @@ func Setup() {
 			Level:     slog.LevelDebug,
 		}),
 	)
-	router := learcredop.SetupServer(verifierUrl, storage, logger, false)
+
+	router, err := learcredop.SetupServer(cfg, storage, logger, false)
+	if err != nil {
+		return err
+	}
 
 	server := &http.Server{
-		Addr:    ":" + port,
+		Addr:    listenAddress,
 		Handler: router,
 	}
-	logger.Info("Verifier listening, press ctrl+c to stop", "addr", fmt.Sprintf("http://localhost:%s/", port))
-	err := server.ListenAndServe()
-	if err != http.ErrServerClosed {
-		logger.Error("server terminated", "error", err)
-		os.Exit(1)
-	}
+	logger.Info("Verifier listening, press ctrl+c to stop", "addr", listenAddress)
+
+	go func() {
+		err := server.ListenAndServe()
+		if err != http.ErrServerClosed {
+			logger.Error("server terminated", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	return nil
 }

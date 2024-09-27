@@ -1,0 +1,46 @@
+server:
+  environment: development
+  listenAddress: ":3030"
+  staticDir: "www"
+  templateDir: "back/views"
+  loglevel: DEBUG
+  walletProvisioning: "wallet.mycredential.eu"
+  buildFront:
+    buildConfigFile: "data/config/buildfront.yaml"
+
+issuer:
+  listenAddress: ":8090"
+  Meta:
+    appName: "DOME Issuer"
+    appUrl: https://issuer.mycredential.eu
+    senderName: Support
+    senderAddress: "admin@mycredential.eu"
+
+  admin:
+    email: jesus@alastria.io
+
+  SMTP:
+    Enabled: true
+    Host: "smtp.serviciodecorreo.es"
+    Port: "465"
+    Tls: true
+    Username: "admin@mycredential.eu"
+
+  samedeviceWallet: "https://wallet.mycredential.eu"
+  credentialTemplatesDir: "data/credential_templates"
+
+
+verifier:
+  verifierURL: "https://verifier.mycredential.eu"
+  listenAddress: ":9998"
+  authnPolicies: "authn_policies.star"
+  samedeviceWallet: "https://wallet.mycredential.eu"
+  credentialTemplatesDir: "data/credential_templates"
+
+relyingParty:
+  url: "https://demo.mycredential.eu"
+  listenAddress: ":9999"
+  verifierURL: "https://verifier.mycredential.eu"
+  callbackPath: "/auth/callback"
+  scopes: "openid learcred profile email"
+

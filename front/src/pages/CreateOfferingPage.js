@@ -1,3 +1,4 @@
+// @ts-check
 import PocketBase from '../components/pocketbase.es.mjs'
 
 const pb = new PocketBase(window.location.origin)
@@ -201,75 +202,75 @@ function mandateForm() {
 async function createCredentialOffer() {
 
     const mandator = {
-        OrganizationIdentifier: document.getElementById("OrganizationIdentifier").value,
-        Organization: document.getElementById("Organization").value,
-        CommonName: document.getElementById("CommonName").value,
-        EmailAddress: document.getElementById("EmailAddress").value,
-        SerialNumber: document.getElementById("SerialNumber").value,
-        Country: document.getElementById("Country").value,
+        OrganizationIdentifier: me("#OrganizationIdentifier").value,
+        Organization: me("#Organization").value,
+        CommonName: me("#CommonName").value,
+        EmailAddress: me("#EmailAddress").value,
+        SerialNumber: me("#SerialNumber").value,
+        Country: me("#Country").value,
     }
 
     const mandatee = {
-        first_name: document.getElementById("first_name").value,
-        last_name: document.getElementById("last_name").value,
-        gender: document.getElementById("gender").value,
-        email: document.getElementById("email").value,
-        mobile_phone: document.getElementById("mobile_phone").value,
+        first_name: me("#first_name").value,
+        last_name: me("#last_name").value,
+        gender: me("#gender").value,
+        email: me("#email").value,
+        mobile_phone: me("#mobile_phone").value,
     }
 
     var action1 = []
-    if (document.getElementById("Execute1").checked) {
+    if (me("#Execute1").checked) {
         action1.push("Execute")
     }
-    if (document.getElementById("Create1").checked) {
+    if (me("#Create1").checked) {
         action1.push("Create")
     }
-    if (document.getElementById("Update1").checked) {
+    if (me("#Update1").checked) {
         action1.push("Update")
     }
-    if (document.getElementById("Delete1").checked) {
+    if (me("#Delete1").checked) {
         action1.push("Delete")
     }
 
     const power1 = {
         tmf_type: "Domain",
-        tmf_domain: [document.getElementById("tmf_domain1").value],
-        tmf_function: document.getElementById("tmf_function1").value,
+        tmf_domain: [me("#tmf_domain1").value],
+        tmf_function: me("#tmf_function1").value,
         tmf_action: action1
     }
 
     var action2 = []
-    if (document.getElementById("Execute2").checked) {
+    if (me("#Execute2").checked) {
         action2.push("Execute")
     }
-    if (document.getElementById("Create2").checked) {
+    if (me("#Create2").checked) {
         action2.push("Create")
     }
-    if (document.getElementById("Update2").checked) {
+    if (me("#Update2").checked) {
         action2.push("Update")
     }
-    if (document.getElementById("Delete2").checked) {
+    if (me("#Delete2").checked) {
         action2.push("Delete")
     }
 
     const power2 = {
         tmf_type: "Domain",
-        tmf_domain: [document.getElementById("tmf_domain2").value],
-        tmf_function: document.getElementById("tmf_function2").value,
+        tmf_domain: [me("#tmf_domain2").value],
+        tmf_function: me("#tmf_function2").value,
         tmf_action: action2
     }
 
     var powers = []
-    if (document.getElementById("tmf_function1").value) {
+    if (me("#tmf_function1").value) {
         powers.push(power1)
     }
-    if (document.getElementById("tmf_function2").value) {
+    if (me("#tmf_function2").value) {
         powers.push(power2)
     }
 
     // Some validations (not comprehensive)
     var errorMessages = []
-    if (!document.getElementById("email").value) {
+    if (!me("#email").value) {
         errorMessages.push(html`The email field of the Mandatee can not be empty.<br>`)
     }
     if (!power1.tmf_function || action1.length == 0) {
@@ -351,6 +352,7 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
         this.render(theHtml, false)
 
         // Re-run the highlighter for the VC display
+        //@ts-ignore
         Prism.highlightAll()
 
     }
@@ -397,62 +399,6 @@ async function storeOfferingInServer(jsonCredential) {
         gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
         return
     }
-
-
-
-    // // Create the record in "tobesigned" status
-    // var data = {
-    //     status: "tobesigned",
-    //     email: userEmail,
-    //     type: "jwt_vc",
-    //     raw: learcred,
-    //     creator_email: model.email
-    // };
-
-    // try {
-    //     var tobesignedRecord = await pb.collection('credentials').create(data);
-    //     console.log(tobesignedRecord)            
-    // } catch (error) {
-    //     gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
-    //     return
-    // }
-
-
-    // // Sign the credential in the server with the x509 certificate
-    // try {
-    //     var result = await pb.send('/apisigner/signcredential', 
-    //     {
-    //         method: "POST",
-    //         body: learcred,
-    //         headers: {
-    //             "Content-Type": "application/json",
-    //         },
-    //     })
-    //     var signedCredential = result.signed
-    //     console.log(signedCredential)            
-    // } catch (error) {
-    //     gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
-    //     return
-    // }
-
-
-    // // Store the signed credential with the status "signed"
-    // data = {
-    //     status: "signed",
-    //     email: userEmail,
-    //     type: "jwt_vc",
-    //     raw: signedCredential,
-    //     signer_email: model.email
-    // };
-
-    // try {
-    //     console.log("Storing signed credential in Record", tobesignedRecord.id)
-    //     const record = await pb.collection('credentials').update(tobesignedRecord.id, data);
-    //     console.log(record)            
-    // } catch (error) {
-    //     gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
-    //     return
-    // }
 
     alert("Credential saved!!")
 

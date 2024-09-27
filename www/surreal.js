@@ -89,7 +89,7 @@ let $ = { // Convenience for internals.
 	},
 	// Add class to element(s).
 	classAdd(e, name) {
-		if (e === null || e === []) return null
+		if (e === null || e == []) return null
 		if (typeof name !== 'string') return null
 		if (name.charAt(0) === '.') name = name.substring(1)
 		if ($.isNodeList(e)) e.forEach(_ => { $.classAdd(_, name) })

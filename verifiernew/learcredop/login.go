@@ -20,16 +20,21 @@ import (
 )
 
 type login struct {
+	cfg          *yaml.YAML
 	authenticate authenticate
 	router       chi.Router
 	callback     func(context.Context, string) string
 }
 
-func NewLogin(authenticate authenticate,
+func NewLogin(
+	cfg *yaml.YAML,
+	authenticate authenticate,
 	callback func(context.Context, string) string,
-	issuerInterceptor *op.IssuerInterceptor) *login {
+	issuerInterceptor *op.IssuerInterceptor,
+) *login {
 
 	l := &login{
+		cfg:          cfg,
 		authenticate: authenticate,
 		callback:     callback,
 	}
@@ -85,16 +90,21 @@ func (l *login) loginPageRender(w http.ResponseWriter, r *http.Request) {
 	}
 	// the oidc package will pass the id of the auth request as query parameter
 	// we will use this id through the login process and therefore pass it to the login page
-	renderLogin(w, r.FormValue(queryAuthRequestID), nil)
+	renderLogin(l.cfg, w, r.FormValue(queryAuthRequestID), nil)
 }
 
-func renderLogin(w http.ResponseWriter, authRequestID string, formError error) {
+func renderLogin(cfg *yaml.YAML, w http.ResponseWriter, authRequestID string, formError error) {
 
-	request_uri := "https://verifier.mycredential.eu/login/authenticationrequest" + "?state=" + authRequestID
+	verifierURL := cfg.String("verifierURL")
+	if len(verifierURL) == 0 {
+		http.Error(w, "verifierURL not specified in config", http.StatusInternalServerError)
+		return
+	}
 
+	request_uri := verifierURL + "/login/authenticationrequest" + "?state=" + authRequestID
 	escaped_request_uri := url.QueryEscape(request_uri)
 
-	sameDeviceWallet := "https://wallet.mycredential.eu"
+	sameDeviceWallet := cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
 	openid4PVURL := "openid4vp://"
 
 	redirected_uri := sameDeviceWallet + "?request_uri=" + escaped_request_uri
@@ -142,7 +152,7 @@ func (l *login) checkLoginHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
 	err = l.authenticate.CheckUsernamePassword(username, password, id)
 	if err != nil {
-		renderLogin(w, id, err)
+		renderLogin(l.cfg, w, id, err)
 		return
 	}
 	http.Redirect(w, r, l.callback(r.Context(), id), http.StatusFound)

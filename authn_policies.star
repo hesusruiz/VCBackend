@@ -1,4 +1,5 @@
-""" This module should define two functions: 'authenticate' and 'authorize'.
+"""
+This module should define two functions: 'authenticate' and 'authorize'.
 - 'authenticate' is called when performing authentication, and
 - 'authorize' is called when actually accessing a protected resource.
 
@@ -8,18 +9,19 @@ True (allowed) or False (denied).
 The 'authenticate' and 'authorize' functions receive three objects: 'request', 'rawcred' and 'protected_resource'
 
 "request" is a dictionary with the following fields:
-"method": the HTTP method that was used in teh request
-"host": the host header in the request
-"remoteip": the IP of the remote host sending the request
-"url": the complete url of the request
-"path": the url path until the query parameters
-"protocol": the 'http' or 'https' protocol
-"headers": a dictionary with the headres in the HTTP request
-"pathparams": a dictionary wil all the path parameters
-"queryparams": a dictionary with all the query parameters in the url
+    "method": the HTTP method that was used in teh request
+    "host": the host header in the request
+    "remoteip": the IP of the remote host sending the request
+    "url": the complete url of the request
+    "path": the url path until the query parameters
+    "protocol": the 'http' or 'https' protocol
+    "headers": a dictionary with the headres in the HTTP request
+    "pathparams": a dictionary wil all the path parameters
+    "queryparams": a dictionary with all the query parameters in the url
 
-'rawcred' is a JSON string serialization of the received Verifiable Credential
-'protected_resource' is the url of the resource that the user is trying to access
+'rawcred' is a JSON string serialization of the Verifiable Credential received in the request.
+'protected_resource' is the url of the resource that the user is trying to access. It maybe empty if only authentication
+is being performed, without specifying the resource.
 """
 
 def authenticate(request, rawcred, protected_resource):

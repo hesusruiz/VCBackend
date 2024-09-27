@@ -1,7 +1,7 @@
 import { Base64 } from 'js-base64';
 
 import { decodeJWT } from '../components/jwt'
-import { renderLEARCredentialCard } from '../components/renderLEAR';
+import { renderAnyCredentialCard } from '../components/renderAnyCredential';
 
 // @ts-ignore
 const MHR = window.MHR
@@ -49,14 +49,14 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         }
 
         // Derive from the received URL a simple one ready for parsing
-        openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.mycredential.eu//?")
+        openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.mycredential.eu/?")
 
         // Convert the input string to a URL object
         const inputURL = new URL(openIdUrl)
 
         // The URL can have two formats:
         // 1. An OpenId url with an Authentication Request object specified in the query parameters
-        // 2. A url specifying a reference to an Authentication Request object
+        // 2. A url specifying a reference to an Authentication Request object, using 'request_uri'
         //
         // We detect which one is it by looking at the query parameters:
         // 1. If 'scope' is in the url, then the AR object is in the url
@@ -134,7 +134,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         // Error message if no credentials satisfy the condition 
         if (credentials.length == 0) {
             var msg = html`
-                <p><b>${rpDomain}</b> has requested a Verifiable Credential of type ${displayCredType} to perform authentication,
+                <p><b>${rpDomain}</b> has requested a Verifiable Credential of type ${displayCredType},
                 but you do not have any credential of that type.</p>
                 <p>Please go to an Issuer to obtain one.</p>
             `
@@ -143,18 +143,16 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         }
 
         let theHtml = html`
-        <ion-card color="warning">
+            <ion-card color="warning">
+                    
+                <ion-card-content>
+                <div style="line-height:1.2"><b>${rpDomain}</b> <span class="text-small">has requested a Verifiable Credential of type ${displayCredType}.</span></div>
+                </ion-card-content>
                 
-            <ion-card-content>
-            <div style="line-height:1.2"><b>${rpDomain}</b> <span class="text-small">has requested a Verifiable Credential of type ${displayCredType} to perform authentication.</span></div>
-            </ion-card-content>
-            
-        </ion-card>
+            </ion-card>
 
-        ${credentials.map(cred => html`${vcToHtml(cred, response_uri, state, this.WebAuthnSupported)}`)}
-        
+            ${credentials.map(cred => html`${vcToHtml(cred, response_uri, state, this.WebAuthnSupported)}`)}
         `
-
         this.render(theHtml)
 
     }
@@ -173,7 +171,7 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
 
     const div = html`
     <ion-card>
-        ${renderLEARCredentialCard(vc)}
+        ${renderAnyCredentialCard(vc)}
 
         <div class="ion-margin-start ion-margin-bottom">
             <ion-button @click=${()=> MHR.cleanReload()}>

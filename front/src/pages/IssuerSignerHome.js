@@ -1,3 +1,4 @@
+// @ts-check
 import PocketBase from '../components/pocketbase.es.mjs'
 
 const pb = new PocketBase(window.location.origin)
@@ -16,6 +17,9 @@ let cleanReload = window.MHR.cleanReload
 // the user machine.
 window.MHR.register("IssuerSignerHome", class extends window.MHR.AbstractPage {
 
+    /**
+     * @param {string} id
+     */
     constructor(id) {
         super(id)
     }
@@ -165,18 +169,17 @@ async function requestVerification(email) {
 async function logonWithEmail() {
 
     // Clear any error message
-    document.getElementById("errortext").innerText = ""
+    me("#errortext").innerText = ""
 
     // Get the email that the user entered
-    const input = document.getElementById("email")
-    const email = input.value
-    console.log(email)
+    const email = me("#email").value
+    console.log("email:", email)
 
     if (email.length == 0) {
-        console.log("empty field")
-        document.getElementById("errortext").innerText = "Enter your email"
+        console.log("email not specified")
+        me("#errortext").innerText = "Enter your email"
         return
-    } 
+    }
 
     // Make sure the authStore is cleared before loging in
     pb.authStore.clear()
@@ -208,16 +211,15 @@ async function logonWithEmail() {
 // registerEmail is called from the Register button in the Logon page
 async function registerEmail() {
     // Clear any error message
-    document.getElementById("errortext").innerText = ""
+    me("#errortext").innerText = ""
 
     // Get the email that the user entered
-    const input = document.getElementById("email")
-    const email = input.value
-    console.log(email)
+    const email = me("#email").value
+    console.log("email:", email)
 
     if (email.length == 0) {
-        console.log("empty field")
-        document.getElementById("errortext").innerText = "Enter your email"
+        console.log("email not specified")
+        me("#errortext").innerText = "Enter your email"
         return
     } 
 

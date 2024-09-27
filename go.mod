@@ -3,17 +3,13 @@ module github.com/evidenceledger/vcdemo
 go 1.21
 
 require (
-	entgo.io/ent v0.11.0
-	github.com/duo-labs/webauthn v0.0.0-20220815211337-00c9fb5711f5
 	github.com/evanw/esbuild v0.19.3
 	github.com/foolin/goview v0.3.0
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-chi/cors v1.2.1
 	github.com/go-jose/go-jose/v3 v3.0.3
 	github.com/gofiber/fiber/v2 v2.49.2
-	github.com/gofiber/storage/memory v0.0.0-20221128090226-a21499405c25
 	github.com/golang-jwt/jwt/v5 v5.2.1
-	github.com/gorilla/sessions v1.2.1
 	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
 	github.com/maragudk/gomponents v0.20.2
 	github.com/mattn/go-sqlite3 v1.14.22
@@ -28,7 +24,6 @@ require (
 	github.com/zitadel/oidc/v3 v3.19.0
 	go.starlark.net v0.0.0-20240314022150-ee8ed142361c
 	golang.org/x/oauth2 v0.18.0
-	software.sslmate.com/src/go-pkcs12 v0.4.0
 )
 
 require (
@@ -93,14 +88,12 @@ require (
 	github.com/multiformats/go-base32 v0.0.4 // indirect
 	github.com/multiformats/go-base36 v0.1.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
-	github.com/philhofer/fwd v1.1.2 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rs/cors v1.10.1 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/tinylib/msgp v1.1.8 // indirect
 	github.com/zitadel/schema v1.3.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/otel v1.24.0 // indirect
@@ -117,6 +110,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240311173647-c811ad7063a7 // indirect
 	google.golang.org/grpc v1.62.1 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240304020402-f0dba7c97c2b // indirect
 	modernc.org/libc v1.44.0 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
@@ -127,33 +121,22 @@ require (
 )
 
 require (
-	ariga.io/atlas v0.8.2 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
-	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
-	github.com/cloudflare/cfssl v1.6.3 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
-	github.com/go-openapi/inflect v0.19.0 // indirect
-	github.com/gofiber/template v1.7.2
+	github.com/go-chi/chi v1.5.5
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
-	github.com/google/certificate-transparency-go v1.1.4 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/securecookie v1.1.2
-	github.com/hashicorp/hcl/v2 v2.15.0 // indirect
 	github.com/hesusruiz/vcutils v1.1.1
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/lestrrat-go/jwx/v2 v2.0.13
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/multiformats/go-multibase v0.1.1
 	github.com/multiformats/go-multicodec v0.9.0
 	github.com/pkg/errors v0.9.1
@@ -162,10 +145,7 @@ require (
 	github.com/valyala/fasthttp v1.49.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2
 	github.com/valyala/tcplisten v1.0.0 // indirect
-	github.com/x448/float16 v0.8.4 // indirect
-	github.com/zclconf/go-cty v1.12.1 // indirect
-	golang.org/x/crypto v0.21.0
-	golang.org/x/mod v0.16.0 // indirect
+	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect

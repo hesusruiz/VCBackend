@@ -1,4 +1,4 @@
-import { renderLEARCredentialCard } from '../components/renderLEAR'
+import { renderAnyCredentialCard } from '../components/renderAnyCredential'
 import { getOrCreateDidKey } from '../components/crypto'
 
 let gotoPage = window.MHR.gotoPage
@@ -96,11 +96,11 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             return
         }
 
-        // Display the credentials
+        // Pre-render each of the known credentials
         const theDivs = []
-
         for (const vcraw of credentials) {
 
+            // For the moment, we only understand the credentials in the "jwt_vc" format
             if (vcraw.type == "jwt_vc") {
 
                 // We use the hash of the credential as its unique ID
@@ -113,27 +113,26 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
 
                 // Render the credential
                 const div = html`
-            <ion-card>
-            
-                ${renderLEARCredentialCard(vc, vcraw.status)}
-    
-                <div class="ion-margin-start ion-margin-bottom">
-                    <ion-button @click=${() => gotoPage("DisplayVC", vcraw)}>
-                        <ion-icon slot="start" name="construct"></ion-icon>
-                        ${T("Details")}
-                    </ion-button>
+                <ion-card>
+                
+                    ${renderAnyCredentialCard(vc, vcraw.status)}
+        
+                    <div class="ion-margin-start ion-margin-bottom">
+                        <ion-button @click=${() => gotoPage("DisplayVC", vcraw)}>
+                            <ion-icon slot="start" name="construct"></ion-icon>
+                            ${T("Details")}
+                        </ion-button>
 
-                    <ion-button color="danger" @click=${() => this.presentActionSheet(currentId)}>
-                        <ion-icon slot="start" name="trash"></ion-icon>
-                        ${T("Delete")}
-                    </ion-button>
-                </div>
-            </ion-card>
-            `
+                        <ion-button color="danger" @click=${() => this.presentActionSheet(currentId)}>
+                            <ion-icon slot="start" name="trash"></ion-icon>
+                            ${T("Delete")}
+                        </ion-button>
+                    </div>
+                </ion-card>
+                `
 
                 theDivs.push(div)
             }
-
 
         }
 

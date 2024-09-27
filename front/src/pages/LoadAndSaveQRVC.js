@@ -1,14 +1,12 @@
 import { credentialsSave } from '../components/db';
 import { decodeJWT } from '../components/jwt';
 import { getOrCreateDidKey, signWithJWK, signJWT } from '../components/crypto'
-import PocketBase from '../components/pocketbase.es.mjs'
 
-import { renderLEARCredentialCard } from '../components/renderLEAR';
+import { renderAnyCredentialCard } from '../components/renderAnyCredential';
 
 // Setup some local variables for convenience
 let gotoPage = window.MHR.gotoPage
 let goHome = window.MHR.goHome
-let html = window.MHR.html
 let storage = window.MHR.storage
 let myerror = window.MHR.storage.myerror
 let mylog = window.MHR.storage.mylog
@@ -35,8 +33,8 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         // We should have received a URL that was scanned as a QR code or as a redirection
         // Perform some sanity checks on the parameter
         if (qrData == null || !qrData.startsWith) {
-            console.log("The scanned QR does not contain a valid URL")
-            gotoPage("ErrorPage", { "title": "No data received", "msg": "The scanned QR does not contain a valid URL" })
+            console.log("The qrData parameter is not a string")
+            gotoPage("ErrorPage", { "title": "No data received", "msg": "The qrData parameter is not a string" })
             return
         }
 
@@ -47,19 +45,22 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             return
         }
 
+        // EBSI wallet conformance tests use redirections with these parameters
         if (qrData.includes("state=") && qrData.includes("auth-mock")) {
             gotoPage("EBSIRedirect", qrData)
             return
         }
 
+        // EBSI wallet conformance tests use redirections with these parameters
         if (qrData.includes("code=")) {
             gotoPage("EBSIRedirectCode", qrData)
             return
         }
         
         mylog(qrData)
-        // The QR points to an an OpenID4VCI credential issuance offer
+    
         if (qrData.includes("credential_offer_uri=")) {
+            // The QR points to an an OpenID4VCI credential issuance offer
 
             // Retrieve the credential offer from the Issuer
             var credentialOffer = await getCredentialOffer(qrData);
@@ -137,6 +138,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
             const theurl = new URL(qrData)
             this.OriginServer = theurl.origin
+            console.log("Origin:", this.OriginServer)
 
             // var myDid = await getOrCreateDidKey()
             // const theProof = await generateDIDKeyProof(myDid, "https://issuer.mycredential.eu", "1234567890")
@@ -144,47 +146,69 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             // var result = await this.updateCredentialPOST(theProof, qrData)
 
             var result = await doGETJSON(qrData)
+
+            // Store some values to facilitate later retrieval
             this.VC = result["credential"]
             this.VCId = result["id"]
             this.VCType = result["type"]
             this.VCStatus = result["status"]
-            this.renderedVC = this.prerenderEmployeeCredential(this.VC, this.VCType, this.VCStatus)
 
-            if (this.VCStatus == "offered") {
-                // Ask the user if we should accept the credential offer
-                let theHtml = html`
-                <ion-card color="warning">
+            // We only process credentials in 'offered' or 'signed' status
+            if (this.VCStatus == "offered" || this.VCStatus == "signed") {
+
+                // Get the HTML for the credential
+                try {
+                    this.renderedVC = this.prerenderCredential(this.VC, this.VCType, this.VCStatus)
+                } catch (error) {
+                    this.showError(error.name, error.message)
+                    return
+                }
+    
+                if (this.VCStatus == "offered") {
+
+                    // The credential has been offered, and the user can authorise its issuance or not
+                    let theHtml = html`
+                    <ion-card color="warning">
+                            
+                        <ion-card-content>
+                        <p><b>
+                        ${T("You received a proposal for a Verifiable Credential")}. ${T("You can accept it, or cancel the operation.")}
+                        </b></p>
+                        </ion-card-content>
                         
-                    <ion-card-content>
-                    <p><b>
-                    ${T("You received a proposal for a Verifiable Credential")}. ${T("You can accept it, or cancel the operation.")}
-                    </b></p>
-                    </ion-card-content>
-                    
-                </ion-card>
+                    </ion-card>
+    
+                    ${this.renderedVC}
+                    `
+                    this.render(theHtml)
+                    return
+    
+                } else if (this.VCStatus == "signed") {
 
-                ${this.renderedVC}
-                `
-                this.render(theHtml)
-                return
-
+                    // The credential is already signed. The user has the option to store it in her wallet
+                    let theHtml = html`
+                    <ion-card color="warning">
+                            
+                        <ion-card-content>
+                        <p><b>
+                        ${T("You received a Verifiable Credential")}. ${T("You can save it in this device for easy access later, or cancel the operation.")}
+                        </b></p>
+                        </ion-card-content>
+                        
+                    </ion-card>
+    
+                    ${this.renderedVC}
+                    `
+                    this.render(theHtml)
+                    return
+    
+                }
+    
             }
 
-            // Ask the user if we should store the VC
-            let theHtml = html`
-            <ion-card color="warning">
-                    
-                <ion-card-content>
-                <p><b>
-                ${T("You received a Verifiable Credential")}. ${T("You can save it in this device for easy access later, or cancel the operation.")}
-                </b></p>
-                </ion-card-content>
-                
-            </ion-card>
+            // The credential is not in a correct state. Present an error screen
+            this.showError("Invalid credential", "The credential is neither in 'offered' nor 'signed' status")
 
-            ${this.renderedVC}
-            `
-            this.render(theHtml)
         }
 
     }
@@ -330,13 +354,13 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             // We should update the credential offer with the did of the user
 
             var myDid = await getOrCreateDidKey()
-            const theProof = await generateDIDKeyProof(myDid, "https://issuer.mycredential.eu", "1234567890")
+            const theProof = await generateDIDKeyProof(myDid, this.OriginServer, "1234567890")
             debugger
-            var result = await this.updateCredentialPOST(theProof, qrData)
+            var result = await this.updateCredentialPOST(theProof, this.qrData)
             console.log("acceptVC", result)
 
-            // Reload the application with a clean URL
-            location = window.location.origin + window.location.pathname
+            // Display result page
+            gotoPage("VCAcceptedPage")
             return
 
         }
@@ -447,6 +471,8 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
         const vc = vcdecoded.body.vc
         const vcTypeArray = vc["type"]
+
+        // Get the last element of the array
         const vcType = vcTypeArray[vcTypeArray.length -1]
     
         const div = html`
@@ -482,21 +508,27 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
     
     }
     
-    prerenderEmployeeCredential(vcencoded, vctype, vcstatus) {
+    prerenderCredential(vcencoded, vctype, vcstatus) {
 
         if (vctype == "jwt_vc") {
             var decoded = decodeJWT(vcencoded)
         } else {
             decoded = vcencoded
         }
+
+        const vc = decoded.body
+
+        const vctypes = vc.type
+
+        const credCard = renderAnyCredentialCard(vc, vcstatus)
+
         let html = this.html
 
         if (vcstatus == "offered") {
 
-            const vc = decoded.body
             const div = html`
             <ion-card>
-                ${renderLEARCredentialCard(vc, vcstatus)}
+                ${credCard}
     
                 <div class="ion-margin-start ion-margin-bottom">
                     <ion-button @click=${() => this.cleanReload()}>
@@ -515,10 +547,9 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
     
         }
 
-        const vc = decoded.body
         const div = html`
         <ion-card>
-            ${renderLEARCredentialCard(vc, vcstatus)}
+            ${credCard}
 
             <div class="ion-margin-start ion-margin-bottom">
                 <ion-button @click=${() => this.cleanReload()}>
@@ -1405,11 +1436,12 @@ window.MHR.register("EBSIRedirect", class extends window.MHR.AbstractPage {
 })
 
 /**
- * generateDIDKeyProof creates a JWT which is used as a proof that the creator (the signer of the JWT) contrrols the
+ * generateDIDKeyProof creates a JWT which is used as a proof that the creator (the signer of the JWT) controls the
  * private key associated to the did:key (which is essentially the public key).
  * This concrete proof is specialised for OIDC4VCI flows, as indicated by the 'typ' field in the header.
+ * 
  * @param {{did: string, privateKey: JsonWebKey}} subjectDID The did and associated private key object for the Subject
- * @param {string} issuerID The did for the Issuer in the OID4VCI flow. Do not confuse with the issuer of the JWT, 
+ * @param {string} issuerID The identifier for the Issuer in the OID4VCI flow. Do not confuse with the issuer of the JWT, 
  * which should be the person who will be receiving the Verifiable Credential.
  * @param {string} nonce The challenge received from the Issuer that we have to sign as a proof of possession
  * @returns {Promise<string>} The JWT in compact string form
@@ -1614,3 +1646,42 @@ async function doPOST(serverURL, body) {
     }                
 
 }
+
+window.MHR.register("VCAcceptedPage", class extends window.MHR.AbstractPage {
+
+    constructor(id) {
+        super(id)
+    }
+
+    async enter() {
+        let html = this.html
+
+        var theHtml = html`
+        <ion-card>
+            <ion-card-header>
+                <ion-card-title>Credential offer accepted</ion-card-title>
+            </ion-card-header>
+    
+            <ion-card-content>
+    
+                <div class="ion-margin-top">
+                <ion-text class="ion-margin-top">You have authorised the issuance of the Verifiable Credential.</ion-text>
+                </div>
+    
+            </ion-card-content>
+    
+            <div class="ion-margin-start ion-margin-bottom">
+                <ion-button @click=${() => {window.MHR.cleanReload()}}>
+                    <ion-icon slot="start" name="home"></ion-icon>
+                    ${T("Home")}
+                </ion-button>
+            </div>
+    
+        </ion-card>
+        `
+
+        this.render(theHtml, false)
+
+    }
+
+})

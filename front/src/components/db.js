@@ -61,7 +61,7 @@ async function credentialsSave(_credential, replace) {
     }
 
     if (replace) {
-        // Store the object, catching the exception if duplicated, but not displayng any error to the user
+        // Store the object, catching the exception if duplicated, but not displaying any error to the user
         try {
             await db.credentials.put(credential_to_store)
         } catch (error) {
