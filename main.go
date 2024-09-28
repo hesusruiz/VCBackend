@@ -108,6 +108,18 @@ func StartServices(rootCfg *yaml.YAML) error {
 				os.Exit(0)
 				return nil
 			})
+
+			staticServer.GET("/fake", func(c echo.Context) error {
+				fmt.Println("Me han llamado al GET: ", c.Request().URL)
+
+				return nil
+			})
+			staticServer.POST("/fake", func(c echo.Context) error {
+				fmt.Println("Me han llamado al POST")
+
+				return nil
+			})
+
 		}
 
 		//Start serving requests

@@ -19,9 +19,10 @@ var QR_UNKNOWN = 0;
 var QR_URL = 1;
 var QR_MULTI = 2;
 var QR_HC1 = 3;
-var QR_SIOP_URL = "QR_SIOP_URL";
+var QR_Verifiable_Presentation = "QR_Verifiable_Presentation";
+var QR_VP_old = "QR_VP_old";
 var QR_W3C_VC = "QR_W3C_VC";
-var QR_OIDC4VCI = "QR_OIDC4VCI";
+var QR_Verifiable_Issuance = "QR_Verifiable_Issuance";
 window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
   displayPage;
   // The page name used to display the HC1 QR code
@@ -176,11 +177,17 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
       qrType = this.detectQRtype(qrData);
     }
     mylog(`QRTYPE: ${qrType}`);
+    alert(qrData);
     if (qrType === QR_UNKNOWN) {
       setTimeout(() => this.detectCode(), this.detectionInterval);
       return;
     }
-    if (qrType === QR_SIOP_URL) {
+    if (qrType === QR_VP_old) {
+      mylog("Old VP requested, going to ", "SIOPSelectCredential", qrData);
+      window.MHR.gotoPage("SIOPSelectCredential", qrData);
+      return true;
+    }
+    if (qrType === QR_Verifiable_Presentation) {
       mylog("Going to ", "SIOPSelectCredential", qrData);
       window.MHR.gotoPage("SIOPSelectCredential", qrData);
       return true;
@@ -195,7 +202,7 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
       window.MHR.gotoPage(this.displayPage, qrData);
       return true;
     }
-    if (qrType === QR_OIDC4VCI) {
+    if (qrType === QR_Verifiable_Issuance) {
       mylog("Going to ", "LoadAndSaveQRVC");
       qrData = qrData.replace("openid-credential-offer://", "https://");
       window.MHR.gotoPage("LoadAndSaveQRVC", qrData);
@@ -219,23 +226,23 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
       log.error("detectQRtype: data is not string");
       return QR_UNKNOWN;
     }
-    if (qrData.startsWith("HC1:")) {
-      return QR_HC1;
-    } else if (qrData.startsWith("multi|w3cvc|")) {
+    if (qrData.startsWith("multi|w3cvc|")) {
       return QR_MULTI;
     } else if (qrData.startsWith("openid4vp:")) {
-      return QR_SIOP_URL;
+      return QR_Verifiable_Presentation;
+    } else if (qrData.startsWith("openid:")) {
+      return QR_VP_old;
     } else if (qrData.startsWith("openid-credential-offer://")) {
-      return QR_OIDC4VCI;
+      return QR_Verifiable_Issuance;
     } else if (qrData.includes("credential_offer_uri=")) {
-      return QR_OIDC4VCI;
+      return QR_Verifiable_Issuance;
     } else if (qrData.startsWith("VC1:")) {
       return QR_W3C_VC;
     } else if (qrData.startsWith("https")) {
       let params = new URL(qrData).searchParams;
       let jar = params.get("jar");
       if (jar == "yes") {
-        return QR_SIOP_URL;
+        return QR_Verifiable_Presentation;
       }
       return QR_URL;
     } else {

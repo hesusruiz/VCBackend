@@ -196,6 +196,10 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         this.PlatformAuthenticatorSupported = true;
       }
     }
+    if (openIdUrl.startsWith("openid:")) {
+      await this.processOldPresentation(openIdUrl);
+      return;
+    }
     openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.mycredential.eu/?");
     const inputURL = new URL(openIdUrl);
     const params = new URLSearchParams(inputURL.search);
@@ -216,13 +220,13 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
     }
     const authRequest = decodeJWT(authRequestJWT);
     console.log("Decoded authRequest", authRequest);
-    const scope = authRequest.body.scope;
+    const scope2 = authRequest.body.scope;
     const response_uri = authRequest.body.response_uri;
     const state = authRequest.body.state;
     mylog("state", state);
     mylog("request_uri", request_uri);
-    mylog("scope", scope);
-    const scopeParts = scope.split(".");
+    mylog("scope", scope2);
+    const scopeParts = scope2.split(".");
     if (scopeParts.length == 0) {
       myerror("Invalid scope specified");
       this.showError("Error", "Invalid scope specified");
@@ -246,7 +250,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
     for (const cc of credStructs) {
       const vc = cc.decoded;
       const vctype = vc.type;
-      if (vctype.includes(scope)) {
+      if (vctype.includes(scope2)) {
         console.log("found", cc.encoded);
         credentials.push(vc);
       }
@@ -272,6 +276,49 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             ${credentials.map((cred) => html2`${vcToHtml(cred, response_uri, state, this.WebAuthnSupported)}`)}
         `;
     this.render(theHtml);
+  }
+  /**
+    * @param {string} openIdUrl
+    */
+  async processOldPresentation(openIdUrl) {
+    openIdUrl = openIdUrl.replace("openid://?", "https://wallet.mycredential.eu/?");
+    const inputURL = new URL(openIdUrl);
+    const params = new URLSearchParams(inputURL.search);
+    var redirect_uri = params.get("redirect_uri");
+    if (!redirect_uri) {
+      gotoPage("ErrorPage", {
+        title: "Error",
+        msg: "'redirect_uri' parameter not found in URL"
+      });
+      return;
+    }
+    var rpURL = new URL(redirect_uri);
+    var rpDomain = rpURL.hostname;
+    var credStructs = await storage.credentialsGetAllRecent();
+    if (!credStructs) {
+      let theHtml = html`
+                <div class="w3-panel w3-margin w3-card w3-center w3-round color-error">
+                <p>You do not have a Verifiable Credential.</p>
+                <p>Please go to an Issuer to obtain one.</p>
+                </div>
+            `;
+      this.render(theHtml);
+      return;
+    }
+    gotoPage("ErrorPage", {
+      title: "No es Error",
+      msg: credStructs[0]
+    });
+    return;
+    var credentials = [];
+    for (const cc of credStructs) {
+      const vc = cc.decoded;
+      const vctype = vc.type;
+      if (vctype.includes(scope)) {
+        console.log("found", cc.encoded);
+        credentials.push(vc);
+      }
+    }
   }
 });
 function vcToHtml(vc, response_uri, state, webAuthnSupported) {

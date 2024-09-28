@@ -48,6 +48,11 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             } 
         }
 
+        if (openIdUrl.startsWith("openid:")) {
+            await this.processOldPresentation(openIdUrl)
+            return
+        }
+
         // Derive from the received URL a simple one ready for parsing
         openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.mycredential.eu/?")
 
@@ -154,6 +159,70 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             ${credentials.map(cred => html`${vcToHtml(cred, response_uri, state, this.WebAuthnSupported)}`)}
         `
         this.render(theHtml)
+
+    }
+
+   /**
+     * @param {string} openIdUrl
+     */
+    async processOldPresentation(openIdUrl) {
+
+        // Derive from the received URL a simple one ready for parsing
+        openIdUrl = openIdUrl.replace("openid://?", "https://wallet.mycredential.eu/?")
+
+        // Convert the input string to a URL object
+        const inputURL = new URL(openIdUrl)
+        
+        // Get the relevant parameters from the query string
+        const params = new URLSearchParams(inputURL.search)
+
+        var redirect_uri = params.get("redirect_uri")
+        if (!redirect_uri) {
+            gotoPage("ErrorPage", {
+                title: "Error",
+                msg: "'redirect_uri' parameter not found in URL"
+            });
+            return
+        }
+
+        // redirect_uri is the endpoint where we have to send the Authentication Response
+        // We are going to extract the RP identity from that URL
+        var rpURL = new URL(redirect_uri)
+        var rpDomain = rpURL.hostname 
+
+        // Retrieve all credentials from storage, to process them in memory
+        var credStructs = await storage.credentialsGetAllRecent()
+        if (!credStructs) {
+            let theHtml = html`
+                <div class="w3-panel w3-margin w3-card w3-center w3-round color-error">
+                <p>You do not have a Verifiable Credential.</p>
+                <p>Please go to an Issuer to obtain one.</p>
+                </div>
+            `;
+            this.render(theHtml)
+            return
+        }
+
+        gotoPage("ErrorPage", {
+            title: "No es Error",
+            msg: credStructs[0]
+        });
+        return
+
+
+        // Select all credentials of the requested type, specified in "scope"
+        var credentials = []
+        for (const cc of credStructs) {
+            const vc = cc.decoded
+            const vctype = vc.type
+            if (vctype.includes(scope)) {
+                console.log("found", cc.encoded)
+                credentials.push(vc)
+            }
+        }
+
+
+
 
     }
 

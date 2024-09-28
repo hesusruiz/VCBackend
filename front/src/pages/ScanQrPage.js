@@ -4,7 +4,6 @@ import { getPreferredVideoDevice, getPlatformOS } from '../components/camerainfo
 let myerror = window.MHR.storage.myerror
 let mylog = window.MHR.storage.mylog
 
-
 // This is to facilitate debugging of certificates
 var testQRdata = "HC1:NC"
 
@@ -20,9 +19,10 @@ const QR_UNKNOWN = 0
 const QR_URL = 1
 const QR_MULTI = 2
 const QR_HC1 = 3
-const QR_SIOP_URL = "QR_SIOP_URL"
+const QR_Verifiable_Presentation = "QR_Verifiable_Presentation"
+const QR_VP_old = "QR_VP_old"
 const QR_W3C_VC = "QR_W3C_VC"
-const QR_OIDC4VCI = "QR_OIDC4VCI"
+const QR_Verifiable_Issuance = "QR_Verifiable_Issuance"
 
 
 window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
@@ -249,14 +249,23 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
 
         mylog(`QRTYPE: ${qrType}`)
 
+        alert(qrData)
+
         // If no QR code recognized, keep trying
         if (qrType === QR_UNKNOWN) {
             setTimeout(() => this.detectCode(), this.detectionInterval)
             return;
         }
 
-        // Handle a SIOP AuthenticationRequest QR
-        if (qrType === QR_SIOP_URL) {
+        // Handle an old format AuthenticationRequest QR
+        if (qrType === QR_VP_old) {
+            mylog("Old VP requested, going to ", "SIOPSelectCredential", qrData)
+            window.MHR.gotoPage("SIOPSelectCredential", qrData)
+            return true;
+        }
+
+        // Handle an AuthenticationRequest QR
+        if (qrType === QR_Verifiable_Presentation) {
             mylog("Going to ", "SIOPSelectCredential", qrData)
             window.MHR.gotoPage("SIOPSelectCredential", qrData)
             return true;
@@ -277,7 +286,7 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
         }
 
         // We scanned a QR for VC Issuance (OIDC4VCI)
-        if (qrType === QR_OIDC4VCI) {
+        if (qrType === QR_Verifiable_Issuance) {
             mylog("Going to ", "LoadAndSaveQRVC")
             // Create a valid URL
             qrData = qrData.replace("openid-credential-offer://", "https://")
@@ -313,24 +322,24 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
             return QR_UNKNOWN;
         }
 
-        if (qrData.startsWith("HC1:")) {
-            // An EU COVID Certificate
-            return QR_HC1;
-
-        } else if (qrData.startsWith("multi|w3cvc|")) {
+        if (qrData.startsWith("multi|w3cvc|")) {
             // A multi-piece JWT
             return QR_MULTI;
 
         } else if (qrData.startsWith("openid4vp:")) {
-            // A SIOP Authentication Request, URL-encoded
-            return QR_SIOP_URL;
+            // An Authentication Request, for Verifiable Presentation
+            return QR_Verifiable_Presentation;
+
+        } else if (qrData.startsWith("openid:")) {
+            // An Authentication Request, for Verifiable Presentation
+            return QR_VP_old;
 
         } else if (qrData.startsWith("openid-credential-offer://")) {
-            // A SIOP OpenID for VC Issuance, URL-encoded
-            return QR_OIDC4VCI;
+            // An OpenID Credential Issuance
+            return QR_Verifiable_Issuance;
 
         } else if (qrData.includes("credential_offer_uri=")) {
-            return QR_OIDC4VCI
+            return QR_Verifiable_Issuance
             
         } else if (qrData.startsWith("VC1:")) {
             // A Verifiable Credential in raw format
@@ -341,7 +350,7 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
             let params = new URL(qrData).searchParams
             let jar = params.get("jar")
             if (jar == "yes") {
-                return QR_SIOP_URL
+                return QR_Verifiable_Presentation
             }
     
             // Normal QR with a URL where the real data is located
