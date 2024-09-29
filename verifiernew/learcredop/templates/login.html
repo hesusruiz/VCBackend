@@ -10,6 +10,9 @@
 
             <input type="hidden" name="id" value="{{.AuthRequestID}}">
 
+            <h3>Here the FAKE QR code</h3>
+            <img src="data:{{.fakeQRcode}}" alt="fakeQRcode">
+
             <h3>Here will go the QR code</h3>
             <img src="data:{{.QRcode}}" alt="QRcode">
 

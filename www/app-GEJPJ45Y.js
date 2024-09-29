@@ -1,6 +1,6 @@
 import {
   storage
-} from "./chunks/chunk-YTTLZ6I3.js";
+} from "./chunks/chunk-J2TLX5TK.js";
 import "./chunks/chunk-BFXLU5VG.js";
 import "./chunks/chunk-CJ4ZD2TO.js";
 import {
@@ -53,8 +53,8 @@ function T(key) {
 window.T = T;
 
 // front/src/app.js
-var myerror = storage.myerror;
-var mylog = storage.mylog;
+window.myerror = storage.myerror;
+window.mylog = storage.mylog;
 var pageModulesMap = window.pageModules;
 var parsedUrl = new URL(import.meta.url);
 var fullPath = parsedUrl.pathname;
@@ -211,14 +211,12 @@ function HeaderBar(backButton = true) {
         <ion-buttons slot="end">
         </ion-buttons>
     `;
-  if (!backButton) {
-    menuB = html`
+  menuB = html`
         <ion-buttons slot="end">
             <ion-button @click=${() => gotoPage("MenuPage", "")}>
                 <ion-icon name="menu"></ion-icon>
             </ion-button>
         </ion-buttons>`;
-  }
   if (backButton) {
     return html`
         <ion-toolbar color="primary">
@@ -402,6 +400,7 @@ window.MHR = {
   goHome,
   gotoPage,
   processPageEntered,
+  // @ts-ignore
   AbstractPage,
   register,
   ErrorPanel,

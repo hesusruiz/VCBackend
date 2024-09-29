@@ -175,6 +175,7 @@ func WebClient(id, secret string, redirectURIs ...string) *Client {
 	if len(redirectURIs) == 0 {
 		redirectURIs = []string{
 			"https://demo.mycredential.eu/auth/callback",
+			"https://demo.mycredential.es/auth/callback",
 		}
 	}
 	return &Client{

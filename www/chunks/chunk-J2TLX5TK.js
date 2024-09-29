@@ -4746,9 +4746,8 @@ db.version(0.7).stores({
 });
 async function credentialsSave(_credential, replace) {
   log.log("CredentialSave", _credential);
-  var hashHex;
   if (_credential.id) {
-    hashHex = _credential.id;
+    var hashHex = _credential.id;
   } else {
     var data = new TextEncoder().encode(_credential.encoded);
     var hash = await crypto.subtle.digest("SHA-256", data);

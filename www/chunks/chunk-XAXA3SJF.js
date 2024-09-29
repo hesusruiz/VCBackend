@@ -61,7 +61,7 @@ function renderLEARCredentialCard(vc, status) {
                 </ion-item>
             
                 ${powers.map((pow) => {
-    return html`<ion-item><ion-label>${pow.tmf_domain[0]}: ${pow.tmf_function} [${pow.tmf_action}]</ion-label></ion-item>`;
+    return html`<ion-item><ion-label>${typeof pow.tmf_domain == "string" ? pow.tmf_domain : pow.tmf_domain[0]}: ${pow.tmf_function} [${pow.tmf_action}]</ion-label></ion-item>`;
   })}
             </ion-list>
             </div>

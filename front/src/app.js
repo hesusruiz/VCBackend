@@ -16,8 +16,10 @@ import logo_img from './img/logo.png'
 
 // The database operations
 import { storage } from "./components/db"
-const myerror = storage.myerror
-const mylog = storage.mylog
+// @ts-ignore
+window.myerror = storage.myerror
+// @ts-ignore
+window.mylog = storage.mylog
 
 // Prepare for lazy-loading the pages composing the application.
 // Typically, the window.pageModules variable is set in the HTML page importing us, but
@@ -399,14 +401,14 @@ function HeaderBar(backButton = true) {
         <ion-buttons slot="end">
         </ion-buttons>
     `
-    if (!backButton) {
+    // if (!backButton) {
         menuB = html`
         <ion-buttons slot="end">
             <ion-button @click=${()=> gotoPage("MenuPage", "")}>
                 <ion-icon name="menu"></ion-icon>
             </ion-button>
         </ion-buttons>`
-    }
+    // }
 
     if (backButton) {
         return html`
@@ -673,6 +675,7 @@ function atobUrl(input) {
 // the relevant functions that we want globally available to other modules.
 // This way they do not have to import us (and avoid circular references in some cases) and
 // we do not pollute the global namespace with our functions and variables
+
 // @ts-ignore
 window.MHR = {
     mylog: storage.mylog,
@@ -681,6 +684,7 @@ window.MHR = {
     goHome: goHome,
     gotoPage: gotoPage,
     processPageEntered: processPageEntered,
+    // @ts-ignore
     AbstractPage: AbstractPage,
     register: register,
     ErrorPanel: ErrorPanel,
@@ -691,3 +695,4 @@ window.MHR = {
     atobUrl: atobUrl,
     pageNameToClass: pageNameToClass
 }
+

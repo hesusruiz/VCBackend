@@ -131,7 +131,6 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             const vc = cc.decoded
             const vctype = vc.type
             if (vctype.includes(scope)) {
-                console.log("found", cc.encoded)
                 credentials.push(vc)
             }
         }
@@ -176,8 +175,17 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         // Get the relevant parameters from the query string
         const params = new URLSearchParams(inputURL.search)
 
-        var redirect_uri = params.get("redirect_uri")
-        if (!redirect_uri) {
+        var state = params.get("state")
+        if (!state) {
+            gotoPage("ErrorPage", {
+                title: "Error",
+                msg: "'state' parameter not found in URL"
+            });
+            return
+        }
+
+        var response_uri = params.get("redirect_uri")
+        if (!response_uri) {
             gotoPage("ErrorPage", {
                 title: "Error",
                 msg: "'redirect_uri' parameter not found in URL"
@@ -187,46 +195,241 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
 
         // redirect_uri is the endpoint where we have to send the Authentication Response
         // We are going to extract the RP identity from that URL
-        var rpURL = new URL(redirect_uri)
+        var rpURL = new URL(response_uri)
         var rpDomain = rpURL.hostname 
 
-        // Retrieve all credentials from storage, to process them in memory
-        var credStructs = await storage.credentialsGetAllRecent()
-        if (!credStructs) {
-            let theHtml = html`
-                <div class="w3-panel w3-margin w3-card w3-center w3-round color-error">
-                <p>You do not have a Verifiable Credential.</p>
-                <p>Please go to an Issuer to obtain one.</p>
-                </div>
-            `;
-            this.render(theHtml)
-            return
-        }
-
-        gotoPage("ErrorPage", {
-            title: "No es Error",
-            msg: credStructs[0]
-        });
-        return
+        // // Retrieve all credentials from storage, to process them in memory
+        // var credStructs = await storage.credentialsGetAllRecent()
+        // if (!credStructs) {
+        //     let theHtml = html`
+        //         <div class="w3-panel w3-margin w3-card w3-center w3-round color-error">
+        //         <p>You do not have a Verifiable Credential.</p>
+        //         <p>Please go to an Issuer to obtain one.</p>
+        //         </div>
+        //     `;
+        //     this.render(theHtml)
+        //     return
+        // }
 
 
         // Select all credentials of the requested type, specified in "scope"
-        var credentials = []
-        for (const cc of credStructs) {
-            const vc = cc.decoded
-            const vctype = vc.type
-            if (vctype.includes(scope)) {
-                console.log("found", cc.encoded)
-                credentials.push(vc)
-            }
-        }
+        // var credentials = []
+        // for (const cc of credStructs) {
+        //     const vc = cc.decoded
+        //     const vctype = vc.type
+        //     if (vctype.includes(scope)) {
+        //         console.log("found", cc.encoded)
+        //         credentials.push(vc)
+        //     }
+        // }
 
+        var credentials = [
+            in2Credential
+        ]
 
+        const displayCredType = "LEARCredentialEmployee"
 
+        let theHtml = html`
+            <ion-card color="warning">
+                    
+                <ion-card-content>
+                <div style="line-height:1.2"><b>${rpDomain}</b> <span class="text-small">has requested a Verifiable Credential of type ${displayCredType}.</span></div>
+                </ion-card-content>
+                
+            </ion-card>
+
+            ${credentials.map(cred => html`${oldvcToHtml(cred, response_uri, state, this.WebAuthnSupported)}`)}
+        `
+        this.render(theHtml)
 
     }
 
 })
+
+// Render the credential with buttons so the user can select it for authentication
+function oldvcToHtml(vc, response_uri, state, webAuthnSupported) {
+
+    // TODO: retrieve the holder and its private key from DB
+    // Get the holder that will present the credential
+    // We get this from the credential subject
+    const holder = vc.credentialSubject.mandate.id
+
+    var credentials = [vc]
+
+    const div = html`
+    <ion-card>
+        ${renderAnyCredentialCard(vc)}
+
+        <div class="ion-margin-start ion-margin-bottom">
+            <ion-button @click=${()=> MHR.cleanReload()}>
+                <ion-icon slot="start" name="chevron-back"></ion-icon>
+                ${T("Cancel")}
+            </ion-button>
+
+            <ion-button @click=${(e)=> sendFIWAREAuthenticationResponse(e, response_uri, credentials, state, webAuthnSupported)}>
+                <ion-icon slot="start" name="paper-plane"></ion-icon>
+                ${T("Send Credential")}
+            </ion-button>
+        </div>
+    </ion-card>
+    `
+
+    return div
+
+}
+
+
+// sendFIWAREAuthenticationResponse prepares an Authentication Response according to the format of FIWARE
+async function sendFIWAREAuthenticationResponse(e, backEndpoint, credentials, state, authSupported) {
+    e.preventDefault()
+
+    const endpointURL  = new URL(backEndpoint)
+    const origin = endpointURL.origin
+
+    mylog("sending AuthenticationResponse to:", backEndpoint + "?state=" + state)
+
+    const uuid = self.crypto.randomUUID()
+
+    // // Create the vp_token structure
+    // var vpToken = {
+    //     context: ["https://www.w3.org/ns/credentials/v2"],
+    //     type: ["VerifiablePresentation"],
+    //     id: uuid,
+    //     verifiableCredential: credentials,
+    //     holder: holder
+    // }
+    // mylog("The encoded vpToken ", Base64.encodeURI(JSON.stringify(vpToken)))
+
+    // // Create the top-level structure for the Authentication Response
+    // var formAttributes = {
+    //     'vp_token': Base64.encodeURI(JSON.stringify(vpToken)),
+    //     'presentation_submission': Base64.encodeURI(JSON.stringify(presentationSubmissionJWT()))
+    // }
+    // // var formBody = [];
+    // // for (var property in formAttributes) {
+    // //     var encodedKey = encodeURIComponent(property);
+    // //     var encodedValue = encodeURIComponent(formAttributes[property]);
+    // //     formBody.push(encodedKey + "=" + encodedValue);
+    // // }
+
+    // // var formBody = formBody.join("&");
+
+    // // Encode in JSON to put it in the body of the POST
+    // var formBody = JSON.stringify(formAttributes)
+    // mylog("The body: " + formBody)
+
+    // Send the Authentication Response
+    try {
+        let response = await fetch(backEndpoint + "?state=" + state, {
+            method: "POST",
+            mode: "cors",
+            cache: "no-cache",
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: bodyEncoded,
+        })
+
+        alert("Response status:", response.status)
+        if (response.status == 200) {
+            const res = await response.json()
+            mylog(res)
+          
+            gotoPage("AuthenticatorSuccessPage")
+            return
+        
+        }
+
+        // There was an error, present it
+        myerror("error sending credential", response.status)
+        const res = await response.text()
+        mylog("response:", res)
+
+        gotoPage("ErrorPage", {
+            title: "Error",
+            msg: "Error sending the credential"
+        });
+        return
+
+    } catch (error) {
+        // There was an error, present it
+        myerror(error)
+        gotoPage("AuthenticatorSuccessPage")
+        return
+    }
+}
+
+const bodyEncoded = 'vp_token=eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvMjAxOC9jcmVkZW50aWFscy92MSJdLCJob2xkZXIiOiJkaWQ6bXk6d2FsbGV0IiwidHlwZSI6WyJWZXJpZmlhYmxlUHJlc2VudGF0aW9uIl0sInZlcmlmaWFibGVDcmVkZW50aWFsIjpbeyJpZCI6IjBmYWM4ZWVmLTI2NjUtNDgxNS05NGI0LTRiYzNjMjgwOTIyNCIsInR5cGUiOlsiVmVyaWZpYWJsZUNyZWRlbnRpYWwiLCJMRUFSQ3JlZGVudGlhbEVtcGxveWVlIl0sImNyZWRlbnRpYWxTdWJqZWN0Ijp7Im1hbmRhdGUiOnsiaWQiOiI4N2FlYTY5NS04M2JhLTQ2MTktYmEzYS1iM2Q1NDFkOWMxMDYiLCJsaWZlX3NwYW4iOnsiZW5kX2RhdGVfdGltZSI6IjIwMjUtMDQtMDIgMDkyMzoyMi42MzczNDUxMjIgKzAwMDAgVVRDIiwic3RhcnRfZGF0ZV90aW1lIjoiMjAyNC0wNC0wMiAwOToyMzoyMi42MzczNDUxMjIgKzAwMDAgVVRDIn0sIm1hbmRhdGVlIjp7ImlkIjoiZGlkOmtleTp6RG5hZWZ4a1hNRlNxaXRUV2dyVjVEOUhtd2ZMZTJzQjZXcWVudzJGZWRVNVRGMVE1IiwiZW1haWwiOiJqZXN1cy5ydWl6QGluMi5lcyIsImZpcnN0X25hbWUiOiJKZXN1cyIsImdlbmRlciI6Ik0iLCJsYXN0X25hbWUiOiJSdWl6IiwibW9iaWxlX3Bob25lIjoiKzM0Njc2NDc3MTA0In0sIm1hbmRhdG9yIjp7ImNvbW1vbk5hbWUiOiJSVUlaIEpFU1VTIC0gODc2NTQzMjFLIiwiY291bnRyeSI6IkVTIiwiZW1haWxBZGRyZXNzIjoiamVzdXMucnVpekBpbjIuZXMiLCJvcmdhbml6YXRpb24iOiJJTjIsIEluZ2VuaWVyw61hIGRlIGxhIEluZm9ybWFjacOzbiwgUy5MLiIsIm9yZ2FuaXphdGlvbklkZW50aWZpZXIiOiJWQVRFUy1CNjA2NDU5MDAiLCJzZXJpYWxOdW1iZXIiOiJJRENFUy04NzY1NDMyMUsifSwicG93ZXIiOlt7ImlkIjoiNmI4ZjMxMzctYTU3YS00NmE1LTk3ZTctMTExN2EyMDE0MmZiIiwidG1mX2FjdGlvbiI6IkV4ZWN1dGUiLCJ0bWZfZG9tYWluIjoiRE9NRSIsInRtZl9mdW5jdGlvbiI6Ik9uYm9hcmRpbmciLCJ0bWZfdHlwZSI6IkRvbWFpbiJ9LHsiaWQiOiJhZDliMTUwOS02MGVhLTQ3ZDQtOTg3OC0xOGI1ODFkOGUxOWIiLCJ0bWZfYWN0aW9uIjpbIkNyZWF0ZSIsIlVwZGF0ZSJdLCJ0bWZfZG9tYWluIjoiRE9NRSIsInRtZl9mdW5jdGlvbiI6IlByb2R1Y3RPZmZlcmluZyIsInRtZl90eXBlIjoiRG9tYWluIn1dLCJzaWduZXIiOnsiY29tbW9uTmFtZSI6IklOMiIsImNvdW50cnkiOiJFUyIsImVtYWlsQWRkcmVzcyI6InJyaGhAaW4yLmVzIiwib3JnYW5pemF0aW9uIjoiSU4yLCBJbmdlbmllcsOtYSBkZSBsYSBJbmZvcm1hY2nDs24sIFMuTC4iLCJvcmdhbml6YXRpb25JZGVudGlmaWVyIjoiVkFURVMtQjYwNjQ1OTAwIiwic2VyaWFsTnVtYmVyIjoiQjYwNjQ1OTAwIn19fSwiZXhwaXJhdGlvbkRhdGUiOiIyMDI1LTA0LTAyIDA5OjIzOjIyLjYzNzM0NTEyMiArMDAwMCBVVEMiLCJpc3N1YW5jZURhdGUiOiIyMDI0LTA0LTAyIDA5OjIzOjIyLjYzNzM0NTEyMiArMDAwMCBVVEMiLCJpc3N1ZXIiOiJkaWQ6d2ViOmluMi5lcyIsInZhbGlkRnJvbSI6IjIwMjQtMDQtMDIgMDk6MjM6MjIuNjM3MzQ1MTIyICswMDAwIFVUQyJ9XX0'
+
+const in2CredSerialised = `{"credentialSubject":{"mandate":{"id":"87aea695-83ba-4619-ba3a-b3d541d9c106","life_span":{"end_date_time":"2025-04-02 0923:22.637345122 +0000 UTC","start_date_time":"2024-04-02 09:23:22.637345122 +0000 UTC"},"mandatee":{"email":"jesus.ruiz@in2.es","first_name":"Jesus","gender":"M","id":"did:key:zDnaefxkXMFSqitTWgrV5D9HmwfLe2sB6Wqenw2FedU5TF1Q5","last_name":"Ruiz","mobile_phone":"+34676477104"},"mandator":{"commonName":"RUIZ JESUS - 87654321K","country":"ES","emailAddress":"jesus.ruiz@in2.es","organization":"IN2, Ingeniería de la Información, S.L.","organizationIdentifier":"VATES-B60645900","serialNumber":"IDCES-87654321K"},"power":[{"id":"6b8f3137-a57a-46a5-97e7-1117a20142fb","tmf_action":"Execute","tmf_domain":"DOME","tmf_function":"Onboarding","tmf_type":"Domain"},{"id":"ad9b1509-60ea-47d4-9878-18b581d8e19b","tmf_action":["Create","Update"],"tmf_domain":"DOME","tmf_function":"ProductOffering","tmf_type":"Domain"}],"signer":{"commonName":"IN2","country":"ES","emailAddress":"rrhh@in2.es","organization":"IN2, Ingeniería de la Información, S.L.","organizationIdentifier":"VATES-B60645900","serialNumber":"B60645900"}}},"expirationDate":"2025-04-02 09:23:22.637345122 +0000 UTC","id":"0fac8eef-2665-4815-94b4-4bc3c2809224","issuanceDate":"2024-04-02 09:23:22.637345122 +0000 UTC","issuer":"did:web:in2.es","type":["VerifiableCredential","LEARCredentialEmployee"],"validFrom":"2024-04-02 09:23:22.637345122 +0000 UTC"}`
+
+var in2Credential = {
+    "id": "urn:entities:credential:0fac8eef-2665-4815-94b4-4bc3c2809224",
+    "type": [
+        "LEARCredentialEmployee",
+        "VerifiableCredential"
+    ],
+    "status": "VALID",
+    "available_formats": [
+        "json_vc",
+        "jwt_vc"
+    ],
+    "credentialSubject": {
+        "mandate": {
+            "id": "87aea695-83ba-4619-ba3a-b3d541d9c106",
+            "life_span": {
+                "end_date_time": "2025-04-02 0923:22.637345122 +0000 UTC",
+                "start_date_time": "2024-04-02 09:23:22.637345122 +0000 UTC"
+            },
+            "mandatee": {
+                "id": "did:key:zDnaefxkXMFSqitTWgrV5D9HmwfLe2sB6Wqenw2FedU5TF1Q5",
+                "email": "jesus.ruiz@in2.es",
+                "first_name": "Jesus",
+                "gender": "M",
+                "last_name": "Ruiz",
+                "mobile_phone": "+34676477104"
+            },
+            "mandator": {
+                "commonName": "RUIZ JESUS - 87654321K",
+                "country": "ES",
+                "emailAddress": "jesus.ruiz@in2.es",
+                "organization": "IN2, Ingeniería de la Información, S.L.",
+                "organizationIdentifier": "VATES-B60645900",
+                "serialNumber": "IDCES-87654321K"
+            },
+            "power": [
+                {
+                    "id": "6b8f3137-a57a-46a5-97e7-1117a20142fb",
+                    "tmf_action": "Execute",
+                    "tmf_domain": "DOME",
+                    "tmf_function": "Onboarding",
+                    "tmf_type": "Domain"
+                },
+                {
+                    "id": "ad9b1509-60ea-47d4-9878-18b581d8e19b",
+                    "tmf_action": [
+                        "Create",
+                        "Update"
+                    ],
+                    "tmf_domain": "DOME",
+                    "tmf_function": "ProductOffering",
+                    "tmf_type": "Domain"
+                }
+            ],
+            "signer": {
+                "commonName": "IN2",
+                "country": "ES",
+                "emailAddress": "rrhh@in2.es",
+                "organization": "IN2, Ingeniería de la Información, S.L.",
+                "organizationIdentifier": "VATES-B60645900",
+                "serialNumber": "B60645900"
+            }
+        }
+    },
+    "expirationDate": "2025-04-02T09:23:22Z"
+}
+
+
 
 // Render the credential with buttons so the user can select it for authentication
 function vcToHtml(vc, response_uri, state, webAuthnSupported) {

@@ -1,14 +1,13 @@
+// @ts-check
+
 import { renderAnyCredentialCard } from '../components/renderAnyCredential'
 import { getOrCreateDidKey } from '../components/crypto'
 
-let gotoPage = window.MHR.gotoPage
-let goHome = window.MHR.goHome
-let storage = window.MHR.storage
-let myerror = window.MHR.storage.myerror
-let mylog = window.MHR.storage.mylog
+MHR.register("MicroWallet", class extends MHR.AbstractPage {
 
-window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
-
+    /**
+     * @param {string} id
+     */
     constructor(id) {
         super(id)
     }
@@ -30,19 +29,20 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         // If URL is clean (initially or after reloading)
         //     retrieve the QR from local storage and display it
 
+        // @ts-ignore
         let params = new URL(document.location).searchParams
         console.log("MicroWallet", document.location)
 
         // Check for redirect during the authentication flow
         if (document.URL.includes("state=") && document.URL.includes("auth-mock")) {
             console.log("MicroWallet ************Redirected with state**************")
-            gotoPage("LoadAndSaveQRVC", document.URL)
+            MHR.gotoPage("LoadAndSaveQRVC", document.URL)
             return;
         }
         
         if (document.URL.includes("code=")) {
             console.log("MicroWallet ************Redirected with code**************")
-            gotoPage("LoadAndSaveQRVC", document.URL)
+            MHR.gotoPage("LoadAndSaveQRVC", document.URL)
             return;
         }
         
@@ -50,7 +50,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         let scope = params.get("scope")
         if (scope !== null) {
             console.log("detected scope")
-            gotoPage("SIOPSelectCredential", document.URL)
+            MHR.gotoPage("SIOPSelectCredential", document.URL)
             return;
         }
 
@@ -61,7 +61,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             request_uri = decodeURIComponent(request_uri)
             console.log("MicroWallet request_uri", request_uri)
             console.log("Going to SIOPSelectCredential with", document.URL)
-            gotoPage("SIOPSelectCredential", document.URL)
+            MHR.gotoPage("SIOPSelectCredential", document.URL)
             return;
         }
 
@@ -69,7 +69,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         let credential_offer_uri = params.get("credential_offer_uri")
         if (credential_offer_uri) {
             console.log("MicroWallet", credential_offer_uri)
-            await gotoPage("LoadAndSaveQRVC", document.location.href)
+            await MHR.gotoPage("LoadAndSaveQRVC", document.location.href)
             return;
         }
 
@@ -80,7 +80,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
             switch (command) {
                 case "getvc":
                     var vc_id = params.get("vcid")
-                    await gotoPage("LoadAndSaveQRVC", vc_id)
+                    await MHR.gotoPage("LoadAndSaveQRVC", vc_id)
                     return;
 
                 default:
@@ -89,19 +89,22 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         }
 
         // Retrieve all recent credentials from storage
-        var credentials = await storage.credentialsGetAllRecent()
+        var credentials = await MHR.storage.credentialsGetAllRecent()
         
         if (!credentials) {
-            gotoPage("ErrorPage", { "title": "Error", "msg": "Error getting recent credentials" })
+            MHR.gotoPage("ErrorPage", { "title": "Error", "msg": "Error getting recent credentials" })
             return
         }
 
+        console.log(credentials)
         // Pre-render each of the known credentials
         const theDivs = []
+
         for (const vcraw of credentials) {
 
             // For the moment, we only understand the credentials in the "jwt_vc" format
             if (vcraw.type == "jwt_vc") {
+                console.log(vcraw)
 
                 // We use the hash of the credential as its unique ID
                 const currentId = vcraw.hash
@@ -118,7 +121,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
                     ${renderAnyCredentialCard(vc, vcraw.status)}
         
                     <div class="ion-margin-start ion-margin-bottom">
-                        <ion-button @click=${() => gotoPage("DisplayVC", vcraw)}>
+                        <ion-button @click=${() => MHR.gotoPage("DisplayVC", vcraw)}>
                             <ion-icon slot="start" name="construct"></ion-icon>
                             ${T("Details")}
                         </ion-button>
@@ -147,7 +150,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
                     </ion-card-content>
 
                     <div class="ion-margin-start ion-margin-bottom">
-                        <ion-button @click=${() => gotoPage("ScanQrPage")}>
+                        <ion-button @click=${() => MHR.gotoPage("ScanQrPage")}>
                             <ion-icon slot="start" name="camera"></ion-icon>
                             ${T("Scan QR")}
                         </ion-button>
@@ -177,7 +180,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
                     </ion-card-content>
 
                     <div class="ion-margin-start ion-margin-bottom">
-                        <ion-button @click=${() => gotoPage("ScanQrPage")}>
+                        <ion-button @click=${() => MHR.gotoPage("ScanQrPage")}>
                             <ion-icon slot="start" name="camera"></ion-icon>
                             ${T("Scan a QR")}
                         </ion-button>
@@ -193,9 +196,14 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
     }
 
 
+    /**
+     * @param {string} currentId
+     */
     async presentActionSheet(currentId) {
         const actionSheet = document.getElementById("mw_actionSheet")
+        // @ts-ignore
         actionSheet.header = 'Confirm to delete credential'
+        // @ts-ignore
         actionSheet.buttons = [
             {
                 text: 'Delete',
@@ -214,6 +222,7 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
         ];
 
         this.credentialIdToDelete = currentId
+        // @ts-ignore
         await actionSheet.present();
     }
 
@@ -224,8 +233,8 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
                 // Get the credential to delete
                 const currentId = this.credentialIdToDelete
                 mylog("deleting credential", currentId)
-                await storage.credentialsDelete(currentId)
-                goHome()
+                await MHR.storage.credentialsDelete(currentId)
+                MHR.goHome()
                 return
             }
         }
@@ -233,3 +242,96 @@ window.MHR.register("MicroWallet", class extends window.MHR.AbstractPage {
 
 })
 
+var in2Credential = {
+    "id": "urn:entities:credential:0fac8eef-2665-4815-94b4-4bc3c2809224",
+    "type": [
+        "LEARCredentialEmployee",
+        "VerifiableCredential"
+    ],
+    "status": "VALID",
+    "available_formats": [
+        "json_vc",
+        "jwt_vc"
+    ],
+    "credentialSubject": {
+        "mandate": {
+            "id": "87aea695-83ba-4619-ba3a-b3d541d9c106",
+            "life_span": {
+                "end_date_time": "2025-04-02 0923:22.637345122 +0000 UTC",
+                "start_date_time": "2024-04-02 09:23:22.637345122 +0000 UTC"
+            },
+            "mandatee": {
+                "id": "did:key:zDnaefxkXMFSqitTWgrV5D9HmwfLe2sB6Wqenw2FedU5TF1Q5",
+                "email": "jesus.ruiz@in2.es",
+                "first_name": "Jesus",
+                "gender": "M",
+                "last_name": "Ruiz",
+                "mobile_phone": "+34676477104"
+            },
+            "mandator": {
+                "commonName": "RUIZ JESUS - 87654321K",
+                "country": "ES",
+                "emailAddress": "jesus.ruiz@in2.es",
+                "organization": "IN2, Ingeniería de la Información, S.L.",
+                "organizationIdentifier": "VATES-B60645900",
+                "serialNumber": "IDCES-87654321K"
+            },
+            "power": [
+                {
+                    "id": "6b8f3137-a57a-46a5-97e7-1117a20142fb",
+                    "tmf_action": "Execute",
+                    "tmf_domain": "DOME",
+                    "tmf_function": "Onboarding",
+                    "tmf_type": "Domain"
+                },
+                {
+                    "id": "ad9b1509-60ea-47d4-9878-18b581d8e19b",
+                    "tmf_action": [
+                        "Create",
+                        "Update"
+                    ],
+                    "tmf_domain": "DOME",
+                    "tmf_function": "ProductOffering",
+                    "tmf_type": "Domain"
+                }
+            ],
+            "signer": {
+                "commonName": "IN2",
+                "country": "ES",
+                "emailAddress": "rrhh@in2.es",
+                "organization": "IN2, Ingeniería de la Información, S.L.",
+                "organizationIdentifier": "VATES-B60645900",
+                "serialNumber": "B60645900"
+            }
+        }
+    },
+    "expirationDate": "2025-04-02T09:23:22Z"
+}
+
+
+MHR.register("SaveIN2Credential", class extends MHR.AbstractPage {
+
+    /**
+     * @param {string} id
+     */
+    constructor(id) {
+        super(id)
+    }
+
+    async enter() {
+
+        var credStruct = {
+            type: "jwt_vc",
+            status: "signed",
+            encoded: "",
+            decoded: in2Credential
+        }
+        var saved = await MHR.storage.credentialsSave(credStruct)
+        if (!saved) {
+            return
+        }
+        MHR.cleanReload()
+
+    }
+
+})

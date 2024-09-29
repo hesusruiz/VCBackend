@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/evidenceledger/vcdemo/verifiernew/storage"
 	"github.com/foolin/goview"
@@ -72,6 +73,9 @@ func (l *login) createRouter(issuerInterceptor *op.IssuerInterceptor) {
 	l.router.Get("/poll", l.APIWalletPoll)
 	l.router.Post("/authenticationresponse", l.APIWalletAuthenticationResponse)
 	l.router.Post("/username", issuerInterceptor.HandlerFunc(l.checkLoginHandler))
+
+	l.router.Get("/fake", l.FakeAPIWalletAuthenticationResponse)
+	l.router.Post("/fake", l.FakeAPIWalletAuthenticationResponse)
 }
 
 // TODO: add the ability to check/verify a VC PresentationResponse to update the in-memory registry
@@ -121,14 +125,27 @@ func renderLogin(cfg *yaml.YAML, w http.ResponseWriter, authRequestID string, fo
 	base64Img := base64.StdEncoding.EncodeToString(png)
 	base64Img = "data:image/png;base64," + base64Img
 
+	const fakeURL = "openid://?response_type=vp_token&response_mode=direct_post&client_id=did:web:dome-marketplace-prd.org&redirect_uri=https://dome-verifier.mycredential.es/login/fake&state=mKSGXgsJ_Ktjr-9qwgO6SA&nonce=rjHS716zcPtrCO_Rl01hlg&scope=didRead,defaultScope"
+
+	fakepng, err := qrcode.Encode(fakeURL, qrcode.Medium, 256)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("cannot create QR code:%s", err), http.StatusInternalServerError)
+		return
+	}
+
+	fakebase64Img := base64.StdEncoding.EncodeToString(fakepng)
+	fakebase64Img = "data:image/png;base64," + fakebase64Img
+
 	data := &struct {
 		AuthRequestID string
 		QRcode        string
+		FakeQRcode    string
 		Samedevice    string
 		Error         string
 	}{
 		AuthRequestID: authRequestID,
 		QRcode:        base64Img,
+		FakeQRcode:    fakebase64Img,
 		Samedevice:    redirected_uri,
 		Error:         errMsg(formError),
 	}
@@ -137,6 +154,94 @@ func renderLogin(cfg *yaml.YAML, w http.ResponseWriter, authRequestID string, fo
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (l *login) FakeAPIWalletAuthenticationResponse(w http.ResponseWriter, r *http.Request) {
+	var theCredential *yaml.YAML
+
+	fmt.Println("\n\n\n\n======================")
+	fmt.Println("Inside FAKE API")
+	fmt.Println(r.URL)
+
+	body, _ := io.ReadAll(r.Body)
+
+	fmt.Println(string(body))
+
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
+		return
+	}
+	authReqId := r.FormValue("state")
+	log.Println("APIWalletAuthenticationResponse", "stateKey", authReqId)
+
+	// The body should have a form like 'vp_token=eyJAY29udGV4dCI...IFVUQyJ9XX0'
+	rawVP, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(string(body), "vp_token="))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error decoding VP:%s", err), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println(string(rawVP))
+
+	// Decode into a map
+	vp, err := yaml.ParseJson(string(rawVP))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("cannot parse body:%s", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Get the list of credentials in the VP
+	credentials := vp.List("verifiableCredential")
+	if len(credentials) == 0 {
+		http.Error(w, "no credentials found in VP", http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: for the moment, we accept only the first credential inside the VP
+	firstCredential := credentials[0]
+	theCredential = yaml.New(firstCredential)
+
+	// Serialize the credential into a JSON string
+	serialCredential, err := json.Marshal(theCredential.Data())
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error serialising the credential:%s", err), http.StatusInternalServerError)
+		return
+	}
+	fmt.Print("======================\n\n\n")
+	log.Println("credential", string(serialCredential))
+
+	fmt.Print("======================\n\n\n")
+
+	// // Invoke the PDP (Policy Decision Point) to authenticate/authorize this request
+	// accepted, err := pdp.TakeAuthnDecision(Authenticate, r, string(serialCredential), "")
+	// if err != nil {
+	// 	http.Error(w, fmt.Sprintf("error evaluating authentication rules:%s", err), http.StatusInternalServerError)
+	// 	return
+	// }
+
+	// if !accepted {
+	// 	http.Error(w, "authentication failed", http.StatusUnauthorized)
+	// 	return
+	// }
+
+	// // Update the storage object with the Wallet Authentication Response and signal login completed
+	// err = l.authenticate.CheckWalletAuthenticationResponse(authReqId, theCredential)
+	// if err != nil {
+	// 	http.Error(w, fmt.Sprintf("error updating Wallet authentication response:%s", err), http.StatusInternalServerError)
+	// 	return
+	// }
+
+	resp := map[string]string{
+		"authenticatorRequired": "no",
+		"type":                  "login",
+		"email":                 "email",
+	}
+	out, _ := json.Marshal(resp)
+
+	w.Header().Add("Content-Type", "application/json")
+	w.Write(out)
+	return
 }
 
 // TODO: replace with the reception and verification of the VC PresentationResponse.

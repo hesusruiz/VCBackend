@@ -4,13 +4,13 @@ import {
 } from "../chunks/chunk-5HFYYPY6.js";
 import {
   renderAnyCredentialCard
-} from "../chunks/chunk-A5P3E2MT.js";
+} from "../chunks/chunk-XAXA3SJF.js";
 import {
   decodeJWT
 } from "../chunks/chunk-4DGWCCCP.js";
 import {
   credentialsSave
-} from "../chunks/chunk-YTTLZ6I3.js";
+} from "../chunks/chunk-J2TLX5TK.js";
 import "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-CJ4ZD2TO.js";
 import "../chunks/chunk-U5RRZUYZ.js";
@@ -32,7 +32,6 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
   async enter(qrData) {
     this.qrData = qrData;
     mylog(`LoadAndSaveQRVC: ${qrData}`);
-    debugger;
     let html2 = this.html;
     if (qrData == null || !qrData.startsWith) {
       console.log("The qrData parameter is not a string");
