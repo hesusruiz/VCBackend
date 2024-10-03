@@ -291,6 +291,9 @@ async function sendReminder(id) {
 
 async function signCredentialOfferingLocal(record) {
 
+    window.location = "elsigner:"
+    return
+
     var learcred = decodeJWT(record.raw).body
 
     if (!learcred.credentialSubject) {

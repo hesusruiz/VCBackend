@@ -265,6 +265,8 @@ async function sendReminder(id) {
   alert("Reminder sent");
 }
 async function signCredentialOfferingLocal(record) {
+  window.location = "elsigner:";
+  return;
   var learcred = decodeJWT(record.raw).body;
   if (!learcred.credentialSubject) {
     gotoPage("ErrorPage", { title: "Invalid credential", msg: "signCredentialOfferingLocal: Invalid credential received" });

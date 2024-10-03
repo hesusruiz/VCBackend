@@ -4,7 +4,7 @@ server:
   staticDir: "www"
   templateDir: "back/views"
   loglevel: DEBUG
-  walletProvisioning: wallet.mycredential.es
+  walletProvisioning: wallet.mycredential.eu
   buildFront:
     buildConfigFile: "data/config/buildfront.yaml"
 
@@ -12,7 +12,7 @@ issuer:
   listenAddress: ":8090"
   Meta:
     appName: "DOME Issuer"
-    appUrl: https://issuer.mycredential.es
+    appUrl: https://issuer.mycredential.eu
     senderName: Support
     senderAddress: "admin@mycredential.eu"
 
@@ -26,21 +26,21 @@ issuer:
     Tls: true
     Username: "admin@mycredential.eu"
 
-  samedeviceWallet: https://wallet.mycredential.es
+  samedeviceWallet: https://wallet.mycredential.eu
   credentialTemplatesDir: "data/credential_templates"
 
 
 verifier:
-  verifierURL: https://verifier.mycredential.es
+  verifierURL: https://verifier.mycredential.eu
   listenAddress: ":9998"
   authnPolicies: "authn_policies.star"
-  samedeviceWallet: https://wallet.mycredential.es
+  samedeviceWallet: https://wallet.mycredential.eu
   credentialTemplatesDir: "data/credential_templates"
 
 relyingParty:
-  url: https://demo.mycredential.es
+  url: https://demo.mycredential.eu
   listenAddress: ":9999"
-  verifierURL: https://verifier.mycredential.es
+  verifierURL: https://verifier.mycredential.eu
   callbackPath: "/auth/callback"
   scopes: "openid learcred profile email"
 

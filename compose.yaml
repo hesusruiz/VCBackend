@@ -1,7 +1,7 @@
 name: vcdemo
 services:
   vcdemo:
-    image: gcr.io/distroless/static-debian12
+    image: cgr.dev/chainguard/glibc-dynamic
     container_name: vcdemo
     user: 1000:1000
     restart: unless-stopped
@@ -11,7 +11,7 @@ services:
       - "9999:9999"
       - "9998:9998"
     volumes:
-      - .:/dome
+      - $PWD:/dome
     working_dir: /dome
     entrypoint: ["/dome/vcdemo", "serve"]
 
