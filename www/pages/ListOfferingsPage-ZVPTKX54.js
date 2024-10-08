@@ -239,7 +239,7 @@ function renderMandateReadOnly(cred) {
             ${T("Sign in Local")}
         </ion-button>
         <ion-button @click=${() => signCredentialOfferingInServer(cred)}>
-            ${T("Sign Credential")}
+            ${T("Sign in Cloud")}
         </ion-button>
         ` : null}
 

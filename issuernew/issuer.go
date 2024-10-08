@@ -400,14 +400,33 @@ func getCertPEMFromHeader(r *http.Request) (cert x509util.PEMCert, err error) {
 func RequireAdminOrX509Auth() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			log.Printf("****Received a request for Signers")
 			admin, _ := c.Get(apis.ContextAdminKey).(*models.Admin)
 			if admin != nil {
+				log.Printf("Request received and looged as ADMIN")
 				return next(c)
 			}
 			_, _, _, err := getX509UserFromHeader(c.Request())
 			if err != nil {
 				return apis.NewUnauthorizedError("The request requires admin or x509 authorization token to be set.", nil)
 			}
+
+			// // Check that the current authenticated user corresponds to the received certificate
+			// info := apis.RequestInfo(c)
+			// record := info.AuthRecord
+			// if record == nil {
+			// 	return apis.NewUnauthorizedError("The request requires an authenticated user.", nil)
+			// }
+
+			// receivedSKI := hex.EncodeToString(receivedCert.SubjectKeyId)
+			// log.Printf("SubjectKeyId: %s", receivedCert.SubjectKeyId)
+
+			// registeredSKI := record.GetString("ski")
+			// log.Printf("ReceivedSKI: %s - RegisteredSKI: %s", receivedSKI, registeredSKI)
+
+			// if receivedSKI != registeredSKI {
+			// 	return apis.NewUnauthorizedError("Invalid SKI received.", nil)
+			// }
 
 			return next(c)
 		}

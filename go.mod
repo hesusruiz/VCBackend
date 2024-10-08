@@ -149,4 +149,5 @@ require (
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
+	software.sslmate.com/src/go-pkcs12 v0.5.0
 )
