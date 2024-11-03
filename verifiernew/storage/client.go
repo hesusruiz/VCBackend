@@ -176,11 +176,12 @@ func WebClient(id, secret string, redirectURIs ...string) *Client {
 		redirectURIs = []string{
 			"https://demo.mycredential.eu/auth/callback",
 			"https://demo.mycredential.es/auth/callback",
+			"https://issuer.mycredential.eu/lear/auth/callback",
 		}
 	}
 	return &Client{
 		id:                             id,
-		secret:                         secret,
+		secret:                         "", // no secret needed (due to PKCE)
 		redirectURIs:                   redirectURIs,
 		applicationType:                op.ApplicationTypeWeb,
 		authMethod:                     oidc.AuthMethodBasic,

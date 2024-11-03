@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/hesusruiz/vcutils/yaml"
+	my "github.com/hesusruiz/vcutils/yaml"
 	"github.com/zitadel/logging"
 	"golang.org/x/text/language"
 
@@ -18,13 +19,13 @@ import (
 )
 
 const (
-	pathLoggedOut        = "/logged-out"
-	defaultAuthnPolicies = "authn_policies.star"
+	pathLoggedOut            = "/logged-out"
+	defaultAuthnPoliciesFile = "authn_policies.star"
 )
 
 func init() {
 
-	// For the moment we use a in-memory implementation, so we need to register the known clients.
+	// For the moment we use an in-memory implementation, so we need to register the known clients.
 	// TODO: use Pocketbase to store them in a collection.
 	// The following are three sample clients, each of a different type.
 	storage.RegisterClients(
@@ -45,18 +46,36 @@ var counter atomic.Int64
 
 var pdp *PDP
 
+type VerifierServer struct {
+	Config *Config
+	Server *http.Server
+}
+
+func New(cfg *my.YAML) *VerifierServer {
+	ver := &VerifierServer{}
+
+	c, err := ConfigFromMap(cfg)
+	if err != nil {
+		panic(err)
+	}
+	ver.Config = c
+
+	return ver
+
+}
+
 // SetupServer creates an OIDC server with the configured verifier URL
-func SetupServer(cfg *yaml.YAML, storage Storage, logger *slog.Logger, wrapServer bool, extraOptions ...op.Option) (chi.Router, error) {
+func (ver *VerifierServer) SetupServer(cfg *yaml.YAML, storage Storage, logger *slog.Logger, wrapServer bool, extraOptions ...op.Option) (chi.Router, error) {
 	var err error
 
-	verifierURL := cfg.String("verifierURL")
+	verifierURL := ver.Config.VerifierURL
 	if len(verifierURL) == 0 {
 		return nil, fmt.Errorf("verifierURL not specified in config")
 	}
 
 	// Start the Policy Decision Point engine for this Verifier
-	authnPolicies := cfg.String("authnPolicies", defaultAuthnPolicies)
-	pdp, err = NewPDP(authnPolicies)
+	authnPoliciesFile := cfg.String("authnPolicies", defaultAuthnPoliciesFile)
+	pdp, err = NewPDP(authnPoliciesFile)
 	if err != nil {
 		return nil, fmt.Errorf("starting authn policies runtime: %w", err)
 	}
@@ -105,6 +124,7 @@ func SetupServer(cfg *yaml.YAML, storage Storage, logger *slog.Logger, wrapServe
 	// so we will direct all calls to /login to the login UI
 	router.Mount("/login/", http.StripPrefix("/login", loginProcess.router))
 
+	// TODO: reformat device support for M2M flows
 	router.Route("/device", func(r chi.Router) {
 		registerDeviceAuth(storage, r)
 	})
@@ -114,11 +134,8 @@ func SetupServer(cfg *yaml.YAML, storage Storage, logger *slog.Logger, wrapServe
 		handler = op.RegisterLegacyServer(op.NewLegacyServer(verifierProvider, *op.DefaultEndpoints))
 	}
 
-	// we register the http handler of the OP on the root, so that the discovery endpoint (/.well-known/openid-configuration)
-	// is served on the correct path
-	//
-	// if the issuer ends with a path (e.g. http://localhost:9998/custom/path/),
-	// then you would have to set the path prefix (/custom/path/)
+	// We register the http handler of the OP on the root, so that the discovery endpoint (/.well-known/openid-configuration)
+	// is served on the correct path.
 	router.Mount("/", handler)
 
 	return router, nil
@@ -149,7 +166,7 @@ func newOP(storage op.Storage, verifierUrl string, verifierKey [32]byte, logger 
 		// enables use of the `request` Object parameter
 		RequestObjectSupported: true,
 
-		// this example has only static texts (in English), so we'll set the here accordingly
+		// we only support English for the moment
 		SupportedUILocales: []language.Tag{language.English},
 
 		DeviceAuthorization: op.DeviceAuthorizationConfig{
@@ -161,12 +178,9 @@ func newOP(storage op.Storage, verifierUrl string, verifierKey [32]byte, logger 
 	}
 	handler, err := op.NewProvider(config, storage, op.StaticIssuer(verifierUrl),
 		append([]op.Option{
-			//we must explicitly allow the use of the http issuer
-			// TODO: this is just for testing without https. Make it configurable so it is not used for production
-			op.WithAllowInsecure(),
 
 			// as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth
-			op.WithCustomAuthEndpoint(op.NewEndpoint("auth")),
+			// op.WithCustomAuthEndpoint(op.NewEndpoint("auth")),
 
 			// Pass our logger to the OP
 			op.WithLogger(logger.WithGroup("op")),

@@ -1,0 +1,10 @@
+package usertpl
+
+templ AuthenticationError(msg string) {
+	@layout() {
+		<div class="w3-panel w3-border">
+			<h2>Authentication error</h2>
+			<p>{ msg }</p>
+		</div>
+	}
+}

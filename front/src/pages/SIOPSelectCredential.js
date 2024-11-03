@@ -39,13 +39,16 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
 
         // check whether current browser supports WebAuthn
         if (window.PublicKeyCredential) {
+            console.log("WebAuthn is supported")
             this.WebAuthnSupported = true
 
             // Check for PlatformAuthenticator
             let available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
             if (available) {
                 this.PlatformAuthenticatorSupported = true
-            } 
+            }
+        } else {
+            console.log("WebAuthn NOT supported")
         }
 
         if (openIdUrl.startsWith("openid:")) {
@@ -85,7 +88,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         console.log(authRequestJWT)
         if (authRequestJWT == "error") {
             this.showError("Error", "Error fetching Authorization Request")
-            return    
+            return
         }
         const authRequest = decodeJWT(authRequestJWT)
         console.log("Decoded authRequest", authRequest)
@@ -105,12 +108,12 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             this.showError("Error", "Invalid scope specified")
             return
         }
-        const displayCredType = scopeParts[scopeParts.length-1]       
+        const displayCredType = scopeParts[scopeParts.length - 1]
 
         // response_uri is the endpoint where we have to send the Authentication Response
         // We are going to extract the RP identity from that URL
         var rpURL = new URL(response_uri)
-        var rpDomain = rpURL.hostname 
+        var rpDomain = rpURL.hostname
 
         // Retrieve all credentials from storage, to process them in memory
         var credStructs = await storage.credentialsGetAllRecent()
@@ -161,9 +164,9 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
 
     }
 
-   /**
-     * @param {string} openIdUrl
-     */
+    /**
+      * @param {string} openIdUrl
+      */
     async processOldPresentation(openIdUrl) {
 
         // Derive from the received URL a simple one ready for parsing
@@ -171,7 +174,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
 
         // Convert the input string to a URL object
         const inputURL = new URL(openIdUrl)
-        
+
         // Get the relevant parameters from the query string
         const params = new URLSearchParams(inputURL.search)
 
@@ -196,7 +199,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         // redirect_uri is the endpoint where we have to send the Authentication Response
         // We are going to extract the RP identity from that URL
         var rpURL = new URL(response_uri)
-        var rpDomain = rpURL.hostname 
+        var rpDomain = rpURL.hostname
 
         // // Retrieve all credentials from storage, to process them in memory
         // var credStructs = await storage.credentialsGetAllRecent()
@@ -261,12 +264,12 @@ function oldvcToHtml(vc, response_uri, state, webAuthnSupported) {
         ${renderAnyCredentialCard(vc)}
 
         <div class="ion-margin-start ion-margin-bottom">
-            <ion-button @click=${()=> MHR.cleanReload()}>
+            <ion-button @click=${() => MHR.cleanReload()}>
                 <ion-icon slot="start" name="chevron-back"></ion-icon>
                 ${T("Cancel")}
             </ion-button>
 
-            <ion-button @click=${(e)=> sendFIWAREAuthenticationResponse(e, response_uri, credentials, state, webAuthnSupported)}>
+            <ion-button @click=${(e) => sendFIWAREAuthenticationResponse(e, response_uri, credentials, state, webAuthnSupported)}>
                 <ion-icon slot="start" name="paper-plane"></ion-icon>
                 ${T("Send Credential")}
             </ion-button>
@@ -283,7 +286,7 @@ function oldvcToHtml(vc, response_uri, state, webAuthnSupported) {
 async function sendFIWAREAuthenticationResponse(e, backEndpoint, credentials, state, authSupported) {
     e.preventDefault()
 
-    const endpointURL  = new URL(backEndpoint)
+    const endpointURL = new URL(backEndpoint)
     const origin = endpointURL.origin
 
     mylog("sending AuthenticationResponse to:", backEndpoint + "?state=" + state)
@@ -334,10 +337,10 @@ async function sendFIWAREAuthenticationResponse(e, backEndpoint, credentials, st
         if (response.status == 200) {
             const res = await response.json()
             mylog(res)
-          
+
             gotoPage("AuthenticatorSuccessPage")
             return
-        
+
         }
 
         // There was an error, present it
@@ -446,12 +449,12 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
         ${renderAnyCredentialCard(vc)}
 
         <div class="ion-margin-start ion-margin-bottom">
-            <ion-button @click=${()=> MHR.cleanReload()}>
+            <ion-button @click=${() => MHR.cleanReload()}>
                 <ion-icon slot="start" name="chevron-back"></ion-icon>
                 ${T("Cancel")}
             </ion-button>
 
-            <ion-button @click=${(e)=> sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported)}>
+            <ion-button @click=${(e) => sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported)}>
                 <ion-icon slot="start" name="paper-plane"></ion-icon>
                 ${T("Send Credential")}
             </ion-button>
@@ -468,7 +471,7 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
 async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, state, authSupported) {
     e.preventDefault();
 
-    const endpointURL  = new URL(backEndpoint)
+    const endpointURL = new URL(backEndpoint)
     const origin = endpointURL.origin
 
     mylog("sending AuthenticationResponse to:", backEndpoint + "?state=" + state)
@@ -515,20 +518,20 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
             body: formBody,
         })
 
-        if (!authSupported) {
-            gotoPage("ErrorPage", {
-                title: "Error",
-                msg: "Authenticator not supported in this device"
-            });
-            return
-        }
-
         if (response.status == 200) {
             const res = await response.json()
             mylog(res)
 
             // Check if the server requires the authenticator to be used
             if (res.authenticatorRequired == "yes") {
+
+                if (!authSupported) {
+                    gotoPage("ErrorPage", {
+                        title: "Error",
+                        msg: "Authenticator not supported in this device"
+                    });
+                    return
+                }
 
                 res["origin"] = origin
                 res["state"] = state
@@ -591,7 +594,7 @@ async function registerUser(origin, username, state) {
         // This request is associated to a session in the server. We will send the response associated to that session
         // so the server can match the reply with the request
         var session = responseJSON.session
-        
+
         mylog("Received CredentialCreationOptions", credentialCreationOptions)
         mylog("Session:", session)
 
@@ -745,7 +748,7 @@ async function loginUser(origin, username, state) {
 
         // Perform a POST to the server
         try {
-            
+
             var response = await fetch(origin + apiPrefix + '/login/finish/' + username + "?state=" + state, {
                 method: 'POST',
                 headers: {
@@ -763,11 +766,11 @@ async function loginUser(origin, username, state) {
             }
 
             return
-    
+
 
         } catch (error) {
             myerror(error)
-            return error        
+            return error
         }
 
     } catch (error) {

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,13 +21,30 @@ import (
 	"log"
 )
 
-const defaultConfigFile = "server.yaml"
+const defaultConfigFileName = "server.yaml"
 const defaultBuildConfigFile = "./data/config/devserver.yaml"
+
+var baseDir string
 
 func main() {
 
+	// Loosely check if it was executed using "go run"
+	isGoRun := strings.HasPrefix(os.Args[0], os.TempDir())
+
+	// Detect the location of the main config file
+	if isGoRun {
+		// Probably ran with go run
+		baseDir, _ = os.Getwd()
+	} else {
+		// Probably ran with go build
+		baseDir = filepath.Dir(os.Args[0])
+	}
+
+	// The full path to the default config file, in the same place as the program binary
+	defaultConfigFilePath := filepath.Join(baseDir, defaultConfigFileName)
+
 	// Read configuration file
-	rootCfg := readConfiguration(LookupEnvOrString("CONFIG_FILE", defaultConfigFile))
+	rootCfg := readConfiguration(LookupEnvOrString("CONFIG_FILE", defaultConfigFilePath))
 
 	// Get the configurations for the individual services
 	icfg := rootCfg.Map("issuer")
@@ -39,9 +57,6 @@ func main() {
 	iss := issuernew.New(issuerCfg)
 	app := iss.App
 
-	// loosely check if it was executed using "go run"
-	isGoRun := strings.HasPrefix(os.Args[0], os.TempDir())
-
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		// enable auto creation of migration files when making collection changes in the Admin UI
 		// (the isGoRun check is to enable it only during development)
@@ -50,6 +65,14 @@ func main() {
 
 	// Customize the root command
 	app.RootCmd.Short = "VCDemo CLI"
+
+	app.RootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		fmt.Println("**Persistent PreRun")
+		fmt.Println(cmd.Use)
+		for _, argument := range args {
+			fmt.Println("   -", argument)
+		}
+	}
 
 	// Add our commands
 	app.RootCmd.AddCommand(&cobra.Command{

@@ -39,7 +39,13 @@ func NewLogin(
 		authenticate: authenticate,
 		callback:     callback,
 	}
-	l.createRouter(issuerInterceptor)
+
+	verifierURL := cfg.String("verifierURL")
+	if len(verifierURL) == 0 {
+		panic("verifierURL not specified in config")
+	}
+
+	l.createRouter()
 
 	gv := goview.New(goview.Config{
 		Root:         "verifiernew/views",
@@ -55,7 +61,7 @@ func NewLogin(
 	return l
 }
 
-func (l *login) createRouter(issuerInterceptor *op.IssuerInterceptor) {
+func (l *login) createRouter() {
 	l.router = chi.NewRouter()
 
 	// Basic CORS
@@ -65,36 +71,154 @@ func (l *login) createRouter(issuerInterceptor *op.IssuerInterceptor) {
 		AllowedHeaders:   []string{"*"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
+		MaxAge:           300,
 	}))
 
-	l.router.Get("/username", l.loginPageRender)
-	l.router.Get("/authenticationrequest", l.APIWalletAuthenticationRequest)
-	l.router.Get("/poll", l.APIWalletPoll)
-	l.router.Post("/authenticationresponse", l.APIWalletAuthenticationResponse)
-	l.router.Post("/username", issuerInterceptor.HandlerFunc(l.checkLoginHandler))
+	// This will render the page with the QR code for cross-device and the link for same-device usage
+	l.router.Get("/username", func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
+			return
+		}
+		// the oidc package will pass the id of the auth request as query parameter
+		// we will use this id through the login process and therefore pass it to the login page
+		renderLogin(l.cfg, w, r.FormValue(queryAuthRequestID), nil)
+	})
 
+	// The JavaScript in the Login page polls the backend to see when the Wallet has sent the
+	// Authentication Response, to know when to continue.
+	l.router.Get("/poll", l.APIWalletPoll)
+
+	// We use request-uri, and this is the route that the Wallet calls to retrieve the
+	// Authentication Request object
+	l.router.Get("/authenticationrequest", func(w http.ResponseWriter, r *http.Request) {
+
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
+			return
+		}
+		authReqId := r.FormValue("state")
+
+		// Get the original auth request from the Client
+		authReq, err := l.authenticate.GetWalletAuthenticationRequest(authReqId)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error getting the Wallet AuthorizationRequest:%s", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Get the auth request that was sent to the Wallet
+		walletAuthRequest := authReq.WalletAuthRequest
+
+		w.Write([]byte(walletAuthRequest))
+
+	})
+
+	// The Wallet calls this route to send the Authentication Response with the LEARCredential
+	l.router.Post("/authenticationresponse", func(w http.ResponseWriter, r *http.Request) {
+		var theCredential *yaml.YAML
+
+		body, _ := io.ReadAll(r.Body)
+
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
+			return
+		}
+		authReqId := r.FormValue("state")
+		log.Println("APIWalletAuthenticationResponse", "stateKey", authReqId)
+
+		// Decode into a map
+		authResponse, err := yaml.ParseJson(string(body))
+		if err != nil {
+			http.Error(w, fmt.Sprintf("cannot parse body:%s", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Get the vp_token field
+		vp_token := authResponse.String("vp_token")
+		if len(vp_token) == 0 {
+			http.Error(w, "vp_token not found", http.StatusInternalServerError)
+			return
+		}
+		// Decode VP from B64Url
+		rawVP, err := base64.RawURLEncoding.DecodeString(vp_token)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error decoding VP:%s", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Parse the VP object into a map
+		vp, err := yaml.ParseJson(string(rawVP))
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error parsing the VP object:%s", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Get the list of credentials in the VP
+		credentials := vp.List("verifiableCredential")
+		if len(credentials) == 0 {
+			http.Error(w, "no credentials found in VP", http.StatusInternalServerError)
+			return
+		}
+
+		// TODO: for the moment, we accept only the first credential inside the VP
+		firstCredential := credentials[0]
+		theCredential = yaml.New(firstCredential)
+
+		// Serialize the credential into a JSON string
+		serialCredential, err := json.Marshal(theCredential.Data())
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error serialising the credential:%s", err), http.StatusInternalServerError)
+			return
+		}
+		log.Println("credential", string(serialCredential))
+
+		// Invoke the PDP (Policy Decision Point) to authenticate/authorize this request
+		accepted, err := pdp.TakeAuthnDecision(Authenticate, r, string(serialCredential), "")
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error evaluating authentication rules:%s", err), http.StatusInternalServerError)
+			return
+		}
+
+		if !accepted {
+			http.Error(w, "authentication failed", http.StatusUnauthorized)
+			return
+		}
+
+		// Update the storage object with the Wallet Authentication Response and signal login completed
+		err = l.authenticate.CheckWalletAuthenticationResponse(authReqId, theCredential)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error updating Wallet authentication response:%s", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Send reply to the Wallet, so it can stop polling and show a success screen
+		resp := map[string]string{
+			"authenticatorRequired": "no",
+			"type":                  "login",
+			"email":                 "email",
+		}
+		out, _ := json.Marshal(resp)
+
+		w.Header().Add("Content-Type", "application/json")
+		w.Write(out)
+
+	})
+
+	// l.router.Post("/username", issuerInterceptor.HandlerFunc(l.checkLoginHandler))
+
+	// For testing several things
 	l.router.Get("/fake", l.FakeAPIWalletAuthenticationResponse)
 	l.router.Post("/fake", l.FakeAPIWalletAuthenticationResponse)
 }
 
-// TODO: add the ability to check/verify a VC PresentationResponse to update the in-memory registry
 type authenticate interface {
 	CheckUsernamePassword(username, password, id string) error
 	GetWalletAuthenticationRequest(id string) (*storage.InternalAuthRequest, error)
 	CheckWalletAuthenticationResponse(id string, cred *yaml.YAML) error
 	CheckLoginDone(id string) bool
-}
-
-func (l *login) loginPageRender(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
-		return
-	}
-	// the oidc package will pass the id of the auth request as query parameter
-	// we will use this id through the login process and therefore pass it to the login page
-	renderLogin(l.cfg, w, r.FormValue(queryAuthRequestID), nil)
 }
 
 func renderLogin(cfg *yaml.YAML, w http.ResponseWriter, authRequestID string, formError error) {
@@ -111,11 +235,11 @@ func renderLogin(cfg *yaml.YAML, w http.ResponseWriter, authRequestID string, fo
 	sameDeviceWallet := cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
 	openid4PVURL := "openid4vp://"
 
-	redirected_uri := sameDeviceWallet + "?request_uri=" + escaped_request_uri
-	qr_uri := openid4PVURL + "?request_uri=" + escaped_request_uri
+	samedevice_uri := sameDeviceWallet + "?request_uri=" + escaped_request_uri
+	crossdevice_uri := openid4PVURL + "?request_uri=" + escaped_request_uri
 
 	// Create the QR code for cross-device SIOP
-	png, err := qrcode.Encode(qr_uri, qrcode.Medium, 256)
+	png, err := qrcode.Encode(crossdevice_uri, qrcode.Medium, 256)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("cannot create QR code:%s", err), http.StatusInternalServerError)
 		return
@@ -146,7 +270,7 @@ func renderLogin(cfg *yaml.YAML, w http.ResponseWriter, authRequestID string, fo
 		AuthRequestID: authRequestID,
 		QRcode:        base64Img,
 		FakeQRcode:    fakebase64Img,
-		Samedevice:    redirected_uri,
+		Samedevice:    samedevice_uri,
 		Error:         errMsg(formError),
 	}
 
@@ -244,25 +368,27 @@ func (l *login) FakeAPIWalletAuthenticationResponse(w http.ResponseWriter, r *ht
 	return
 }
 
-// TODO: replace with the reception and verification of the VC PresentationResponse.
-// The function will redirect to the client application using the callback URL.
-func (l *login) checkLoginHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
-		return
-	}
-	username := r.FormValue("username")
-	password := r.FormValue("password")
-	id := r.FormValue("id")
-	err = l.authenticate.CheckUsernamePassword(username, password, id)
-	if err != nil {
-		renderLogin(l.cfg, w, id, err)
-		return
-	}
-	http.Redirect(w, r, l.callback(r.Context(), id), http.StatusFound)
-}
+// TODO: erase this as authentication with user/password is not used
+// // The function will redirect to the client application using the callback URL.
+// func (l *login) checkLoginHandler(w http.ResponseWriter, r *http.Request) {
+// 	err := r.ParseForm()
+// 	if err != nil {
+// 		http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	username := r.FormValue("username")
+// 	password := r.FormValue("password")
+// 	id := r.FormValue("id")
+// 	err = l.authenticate.CheckUsernamePassword(username, password, id)
+// 	if err != nil {
+// 		renderLogin(l.cfg, w, id, err)
+// 		return
+// 	}
+// 	http.Redirect(w, r, l.callback(r.Context(), id), http.StatusFound)
+// }
 
+// APIWalletAuthenticationRequest is called by the Wallet to retrieve the Authentication Request.
+// This is to support the request_uri OIDC parameter, which we use to reduce the size of the QR.
 func (l *login) APIWalletAuthenticationRequest(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseForm()

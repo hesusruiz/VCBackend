@@ -382,57 +382,37 @@ function T(e) {
     return (e)
 }
 
-// @ts-ignore
-/**
- * @param {undefined} [e]
- */
-function resetAndGoHome(e) {
-    HeaderBar()
-    goHome()
-}
-
-
 /**
  * @param {boolean} backButton - If true, a back button is shown in the header
+ * @param {string} loginData? - Login data to show in header
  */
-function HeaderBar(backButton = true) {
+function HeaderBar(backButton = true, loginData) {
 
-    var menuB = html`
-        <ion-buttons slot="end">
-        </ion-buttons>
-    `
-    // if (!backButton) {
-        menuB = html`
-        <ion-buttons slot="end">
-            <ion-button @click=${()=> gotoPage("MenuPage", "")}>
-                <ion-icon name="menu"></ion-icon>
-            </ion-button>
-        </ion-buttons>`
-    // }
-
+    var backButtonHTML
     if (backButton) {
-        return html`
-        <ion-toolbar color="primary">
+        backButtonHTML = html`
         <ion-buttons slot="start">
             <ion-button @click=${()=> history.back()}>
                 <ion-icon slot="start" name="chevron-back"></ion-icon>
                 Back
             </ion-button>
-        </ion-buttons>
-        <ion-title>${myAppTitle}</ion-title>
-        ${menuB}
-        </ion-toolbar>
-        `;
-    } else {
-        return html`
+        </ion-buttons>`
+    }
+
+    var menuButton = html`
+        <ion-buttons slot="end">
+            <ion-button @click=${()=> gotoPage("MenuPage", "")}>
+                <ion-icon name="menu"></ion-icon>
+            </ion-button>
+        </ion-buttons>`
+
+    return html`
         <ion-toolbar color="primary">
-        <ion-title>${myAppTitle}</ion-title>
-        ${menuB}
+        ${backButtonHTML}
+        <ion-title>${loginData ? loginData : myAppTitle}</ion-title>
+        ${menuButton}
         </ion-toolbar>
-    `;
-
-    }    
-
+        `
 }
 
 
@@ -468,15 +448,16 @@ function ErrorPanel(title, message) {
 
 
 
-// *****************************************************
+// **************************************************************
 // AbstractPage is the superclass of all pages in the application
-// *****************************************************
+// **************************************************************
 
 class AbstractPage {
     html;           // The uhtml html function, for subclasses
     domElem;        // The DOM Element that holds the page
     pageName;       // The name of the page for routing
     headerBar = HeaderBar
+    loginData = ""
 
     /**
      * @param {string} id - The name of the page to be registered. This will be used for page routing
@@ -529,7 +510,7 @@ class AbstractPage {
         // The caller can specify if the back button has to be displayed in the header
         let header = document.getElementById('the_header')
         if (header) {
-            render(header, HeaderBar(backButton))
+            render(header, HeaderBar(backButton, this.loginData))
         }    
 
         // Render the html of the page into the DOM element of this page
@@ -590,14 +571,16 @@ register("ErrorPage", class extends AbstractPage {
     }
 
     /**
-     * @param {{title: string;msg: string;back:boolean}} pageData
+     * @param {{title:string; msg:string; back:boolean; level:string}} pageData
      */
     enter(pageData) {
         let html = this.html
 
-        // We expect pageData to be an object with two fields:
+        // We expect pageData to be an object with four fields:
         // - title: the string to be used for the title of the error page
         // - msg: the string with the details of the error
+        // - back: a boolean indicating if a back button must be displayed
+        // - level: a string with the level ("error", "warning", "info")
 
         // Provide a default title if the user did not set the title
         let title = T("Error")
@@ -605,10 +588,20 @@ register("ErrorPage", class extends AbstractPage {
             title = T(pageData.title)
         }
 
-        //Provide a defaul message if the user did not specify it
+        //Provide a default message if the user did not specify it
         let msg = T("An error has happened.")
         if (pageData && pageData.msg) {
             msg = T(pageData.msg)
+        }
+
+        //Provide a default color for the button in the page
+        let color = "danger"
+        if (pageData) {
+            if (pageData.level == "info") {
+                color = "primary"
+            } else if (pageData.level == "warning") {
+                color = "warning"
+            }
         }
 
         // Display the title and message, with a button that reloads the whole application
@@ -631,13 +624,13 @@ register("ErrorPage", class extends AbstractPage {
                 <ion-button @click=${()=> history.back()}>
                     <ion-icon slot="start" name="chevron-back"></ion-icon>${T("Back")}
                 </ion-button>` : html`
-                <ion-button color="danger" @click=${()=> cleanReload()}>${T("Accept")}
+                <ion-button .color=${color} @click=${()=> cleanReload()}>${T("Accept")}
                 </ion-button>`}
 
             </div>
         </ion-card>
         `
-        this.render(theHtml)
+        this.render(theHtml, pageData.back)
     }
 })
 

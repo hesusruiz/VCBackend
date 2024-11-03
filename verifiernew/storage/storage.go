@@ -39,18 +39,18 @@ var (
 // In our case (Verifiable Credentials), we only need to store the registered clients,
 // and everything else is either transitory or comes from the VC
 type Storage struct {
-	lock          sync.Mutex
-	authRequests  map[string]*InternalAuthRequest
-	codes         map[string]string
-	tokens        map[string]*Token
-	clients       map[string]*Client
-	userStore     UserStore
-	services      map[string]Service
-	refreshTokens map[string]*RefreshToken
-	signingKey    signingKey
-	deviceCodes   map[string]deviceAuthorizationEntry
-	userCodes     map[string]string
-	serviceUsers  map[string]*Client
+	lock                 sync.Mutex
+	internalAuthRequests map[string]*InternalAuthRequest
+	codes                map[string]string
+	tokens               map[string]*Token
+	clients              map[string]*Client
+	userStore            UserStore
+	services             map[string]Service
+	refreshTokens        map[string]*RefreshToken
+	signingKey           signingKey
+	deviceCodes          map[string]deviceAuthorizationEntry
+	userCodes            map[string]string
+	serviceUsers         map[string]*Client
 }
 
 type signingKey struct {
@@ -98,12 +98,12 @@ func NewStorage(userStore UserStore) *Storage {
 func NewStorageWithClients(userStore UserStore, clients map[string]*Client) *Storage {
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	return &Storage{
-		authRequests:  make(map[string]*InternalAuthRequest),
-		codes:         make(map[string]string),
-		tokens:        make(map[string]*Token),
-		refreshTokens: make(map[string]*RefreshToken),
-		clients:       clients,
-		userStore:     userStore,
+		internalAuthRequests: make(map[string]*InternalAuthRequest),
+		codes:                make(map[string]string),
+		tokens:               make(map[string]*Token),
+		refreshTokens:        make(map[string]*RefreshToken),
+		clients:              clients,
+		userStore:            userStore,
 		services: map[string]Service{
 			userStore.ExampleClientID(): {
 				keys: map[string]*rsa.PublicKey{
@@ -135,7 +135,7 @@ func NewStorageWithClients(userStore UserStore, clients map[string]*Client) *Sto
 func (s *Storage) CheckUsernamePassword(username, password, authRequestId string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	request, ok := s.authRequests[authRequestId]
+	request, ok := s.internalAuthRequests[authRequestId]
 	if !ok {
 		return fmt.Errorf("request not found")
 	}
@@ -182,25 +182,26 @@ func (s *Storage) CreateAuthRequest(ctx context.Context, authReq *oidc.AuthReque
 	}
 
 	// typically, you'll fill your storage / storage model with the information of the passed object
-	request := authRequestToInternal(authReq, userID)
+	internalAuthRequest := authRequestToInternal(authReq, userID)
 
 	// you'll also have to create a unique id for the request (this might be done by your database; we'll use a uuid)
-	request.ID = uuid.NewString()
+	internalAuthRequest.ID = uuid.NewString()
 
 	// Create the authentication request for talking with the wallet
 	// This is the endpoint inside the QR that the wallet will use to send the VC/VP
 	response_uri := "https://verifier.mycredential.eu/login/authenticationresponse"
-	walletAuthRequest, err := createJWTSecuredAuthenticationRequest(response_uri, request.ID)
+	walletAuthRequest, err := createJWTSecuredAuthenticationRequest(response_uri, internalAuthRequest.ID)
 	if err != nil {
 		return nil, err
 	}
-	request.WalletAuthRequest = walletAuthRequest
+	internalAuthRequest.WalletAuthRequest = walletAuthRequest
 
-	// and save it in your database (for demonstration purposed we will use a simple map)
-	s.authRequests[request.ID] = request
+	// And save it in the in-memory database. We do not need to persist this.
+	// There is a single server and if the server fails, all auth requets in flight will need to be restarted.
+	s.internalAuthRequests[internalAuthRequest.ID] = internalAuthRequest
 
-	// finally, return the request (which implements the AuthRequest interface of the OP
-	return request, nil
+	// Finally, return the request (which implements the AuthRequest interface of the OP
+	return internalAuthRequest, nil
 }
 
 // AuthRequestByID implements the op.Storage interface
@@ -208,7 +209,7 @@ func (s *Storage) CreateAuthRequest(ctx context.Context, authReq *oidc.AuthReque
 func (s *Storage) AuthRequestByID(ctx context.Context, id string) (op.AuthRequest, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	request, ok := s.authRequests[id]
+	request, ok := s.internalAuthRequests[id]
 	if !ok {
 		return nil, fmt.Errorf("request not found")
 	}
@@ -219,7 +220,7 @@ func (s *Storage) AuthRequestByID(ctx context.Context, id string) (op.AuthReques
 func (s *Storage) GetWalletAuthenticationRequest(id string) (*InternalAuthRequest, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	request, ok := s.authRequests[id]
+	request, ok := s.internalAuthRequests[id]
 	if !ok {
 		return nil, fmt.Errorf("request not found")
 	}
@@ -229,7 +230,7 @@ func (s *Storage) GetWalletAuthenticationRequest(id string) (*InternalAuthReques
 func (s *Storage) CheckWalletAuthenticationResponse(id string, cred *yaml.YAML) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	request, ok := s.authRequests[id]
+	request, ok := s.internalAuthRequests[id]
 	if !ok {
 		return fmt.Errorf("request not found")
 	}
@@ -248,7 +249,7 @@ func (s *Storage) CheckWalletAuthenticationResponse(id string, cred *yaml.YAML) 
 func (s *Storage) CheckLoginDone(id string) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	request, ok := s.authRequests[id]
+	request, ok := s.internalAuthRequests[id]
 	if !ok {
 		return false
 	}
@@ -290,7 +291,7 @@ func (s *Storage) DeleteAuthRequest(ctx context.Context, id string) error {
 	// you can simply delete all reference to the auth request
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	delete(s.authRequests, id)
+	delete(s.internalAuthRequests, id)
 	for code, requestID := range s.codes {
 		if id == requestID {
 			delete(s.codes, code)
@@ -943,7 +944,7 @@ func (s *Storage) AuthRequestDone(id string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if req, ok := s.authRequests[id]; ok {
+	if req, ok := s.internalAuthRequests[id]; ok {
 		req.done = true
 		return nil
 	}

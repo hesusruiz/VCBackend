@@ -10,32 +10,35 @@ server:
 
 issuer:
   listenAddress: ":8090"
-  Meta:
-    appName: "DOME Issuer"
-    appUrl: https://issuer.mycredential.eu
-    senderName: Support
-    senderAddress: "admin@mycredential.eu"
-
-  admin:
-    email: jesus@alastria.io
-
-  SMTP:
-    Enabled: true
-    Host: "smtp.serviciodecorreo.es"
-    Port: "465"
-    Tls: true
-    Username: "admin@mycredential.eu"
-
+  appName: "DOME Issuer"
+  issuerURL: https://issuer.mycredential.eu
+  clientID: domemarketplace
+  senderName: Support
+  senderAddress: "admin@mycredential.eu"
+  verifierURL: https://verifier.mycredential.eu
+  callbackPath: "/auth/callback"
+  scopes: "openid learcred profile email"
+  adminEmail: jesus@alastria.io
+  smtp:
+    enabled: true
+    host: "smtp.serviciodecorreo.es"
+    port: 465
+    tls: true
+    username: "admin@mycredential.eu"
   samedeviceWallet: https://wallet.mycredential.eu
   credentialTemplatesDir: "data/credential_templates"
 
 
 verifier:
-  verifierURL: https://verifier.mycredential.eu
   listenAddress: ":9998"
+  verifierURL: https://verifier.mycredential.eu
   authnPolicies: "authn_policies.star"
   samedeviceWallet: https://wallet.mycredential.eu
   credentialTemplatesDir: "data/credential_templates"
+  registeredClients:
+    - id: domemarketplace
+      type: web
+      secret: ""
 
 relyingParty:
   url: https://demo.mycredential.eu

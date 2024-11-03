@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/evidenceledger/vcdemo/vault/x509util"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
@@ -15,21 +16,44 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
+type loginwithcertResponse struct {
+	NotVerified bool `json:"not_verified,omitempty"`
+	*x509util.ELSIName
+}
+
 func (is *IssuerServer) addSignerRoutes(e *core.ServeEvent) {
 	// Add special Issuer routes with a common prefix
 	// All requests for this group should be authenticated as Admin or with x509 certificate
 	signerApiGroup := e.Router.Group(signerApiGroupPrefix, RequireAdminOrX509Auth())
 
-	// Return to caller the x509 certificate that was used to do client authentication
-	// This call is a helper to the client and does not touch the database
-	signerApiGroup.GET("/getcertinfo", func(c echo.Context) error {
-		_, _, subject, err := getX509UserFromHeader(c.Request())
+	signerApiGroup.GET("/loginwithcert", func(c echo.Context) error {
+		receivedCert, _, subject, err := getX509UserFromHeader(c.Request())
 		if err != nil {
 			return err
 		}
 		log.Println(subject)
 
-		return c.JSON(http.StatusOK, subject)
+		// This is the unique identifier of the certificate
+		receivedSKI := hex.EncodeToString(receivedCert.SubjectKeyId)
+
+		// Check if there is a signer already registered with that certificate.
+		// If not found, just return the subject of the TLS certificate.
+		// If found, return the whole authentication record, which includes a token.
+
+		record, err := is.App.Dao().FindFirstRecordByData("signers", "ski", receivedSKI)
+		if err != nil {
+			return c.JSON(http.StatusOK, subject)
+		} else {
+			if !record.Verified() && record.Collection().AuthOptions().OnlyVerified {
+				ci := &loginwithcertResponse{}
+				ci.ELSIName = subject
+				ci.NotVerified = true
+				log.Println("record found but email not verified")
+				return c.JSON(http.StatusOK, ci)
+			}
+			return apis.RecordAuthResponse(is.App, c, record, nil)
+		}
+
 	})
 
 	// Create a LEARCredential with the info in the request

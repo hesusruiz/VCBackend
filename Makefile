@@ -22,4 +22,5 @@ build:
 	go run cmd/faster/faster.go
 
 serve:
-	go run . autobuild serve
+	templ generate
+	go run . serve

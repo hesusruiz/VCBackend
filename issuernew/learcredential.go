@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/hesusruiz/vcutils/yaml"
+	"github.com/invopop/validation"
 )
 
 type Mandate struct {
@@ -88,5 +90,71 @@ func CreateLEARCredentialJWTtoken(learCred LEARCredentialEmployee, sigMethod jwt
 	fmt.Println(ss, err)
 
 	return ss, nil
+
+}
+
+func LEARCredentialFromMap(s map[string]any) (err error) {
+	// s, ok := sourceany.(map[string]any)
+	// if !ok {
+	// 	return lc, fmt.Errorf("source is not a map[string]any")
+	// }
+
+	err = validation.Validate(s,
+		validation.Map(
+			validation.Key("type", validation.Required, validation.Length(2, 2)),
+		),
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func VerifyLEARCredential(r any) (*yaml.YAML, error) {
+	lc := yaml.New(r)
+
+	// Check that the type is a LEARCredentialEmployee
+	vctypes := lc.ListString("type")
+	if len(vctypes) == 0 {
+		return nil, fmt.Errorf("malformed VC, missing 'type' array")
+	}
+
+	var hasVCtype, hasLEARtype bool
+	for _, el := range vctypes {
+		if el == "VerifiableCredential" {
+			hasVCtype = true
+		}
+		if el == "LEARCredentialEmployee" {
+			hasLEARtype = true
+		}
+	}
+
+	if !hasVCtype {
+		return nil, fmt.Errorf("malformed VC, missing type 'VerifiableCredential'")
+	}
+	if !hasLEARtype {
+		return nil, fmt.Errorf("malformed VC, missing type 'LEARCredentialEmployee'")
+	}
+
+	// Get the Mandate
+	if len(lc.Map("credentialSubject")) == 0 {
+		return nil, fmt.Errorf("malformed VC, missing 'credentialSubject'")
+	}
+	if len(lc.Map("credentialSubject.mandate")) == 0 {
+		return nil, fmt.Errorf("malformed VC, missing 'mandate'")
+	}
+	if len(lc.Map("credentialSubject.mandate.mandator")) == 0 {
+		return nil, fmt.Errorf("malformed VC, missing 'mandator'")
+	}
+	if len(lc.Map("credentialSubject.mandate.mandatee")) == 0 {
+		return nil, fmt.Errorf("malformed VC, missing 'mandatee'")
+	}
+	if len(lc.List("credentialSubject.mandate.power")) == 0 {
+		return nil, fmt.Errorf("malformed VC, missing 'power'")
+	}
+
+	return lc, nil
 
 }
