@@ -4890,14 +4890,19 @@ async function mylog(_desc, ...additional) {
   }
 }
 async function myerror(_desc, ...additional) {
-  let msg = _desc;
-  try {
-    let e = new Error(_desc);
-    msg = e.stack;
-  } catch {
+  if (_desc instanceof Error) {
+    console.error(_desc, ...additional);
+    mylog_entry("E", _desc.stack, ...additional);
+  } else {
+    let msg = _desc;
+    try {
+      let e = new Error(_desc);
+      msg = e.stack;
+    } catch {
+    }
+    console.error(msg, ...additional);
+    mylog_entry("E", msg, _desc, ...additional);
   }
-  console.error(msg, ...additional);
-  mylog_entry("E", msg, _desc, ...additional);
 }
 async function settingsPut(key, value) {
   try {

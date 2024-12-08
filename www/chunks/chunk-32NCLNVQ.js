@@ -17,6 +17,10 @@ var myerror = window.MHR.storage.myerror;
 var mylog = window.MHR.storage.mylog;
 function renderAnyCredentialCard(vc, status = "signed") {
   var credCard;
+  console.log("renderAnyCredentialCard", vc);
+  if (vc.vc) {
+    vc = vc.vc;
+  }
   const vctypes = vc.type;
   if (vctypes.includes("LEARCredentialEmployee")) {
     credCard = renderLEARCredentialCard(vc, status);

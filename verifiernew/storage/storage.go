@@ -181,15 +181,25 @@ func (s *Storage) CreateAuthRequest(ctx context.Context, authReq *oidc.AuthReque
 		return nil, oidc.ErrLoginRequired()
 	}
 
-	// typically, you'll fill your storage / storage model with the information of the passed object
+	// Convert to our internal model and save it in memory.
+	// AuthRequests are ephemeral and we only have one server for authentication.
 	internalAuthRequest := authRequestToInternal(authReq, userID)
 
-	// you'll also have to create a unique id for the request (this might be done by your database; we'll use a uuid)
+	// Every AuthRequest is assigned a unique ID so they can be referenced later
 	internalAuthRequest.ID = uuid.NewString()
 
-	// Create the authentication request for talking with the wallet
+	// Now, we should request from the Wallet the LEARCredential. We use the OID4VP protocol for that.
+	// We create another related but different AuthRequest for sending the request to the Wallet.
+	// It is important to note that the Verifier is action as a standard OpenID Provider for the Application/Client,
+	// but the Verifier actas as a Relaying Party (OID4VP) when talking to the Wallet, which acts as a
+	// OpenID Provider (OID4VP).
+	// This is because the Wallet will send us identity information about the user, in the form of a LEARCredential.
+
 	// This is the endpoint inside the QR that the wallet will use to send the VC/VP
 	response_uri := "https://verifier.mycredential.eu/login/authenticationresponse"
+
+	// The new AuthRequest for the Wallet contains the ID of the AuthRequest received from the Application.
+	// When the Wallet sends the AuthReponse, we will be able to match the Wallet response with the Application request.
 	walletAuthRequest, err := createJWTSecuredAuthenticationRequest(response_uri, internalAuthRequest.ID)
 	if err != nil {
 		return nil, err
@@ -200,7 +210,7 @@ func (s *Storage) CreateAuthRequest(ctx context.Context, authReq *oidc.AuthReque
 	// There is a single server and if the server fails, all auth requets in flight will need to be restarted.
 	s.internalAuthRequests[internalAuthRequest.ID] = internalAuthRequest
 
-	// Finally, return the request (which implements the AuthRequest interface of the OP
+	// Finally, return the request (which implements the AuthRequest interface of the OP).
 	return internalAuthRequest, nil
 }
 
@@ -216,8 +226,8 @@ func (s *Storage) AuthRequestByID(ctx context.Context, id string) (op.AuthReques
 	return request, nil
 }
 
-// GetWalletAuthenticationRequest implements the `authenticate` interface of the login
-func (s *Storage) GetWalletAuthenticationRequest(id string) (*InternalAuthRequest, error) {
+// GetWalletAuthenticationRequestByID implements the `authenticate` interface of the login
+func (s *Storage) GetWalletAuthRequestByID(id string) (*InternalAuthRequest, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	request, ok := s.internalAuthRequests[id]
@@ -227,10 +237,10 @@ func (s *Storage) GetWalletAuthenticationRequest(id string) (*InternalAuthReques
 	return request, nil
 }
 
-func (s *Storage) CheckWalletAuthenticationResponse(id string, cred *yaml.YAML) error {
+func (s *Storage) SaveWalletAuthenticationResponse(id string, cred *yaml.YAML) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	request, ok := s.internalAuthRequests[id]
+	clientRequest, ok := s.internalAuthRequests[id]
 	if !ok {
 		return fmt.Errorf("request not found")
 	}
@@ -239,10 +249,11 @@ func (s *Storage) CheckWalletAuthenticationResponse(id string, cred *yaml.YAML) 
 	fmt.Printf("%#v\n", credSubject)
 	mandateeEmail := cred.String("credentialSubject.mandate.mandatee.email")
 
-	request.UserID = mandateeEmail
+	clientRequest.UserID = mandateeEmail
 	s.userStore.AddUserFromLEARCredential(cred)
 
-	request.done = true
+	// Mark the AuthRequest as completed, so the frontend of the Verifier can stop polling and continue the process.
+	clientRequest.done = true
 	return nil
 }
 

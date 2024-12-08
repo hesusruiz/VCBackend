@@ -317,6 +317,7 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
 });
 async function storeOfferingInServer(jsonCredential) {
   const userEmail = jsonCredential.credentialSubject.mandate.mandatee.email;
+  const organizationIdentifier = jsonCredential.credentialSubject.mandate.mandator.organizationIdentifier;
   const learcred = JSON.stringify(jsonCredential);
   var model = pb.authStore.model;
   try {
@@ -339,6 +340,7 @@ async function storeOfferingInServer(jsonCredential) {
   var data = {
     status: "offered",
     email: userEmail,
+    organizationIdentifier,
     type: "jwt_vc",
     raw: signedCredential,
     creator_email: model.email,

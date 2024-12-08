@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/evidenceledger/vcdemo/types"
 	"github.com/evidenceledger/vcdemo/vault/x509util"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
@@ -39,9 +40,11 @@ func (is *IssuerServer) addSignerRoutes(e *core.ServeEvent) {
 		// Check if there is a signer already registered with that certificate.
 		// If not found, just return the subject of the TLS certificate.
 		// If found, return the whole authentication record, which includes a token.
+		log.Println("receivedSKI:", receivedSKI)
 
 		record, err := is.App.Dao().FindFirstRecordByData("signers", "ski", receivedSKI)
 		if err != nil {
+			log.Println("WARNING: SKI not found")
 			return c.JSON(http.StatusOK, subject)
 		} else {
 			if !record.Verified() && record.Collection().AuthOptions().OnlyVerified {
@@ -134,7 +137,7 @@ func (is *IssuerServer) createJSONCredential(c echo.Context) error {
 	log.Println("RAW", string(raw))
 
 	// Create the Mandate struct from the serialized JSON data
-	mandate := Mandate{}
+	mandate := types.Mandate{}
 	err = json.Unmarshal(raw, &mandate)
 	if err != nil {
 		return err
@@ -169,7 +172,7 @@ func (is *IssuerServer) createJSONCredential(c echo.Context) error {
 	log.Println(string(raw))
 
 	// Create the LEARCredential struct
-	lc := LEARCredentialEmployee{}
+	lc := types.LEARCredentialEmployee{}
 	lc.CredentialSubject.Mandate = mandate
 
 	// Complete the LEARCredential
@@ -200,7 +203,7 @@ func (is *IssuerServer) signCredential(c echo.Context) error {
 		return err
 	}
 
-	var learCred LEARCredentialEmployee
+	var learCred types.LEARCredentialEmployee
 
 	// The body of the HTTP request should be a LEARCredentialEmployee
 	err = echo.BindBody(c, &learCred)
@@ -209,7 +212,7 @@ func (is *IssuerServer) signCredential(c echo.Context) error {
 	}
 
 	// Sign the credential
-	tok, err := CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
+	tok, err := types.CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
 	if err != nil {
 		return err
 	}

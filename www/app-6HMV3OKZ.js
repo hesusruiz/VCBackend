@@ -1,6 +1,6 @@
 import {
   storage
-} from "./chunks/chunk-J2TLX5TK.js";
+} from "./chunks/chunk-T6LHJ32I.js";
 import "./chunks/chunk-BFXLU5VG.js";
 import "./chunks/chunk-CJ4ZD2TO.js";
 import {
@@ -55,6 +55,11 @@ window.T = T;
 // front/src/app.js
 window.myerror = storage.myerror;
 window.mylog = storage.mylog;
+if (!localStorage.getItem("MHRdebug")) {
+  localStorage.setItem("MHRdebug", "false");
+}
+var debug = localStorage.getItem("MHRdebug") == "true";
+console.log("DEBUG", debug);
 var pageModulesMap = window.pageModules;
 var parsedUrl = new URL(import.meta.url);
 var fullPath = parsedUrl.pathname;
@@ -231,7 +236,7 @@ function HeaderBar(backButton = true, loginData) {
         </ion-toolbar>
         `;
 }
-function ErrorPanel(title, message) {
+function ErrorPanel(title, message, details) {
   let theHtml = html`
 
     <ion-card>
@@ -242,6 +247,12 @@ function ErrorPanel(title, message) {
         <ion-card-content class="ion-padding-bottom">
             <div class="text-larger">${message}</div>
         </ion-card-content>
+
+        ${details ? html`
+        <ion-card-content class="ion-padding-bottom">
+            <div class="text-medium">${details}</div>
+        </ion-card-content>            
+        ` : null}
 
         <div class="ion-margin-start ion-margin-bottom">
 
@@ -336,25 +347,32 @@ register("ErrorPage", class extends AbstractPage {
     super(id);
   }
   /**
-   * @param {{title:string; msg:string; back:boolean; level:string}} pageData
+   * @param {{title:string; msg:string; details:string; back:boolean; level:string}} pageData
    */
   enter(pageData) {
     let html2 = this.html;
+    if (!pageData) {
+      pageData = {
+        title: "Error",
+        msg: "An error has happened",
+        details: "",
+        back: false,
+        level: "error"
+      };
+    }
     let title = T2("Error");
-    if (pageData && pageData.title) {
+    if (pageData.title) {
       title = T2(pageData.title);
     }
     let msg = T2("An error has happened.");
-    if (pageData && pageData.msg) {
+    if (pageData.msg) {
       msg = T2(pageData.msg);
     }
     let color = "danger";
-    if (pageData) {
-      if (pageData.level == "info") {
-        color = "primary";
-      } else if (pageData.level == "warning") {
-        color = "warning";
-      }
+    if (pageData.level == "info") {
+      color = "primary";
+    } else if (pageData.level == "warning") {
+      color = "warning";
     }
     let theHtml = html2`
 
@@ -366,13 +384,23 @@ register("ErrorPage", class extends AbstractPage {
 
             <ion-card-content class="ion-padding-bottom">
                 <div class="text-larger">${msg}</div>
-                ${pageData && pageData.back == true ? null : html2`<div>${T2("Please click Accept to refresh the page.")}</div>`}
+
+                ${pageData.details ? html2`
+                    <div class="text-medium">${pageData.details}</div>
+                ` : null}
+
             </ion-card-content>
+
+            ${pageData.back == true ? null : html2`
+                <ion-card-content class="ion-padding-bottom">
+                <div>${T2("Please click Accept to refresh the page.")}</div>
+                </ion-card-content>
+            `}
 
             <div class="ion-margin-start ion-margin-bottom">
 
-                ${pageData && pageData.back == true ? html2`
-                <ion-button @click=${() => history.back()}>
+                ${pageData.back == true ? html2`
+                <ion-button .color=${color} @click=${() => history.back()}>
                     <ion-icon slot="start" name="chevron-back"></ion-icon>${T2("Back")}
                 </ion-button>` : html2`
                 <ion-button .color=${color} @click=${() => cleanReload()}>${T2("Accept")}
@@ -395,6 +423,7 @@ function atobUrl(input) {
   return bstr;
 }
 window.MHR = {
+  debug,
   mylog: storage.mylog,
   storage,
   route,

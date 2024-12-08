@@ -33,6 +33,7 @@ window.MHR.register("IssuerSignerHome", class extends window.MHR.AbstractPage {
         // Authenticate with the server using implicitly the certificate in the TLS session.
         try {
             const authData = await pb.send('/apisigner/loginwithcert')
+            debugger
 
             if (authData.token) {
                 // We receive the token if the user was already registered, including its email
@@ -41,10 +42,10 @@ window.MHR.register("IssuerSignerHome", class extends window.MHR.AbstractPage {
                 pb.authStore.save(authData.token, authData.record)
 
                 console.log(authData)
-    
+
                 gotoPage("ListOfferingsPage")
                 return
-    
+
             } else {
 
                 if (authData.not_verified) {
@@ -54,9 +55,10 @@ window.MHR.register("IssuerSignerHome", class extends window.MHR.AbstractPage {
                         title: "Waiting for confirmation",
                         msg: "Please, check your email for a confirmation message.",
                         back: false,
-                        level: "info"})
-                    return       
-    
+                        level: "info"
+                    })
+                    return
+
                 }
 
                 // The certificate was not yet in the db, ask user to register
@@ -64,12 +66,12 @@ window.MHR.register("IssuerSignerHome", class extends window.MHR.AbstractPage {
                 this.render(theHtml, false)
                 return
             }
-        
+
         } catch (error) {
             console.log("error in loginwithcert:", error)
             // Other errors are displayed as usual
-            gotoPage("ErrorPage", {title: "Error in logon", msg: error.message})
-            return       
+            gotoPage("ErrorPage", { title: "Error in logon", msg: error.message })
+            return
         }
 
     }
@@ -104,7 +106,7 @@ async function registerScreen(authData) {
         </ion-card-content>
         </ion-card>
         `
-    
+
     } else {
         introMessage = html`
 
@@ -157,7 +159,7 @@ async function registerScreen(authData) {
             <div class="ion-margin">
                 <ion-text color="danger"><p id="errortext"></p></ion-text>
     
-                <ion-button @click=${()=> registerEmail()}>
+                <ion-button @click=${() => registerEmail()}>
                     ${T("Register")}
                 </ion-button>
 
@@ -180,7 +182,7 @@ async function registerEmail() {
         console.log("email not specified")
         me("#errortext").innerText = "Enter your email"
         return
-    } 
+    }
 
     // Prepare data to be sent to the server. The password is not used, but the server requires it (for the moment)
     const data = {
@@ -193,10 +195,10 @@ async function registerEmail() {
     // Create a record for the legal representative in the server
     try {
         const record = await pb.collection('signers').create(data);
-        console.log(record)            
+        console.log(record)
     } catch (error) {
         myerror(error)
-        gotoPage("ErrorPage", {title: "Error in registration", msg: error.message})
+        gotoPage("ErrorPage", { title: "Error in registration", msg: error.message })
         return
     }
 
@@ -204,11 +206,11 @@ async function registerEmail() {
     try {
         console.log("Requesting verification")
         var result = await pb.collection('signers').requestVerification(email)
-        console.log("After requesting verification:", result)            
+        console.log("After requesting verification:", result)
     } catch (error) {
         myerror(error)
-        gotoPage("ErrorPage", {title: "Error requesting verification", msg: error.message})
-        return        
+        gotoPage("ErrorPage", { title: "Error requesting verification", msg: error.message })
+        return
     }
 
     alert("Registration requested. Please check your email for confirmation.")
@@ -230,13 +232,13 @@ async function logonScreen() {
         mylog(certInfo)
         if (!certInfo.common_name) {
             myerror("eIDAS certificate does not have Common Name")
-            gotoPage("ErrorPage", {title: "Error retrieving eIDAS certificate info", msg: "eIDAS certificate does not have Common Name"})
-            return           
+            gotoPage("ErrorPage", { title: "Error retrieving eIDAS certificate info", msg: "eIDAS certificate does not have Common Name" })
+            return
         }
     } catch (error) {
         myerror(error)
-        gotoPage("ErrorPage", {title: "Error retrieving eIDAS certificate info", msg: error.message})
-        return       
+        gotoPage("ErrorPage", { title: "Error retrieving eIDAS certificate info", msg: error.message })
+        return
     }
 
     if (certInfo.organization_identifier) {
@@ -256,7 +258,7 @@ async function logonScreen() {
         </ion-card>
 
         `
-    
+
     } else {
         introMessage = html`
 
@@ -310,15 +312,15 @@ async function logonScreen() {
             <div class="ion-margin">
                 <ion-text color="danger"><p id="errortext"></p></ion-text>
     
-                <ion-button id="login" @click=${()=> logonWithEmail()}>
+                <ion-button id="login" @click=${() => logonWithEmail()}>
                     ${T("Logon (if you are already registered)")}
                 </ion-button>
 
                 ${certInfo.registered_email_address ? null : html`
-                <ion-button color="secondary" @click=${()=> registerEmail()}>
+                <ion-button color="secondary" @click=${() => registerEmail()}>
                     ${T("Register (if this is the first time)")}
                 </ion-button>`
-                }
+        }
 
             </div>
         </div>
@@ -352,10 +354,10 @@ function validateEmailScreen() {
             </ion-card-content>
     
             <div class="ion-margin-start ion-margin-bottom">
-                <ion-button @click=${()=> requestVerification(email)}>
+                <ion-button @click=${() => requestVerification(email)}>
                     ${T("Request verification")}
                 </ion-button>
-                <ion-button @click=${()=> pb.authStore.clear()}>
+                <ion-button @click=${() => pb.authStore.clear()}>
                     ${T("Logoff")}
                 </ion-button>
             </div>
@@ -405,10 +407,10 @@ async function logonWithEmail() {
             "12345678",
         );
         console.log(authData)
-            
+
     } catch (error) {
-        gotoPage("ErrorPage", {title: "Error in logon", msg: error.message})
-        return       
+        gotoPage("ErrorPage", { title: "Error in logon", msg: error.message })
+        return
     } finally {
         loader.dismiss()
     }
@@ -451,7 +453,7 @@ window.MHR.register("LogoffPage", class extends window.MHR.AbstractPage {
             </ion-card-content>
     
             <div class="ion-margin-start ion-margin-bottom">
-                <ion-button @click=${() => {pb.authStore.clear();window.MHR.cleanReload()}}>
+                <ion-button @click=${() => { pb.authStore.clear(); window.MHR.cleanReload() }}>
                     ${T("Logoff")}
                 </ion-button>
             </div>

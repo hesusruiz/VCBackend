@@ -36,7 +36,7 @@ MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
     canvasSpace
 
     constructor(id) {
-    
+
         super(id);
 
         // Check if native barcode detection is supported
@@ -89,7 +89,7 @@ MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
         // to the video DOM element. In this case, the video DOM element can be accessed later at
         // this.videoElement.current
         let theHtml = html`<div class="w3-content" style="margin:auto;max-width:500px">
-        <video style="max-width:500px" ref=${this.videoElement} oncanPlay=${()=>this.canPlay()}></video>
+        <video style="max-width:500px" ref=${this.videoElement} oncanPlay=${() => this.canPlay()}></video>
         </div>`;
         this.render(theHtml)
 
@@ -134,7 +134,7 @@ MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
 
         } catch (error) {
             log.error("Error getting stream", error)
-            window.MHR.gotoPage("ErrorPage", {title: "Error getting video stream", msg: "There was an error trying to start the camera."})
+            window.MHR.gotoPage("ErrorPage", { title: "Error getting video stream", msg: "There was an error trying to start the camera." })
             return
         }
 
@@ -212,13 +212,13 @@ MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
                 log.error(error);
                 return;
             }
-    
+
             // If not detected, try again
             if (codes.length === 0) {
                 setTimeout(() => this.detectCode(), this.detectionInterval)
                 return;
             }
-    
+
             // There may be several QR codes detected
             // We will process the first one that is recognized
             for (const barcode of codes) {
@@ -231,25 +231,28 @@ MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
                     break;
                 }
             }
-    
+
         } else {
             // Native support not available, use the JavaScript library
 
             try {
-                const result = await this.zxingReader.decodeOnceFromVideoElement(this.videoElement.current);     
+                const result = await this.zxingReader.decodeOnceFromVideoElement(this.videoElement.current);
                 qrData = result.text
                 mylog("RESULT", qrData)
             } catch (error) {
                 log.error("ZXING decoding error", error)
             }
-            
+
             qrType = this.detectQRtype(qrData)
 
         }
 
         mylog(`QRTYPE: ${qrType}`)
 
-        alert(qrData)
+        if (MHR.debug) {
+            alert(qrData)
+            alert(qrType)
+        }
 
         // If no QR code recognized, keep trying
         if (qrType === QR_UNKNOWN) {
@@ -340,7 +343,7 @@ MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
 
         } else if (qrData.includes("credential_offer_uri=")) {
             return QR_Verifiable_Issuance
-            
+
         } else if (qrData.startsWith("VC1:")) {
             // A Verifiable Credential in raw format
             return QR_W3C_VC;
@@ -352,11 +355,11 @@ MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
             if (jar == "yes") {
                 return QR_Verifiable_Presentation
             }
-    
+
             // Normal QR with a URL where the real data is located
             // We require secure connections with https, and do not accept http schemas
             return QR_URL;
-            
+
         } else {
             return QR_UNKNOWN
         }

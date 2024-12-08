@@ -22,13 +22,13 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/a-h/templ"
+	"github.com/evidenceledger/vcdemo/types"
 	"github.com/evidenceledger/vcdemo/vault/x509util"
 	"github.com/google/uuid"
 	my "github.com/hesusruiz/vcutils/yaml"
 	"github.com/labstack/echo/v5"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 
-	"github.com/evidenceledger/vcdemo/issuernew/usertpl"
 	"github.com/multiformats/go-multibase"
 	"github.com/multiformats/go-multicodec"
 	"github.com/pocketbase/pocketbase"
@@ -42,7 +42,8 @@ import (
 
 const signerApiGroupPrefix = "/apisigner"
 const userApiGroupPrefix = "/apiuser"
-const learGroupPrefix = "/lear"
+const learGroupPrefix = "/lear/pages"
+const learLoginGroupPrefix = "/lear"
 
 // LookupEnvOrString gets a value from the environment or returns the specified default value
 func LookupEnvOrString(key string, defaultVal string) string {
@@ -55,8 +56,10 @@ func LookupEnvOrString(key string, defaultVal string) string {
 type IssuerServer struct {
 	App *pocketbase.PocketBase
 	// cfg    *my.YAML
-	config *Config
-	treg   *pbtemplate.Registry
+	config            *Config
+	treg              *pbtemplate.Registry
+	authUser          *types.AuthenticatedUser
+	generalLoginRoute echo.RouteInfo
 }
 
 func New(cfg *my.YAML) *IssuerServer {
@@ -111,22 +114,6 @@ func (is *IssuerServer) Start() error {
 		pbSettings.Smtp.Port = is.config.SMTP.Port
 		pbSettings.Smtp.Tls = is.config.SMTP.Tls
 		pbSettings.Smtp.Username = is.config.SMTP.Username
-
-		// pbSettings, _ := dao.FindSettings()
-		// pbSettings.Meta.AppName = cfg.String("appName", "DOME Issuer")
-		// pbSettings.Meta.AppUrl = cfg.String("appUrl", "issuer.mycredential.eu")
-		// is.config.URL = pbSettings.Meta.AppUrl
-		// pbSettings.Logs.MaxDays = 2
-
-		// pbSettings.Meta.SenderName = cfg.String("senderName", "Support")
-		// pbSettings.Meta.SenderAddress = cfg.String("senderAddress", "admin@mycredential.eu")
-
-		// pbSettings.Smtp.Enabled = cfg.Bool("smtp.enabled", true)
-		// pbSettings.Smtp.Host = cfg.String("smtp.host", "example.com")
-		// pbSettings.Smtp.Port = cfg.Int("smtp.port", 465)
-		// pbSettings.Smtp.Tls = cfg.Bool("smtp.tls", true)
-		// pbSettings.Smtp.Username = cfg.String("smtp.username", "admin@mycredential.eu")
-		// settings.Smtp.Password = cfg.String("SMTP.Password")
 
 		// Write the settings to the database
 		err := dao.SaveSettings(pbSettings)
@@ -384,7 +371,7 @@ func (is *IssuerServer) selectHomePage(next echo.HandlerFunc) echo.HandlerFunc {
 			clientCertDer := c.Request().Header.Get("Tls-Client-Certificate")
 			if clientCertDer == "" {
 				// We did not receive a client certificate, serve the public pages
-				return is.HomeHandler(c)
+				return is.LEARHomeHandler(c)
 			} else {
 				// We received a client certificate identifying the user, who will act as Signer
 				return c.File("www/indexSigner.html")
@@ -393,11 +380,6 @@ func (is *IssuerServer) selectHomePage(next echo.HandlerFunc) echo.HandlerFunc {
 
 		return next(c) // proceed with the request chain
 	}
-}
-
-func (is *IssuerServer) HomeHandler(c echo.Context) error {
-
-	return Render(c, http.StatusOK, usertpl.Home())
 }
 
 // getX509UserFromHeader retrieves the 'issuer' and 'subject' information from the

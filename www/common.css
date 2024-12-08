@@ -273,7 +273,9 @@
 .w3-margin{margin:16px!important}.w3-margin-top{margin-top:16px!important}.w3-margin-bottom{margin-bottom:16px!important}
 .w3-margin-left{margin-left:16px!important}.w3-margin-right{margin-right:16px!important}
 
-
+.margin-small {
+  margin: 8px;
+}
     .text-large {
         font-size: large;
     }

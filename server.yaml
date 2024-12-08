@@ -12,7 +12,7 @@ issuer:
   listenAddress: ":8090"
   appName: "DOME Issuer"
   issuerURL: https://issuer.mycredential.eu
-  clientID: domemarketplace
+  clientID: https://issuer.mycredential.eu
   senderName: Support
   senderAddress: "admin@mycredential.eu"
   verifierURL: https://verifier.mycredential.eu
@@ -36,9 +36,17 @@ verifier:
   samedeviceWallet: https://wallet.mycredential.eu
   credentialTemplatesDir: "data/credential_templates"
   registeredClients:
-    - id: domemarketplace
+    - id: https://issuer.mycredential.eu
       type: web
       secret: ""
+      redirectURIs:
+        - https://issuer.mycredential.eu/lear/auth/callback
+
+    - id: https://demo.mycredential.eu
+      type: web
+      secret: ""
+      redirectURIs:
+        - https://demo.mycredential.eu/auth/callback
 
 relyingParty:
   url: https://demo.mycredential.eu

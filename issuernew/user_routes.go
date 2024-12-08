@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/evidenceledger/vcdemo/issuernew/usertpl"
+	"github.com/evidenceledger/vcdemo/types"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
@@ -81,7 +82,7 @@ func (is *IssuerServer) addUserRoutes(e *core.ServeEvent) {
 		// 	return
 		// }
 
-		lc, err := VerifyLEARCredential(learCredential)
+		lc, err := types.VerifyLEARCredential(learCredential)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -260,7 +261,7 @@ func (is *IssuerServer) sendDid(c echo.Context) error {
 	}
 
 	// Build the Go struct from the JSON credential
-	var learCred LEARCredentialEmployee
+	var learCred types.LEARCredentialEmployee
 	err = json.Unmarshal(claimsDecoded, &learCred)
 	if err != nil {
 		return err
@@ -277,7 +278,7 @@ func (is *IssuerServer) sendDid(c echo.Context) error {
 	}
 
 	// Sign the credential with the server certificate
-	credential, err := CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
+	credential, err := types.CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
 	if err != nil {
 		return err
 	}
@@ -378,7 +379,7 @@ func (is *IssuerServer) retrieveCredentialPOST(c echo.Context) error {
 	}
 
 	// Build the Go struct from the JSON credential
-	var learCred LEARCredentialEmployee
+	var learCred types.LEARCredentialEmployee
 	err = json.Unmarshal(claimsDecoded, &learCred)
 	if err != nil {
 		return err
@@ -403,7 +404,7 @@ func (is *IssuerServer) retrieveCredentialPOST(c echo.Context) error {
 	}
 
 	// Sign the signedCredential with the server certificate
-	signedCredential, err := CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
+	signedCredential, err := types.CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
 	if err != nil {
 		return err
 	}

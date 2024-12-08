@@ -45,7 +45,7 @@ async function credentialsSave(_credential, replace) {
 
     log.log("CredentialSave", _credential)
 
-    
+
     if (_credential.id) {
         var hashHex = _credential.id
     } else {
@@ -74,7 +74,7 @@ async function credentialsSave(_credential, replace) {
             //@ts-ignore
             await db.credentials.put(credential_to_store)
         } catch (error) {
-            window.MHR.gotoPage("ErrorPage", {"title": "Error saving credential", "msg": error.message})
+            window.MHR.gotoPage("ErrorPage", { "title": "Error saving credential", "msg": error.message })
             log.error("Error saving credential", error)
             return;
         }
@@ -85,9 +85,9 @@ async function credentialsSave(_credential, replace) {
             await db.credentials.add(credential_to_store)
         } catch (error) {
             if (error.name == "ConstraintError") {
-                window.MHR.gotoPage("ErrorPage", {"title": "Credential already exists", "msg": "Can not save credential: already exists"})
+                window.MHR.gotoPage("ErrorPage", { "title": "Credential already exists", "msg": "Can not save credential: already exists" })
             } else {
-                window.MHR.gotoPage("ErrorPage", {"title": "Error saving credential", "msg": error.message})
+                window.MHR.gotoPage("ErrorPage", { "title": "Error saving credential", "msg": error.message })
             }
             log.error("Error saving credential", error)
             return;
@@ -134,7 +134,7 @@ async function credentialsDeleteCred(_credential) {
         await db.credentials.delete(hashHex)
     } catch (error) {
         log.error(error);
-        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error deleting credential"})
+        window.MHR.gotoPage("ErrorPage", { "title": "Error", "msg": "Error deleting credential" })
     }
 }
 
@@ -145,7 +145,7 @@ async function credentialsDelete(key) {
         await db.credentials.delete(key)
     } catch (error) {
         log.error(error);
-        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error deleting credential"})
+        window.MHR.gotoPage("ErrorPage", { "title": "Error", "msg": "Error deleting credential" })
     }
 }
 
@@ -155,7 +155,7 @@ async function credentialsDeleteAll() {
         await db.credentials.clear()
     } catch (error) {
         log.error(error);
-        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error deleting all credential"})
+        window.MHR.gotoPage("ErrorPage", { "title": "Error", "msg": "Error deleting all credential" })
     }
 }
 
@@ -182,7 +182,7 @@ async function credentialsGetAllRecent(days) {
     if (days == undefined) {
         days = 365
     }
-    const dateInThePast = Date.now() - 60 * 60 *  24 * 1000 * days;
+    const dateInThePast = Date.now() - 60 * 60 * 24 * 1000 * days;
 
     try {
         // @ts-ignore
@@ -203,7 +203,7 @@ async function credentialsGetAllKeys() {
         var keys = await db.credentials.orderBy("timestamp").primaryKeys();
     } catch (error) {
         log.error(error);
-        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error getting all credentials"})
+        window.MHR.gotoPage("ErrorPage", { "title": "Error", "msg": "Error getting all credentials" })
     }
 
     return keys;
@@ -314,15 +314,22 @@ async function mylog(_desc, ...additional) {
 // }
 
 async function myerror(_desc, ...additional) {
-    let msg = _desc
-    // Get the stack trace if available
-    try {
-        let e = new Error(_desc)
-        msg = e.stack
-    } catch {}
-    console.error(msg, ...additional)
-    // @ts-ignore
-    mylog_entry("E", msg, _desc, ...additional)
+    if (_desc instanceof Error) {
+        console.error(_desc, ...additional)
+        // @ts-ignore
+        mylog_entry("E", _desc.stack, ...additional)
+
+    } else {
+        let msg = _desc
+        // Get the stack trace if available
+        try {
+            let e = new Error(_desc)
+            msg = e.stack
+        } catch { }
+        console.error(msg, ...additional)
+        // @ts-ignore
+        mylog_entry("E", msg, _desc, ...additional)
+    }
 }
 
 
@@ -379,7 +386,7 @@ async function settingsDeleteAll() {
  */
 async function showError(_text) {
     myerror(_text)
-    window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": _text})
+    window.MHR.gotoPage("ErrorPage", { "title": "Error", "msg": _text })
     return;
 }
 
@@ -404,9 +411,9 @@ async function didSave(_didObject) {
 
     // Create the object to store
     var object_to_store = {
-        did:        _didObject.did,
+        did: _didObject.did,
         privateKey: _didObject.privateKey,
-        timestamp:  Date.now(),
+        timestamp: Date.now(),
     }
 
     // Store the object

@@ -52,14 +52,14 @@ func Setup(cfg *yaml.YAML) {
 		}
 	})
 
-	// Get my client ID to identify with the Verifier acting as OpenID Provider
-	clientID := LookupEnvOrString("CLIENT_ID", "domemarketplace")
-	clientSecret := LookupEnvOrString("CLIENT_SECRET", "secret")
-
 	// The URL that the Verifier will use to call us with the result of authentication
 	myURL := cfg.String("url", "https://demo.mycredential.eu")
 	callbackPath := cfg.String("callbackPath", "/auth/callback")
 	redirectURI := myURL + callbackPath
+
+	// Get my client ID to identify with the Verifier acting as OpenID Provider
+	clientID := LookupEnvOrString("CLIENT_ID", myURL)
+	clientSecret := LookupEnvOrString("CLIENT_SECRET", "")
 
 	// The URL of the Verifier (acting as OpenID Provider, Issuer of tokens)
 	issuer := LookupEnvOrString("ISSUER", cfg.String("verifierURL", "https://verifier.mycredential.eu"))

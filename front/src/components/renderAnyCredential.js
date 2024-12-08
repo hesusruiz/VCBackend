@@ -22,8 +22,12 @@ let mylog = window.MHR.storage.mylog
  * @param {string}  status - One of 'offered', 'tobesigned' or 'signed'.
  * @returns {Tag<HTMLElement>} - The HTML representing the credential
  */
-export function renderAnyCredentialCard(vc, status="signed") {
+export function renderAnyCredentialCard(vc, status = "signed") {
     var credCard
+    console.log("renderAnyCredentialCard", vc)
+    if (vc.vc) {
+        vc = vc.vc
+    }
     const vctypes = vc.type
 
     if (vctypes.includes("LEARCredentialEmployee")) {
@@ -87,8 +91,8 @@ export function renderLEARCredentialCard(vc, status) {
                 </ion-item>
             
                 ${powers.map(pow => {
-                return html`<ion-item><ion-label>${(typeof pow.tmf_domain)=="string" ? pow.tmf_domain : pow.tmf_domain[0]}: ${pow.tmf_function} [${pow.tmf_action}]</ion-label></ion-item>`
-                })}
+        return html`<ion-item><ion-label>${(typeof pow.tmf_domain) == "string" ? pow.tmf_domain : pow.tmf_domain[0]}: ${pow.tmf_function} [${pow.tmf_action}]</ion-label></ion-item>`
+    })}
             </ion-list>
             </div>
 

@@ -90,7 +90,7 @@ func (a *InternalAuthRequest) GetCodeChallenge() *oidc.CodeChallenge {
 	return CodeChallengeToOIDC(a.CodeChallenge)
 }
 
-func (a *InternalAuthRequest) GetWalletAuthRequest() string {
+func (a *InternalAuthRequest) GetWalletAuthRequestByID() string {
 	return a.WalletAuthRequest
 }
 

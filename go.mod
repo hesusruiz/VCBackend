@@ -9,8 +9,10 @@ require (
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-chi/cors v1.2.1
 	github.com/go-jose/go-jose/v3 v3.0.3
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gofiber/fiber/v2 v2.49.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/invopop/validation v0.8.0
 	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
 	github.com/otiai10/copy v1.2.0
 	github.com/pocketbase/dbx v1.10.1
@@ -59,7 +61,6 @@ require (
 	github.com/ganigeorgiev/fexpr v0.4.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/goccy/go-yaml v1.9.6 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -71,7 +72,6 @@ require (
 	github.com/huandu/xstrings v1.3.3 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/invopop/validation v0.8.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.2 // indirect
@@ -130,7 +130,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/securecookie v1.1.2
+	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/hesusruiz/vcutils v1.1.1
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/lestrrat-go/jwx/v2 v2.0.13

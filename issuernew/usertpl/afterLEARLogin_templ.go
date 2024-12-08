@@ -84,7 +84,7 @@ func AfterLEARLogin(lc *yaml.YAML) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(").</p></div><div class=\"w3-section\"><a href=\"/lear/learRetrieveAllCredentials\" class=\"w3-btn w3-black\" title=\"Submit button\">Retrieve credentials</a></div>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(").</p></div><div class=\"w3-section\"><a href=\"/lear/pages/learRetrieveAllCredentials\" class=\"w3-btn w3-black\" title=\"Submit button\">Retrieve credentials</a></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

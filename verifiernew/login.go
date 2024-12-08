@@ -1,4 +1,4 @@
-package learcredop
+package verifiernew
 
 import (
 	"context"
@@ -16,19 +16,24 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/hesusruiz/vcutils/yaml"
+	"github.com/sirupsen/logrus"
 	"github.com/skip2/go-qrcode"
 	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
+const (
+	queryAuthRequestID = "authRequestID"
+)
+
 type login struct {
-	cfg          *yaml.YAML
+	cfg          *Config
 	authenticate authenticate
 	router       chi.Router
 	callback     func(context.Context, string) string
 }
 
 func NewLogin(
-	cfg *yaml.YAML,
+	cfg *Config,
 	authenticate authenticate,
 	callback func(context.Context, string) string,
 	issuerInterceptor *op.IssuerInterceptor,
@@ -38,11 +43,6 @@ func NewLogin(
 		cfg:          cfg,
 		authenticate: authenticate,
 		callback:     callback,
-	}
-
-	verifierURL := cfg.String("verifierURL")
-	if len(verifierURL) == 0 {
-		panic("verifierURL not specified in config")
 	}
 
 	l.createRouter()
@@ -102,7 +102,7 @@ func (l *login) createRouter() {
 		authReqId := r.FormValue("state")
 
 		// Get the original auth request from the Client
-		authReq, err := l.authenticate.GetWalletAuthenticationRequest(authReqId)
+		authReq, err := l.authenticate.GetWalletAuthRequestByID(authReqId)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error getting the Wallet AuthorizationRequest:%s", err), http.StatusInternalServerError)
 			return
@@ -128,6 +128,13 @@ func (l *login) createRouter() {
 		}
 		authReqId := r.FormValue("state")
 		log.Println("APIWalletAuthenticationResponse", "stateKey", authReqId)
+
+		// Check if the AuthRequest exists
+		_, err = l.authenticate.GetWalletAuthRequestByID(authReqId)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("AuthRequest does not exist:%s", err), http.StatusInternalServerError)
+			return
+		}
 
 		// Decode into a map
 		authResponse, err := yaml.ParseJson(string(body))
@@ -187,14 +194,14 @@ func (l *login) createRouter() {
 			return
 		}
 
-		// Update the storage object with the Wallet Authentication Response and signal login completed
-		err = l.authenticate.CheckWalletAuthenticationResponse(authReqId, theCredential)
+		// Update the internal AuthRequest with the LEARCredential received from the Wallet.
+		err = l.authenticate.SaveWalletAuthenticationResponse(authReqId, theCredential)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error updating Wallet authentication response:%s", err), http.StatusInternalServerError)
 			return
 		}
 
-		// Send reply to the Wallet, so it can stop polling and show a success screen
+		// Send reply to the Wallet, so it can show a success screen
 		resp := map[string]string{
 			"authenticatorRequired": "no",
 			"type":                  "login",
@@ -207,8 +214,6 @@ func (l *login) createRouter() {
 
 	})
 
-	// l.router.Post("/username", issuerInterceptor.HandlerFunc(l.checkLoginHandler))
-
 	// For testing several things
 	l.router.Get("/fake", l.FakeAPIWalletAuthenticationResponse)
 	l.router.Post("/fake", l.FakeAPIWalletAuthenticationResponse)
@@ -216,23 +221,19 @@ func (l *login) createRouter() {
 
 type authenticate interface {
 	CheckUsernamePassword(username, password, id string) error
-	GetWalletAuthenticationRequest(id string) (*storage.InternalAuthRequest, error)
-	CheckWalletAuthenticationResponse(id string, cred *yaml.YAML) error
+	GetWalletAuthRequestByID(id string) (*storage.InternalAuthRequest, error)
+	SaveWalletAuthenticationResponse(id string, cred *yaml.YAML) error
 	CheckLoginDone(id string) bool
 }
 
-func renderLogin(cfg *yaml.YAML, w http.ResponseWriter, authRequestID string, formError error) {
+func renderLogin(cfg *Config, w http.ResponseWriter, authRequestID string, formError error) {
 
-	verifierURL := cfg.String("verifierURL")
-	if len(verifierURL) == 0 {
-		http.Error(w, "verifierURL not specified in config", http.StatusInternalServerError)
-		return
-	}
+	verifierURL := cfg.VerifierURL
 
 	request_uri := verifierURL + "/login/authenticationrequest" + "?state=" + authRequestID
 	escaped_request_uri := url.QueryEscape(request_uri)
 
-	sameDeviceWallet := cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
+	sameDeviceWallet := cfg.SamedeviceWallet
 	openid4PVURL := "openid4vp://"
 
 	samedevice_uri := sameDeviceWallet + "?request_uri=" + escaped_request_uri
@@ -368,50 +369,6 @@ func (l *login) FakeAPIWalletAuthenticationResponse(w http.ResponseWriter, r *ht
 	return
 }
 
-// TODO: erase this as authentication with user/password is not used
-// // The function will redirect to the client application using the callback URL.
-// func (l *login) checkLoginHandler(w http.ResponseWriter, r *http.Request) {
-// 	err := r.ParseForm()
-// 	if err != nil {
-// 		http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
-// 		return
-// 	}
-// 	username := r.FormValue("username")
-// 	password := r.FormValue("password")
-// 	id := r.FormValue("id")
-// 	err = l.authenticate.CheckUsernamePassword(username, password, id)
-// 	if err != nil {
-// 		renderLogin(l.cfg, w, id, err)
-// 		return
-// 	}
-// 	http.Redirect(w, r, l.callback(r.Context(), id), http.StatusFound)
-// }
-
-// APIWalletAuthenticationRequest is called by the Wallet to retrieve the Authentication Request.
-// This is to support the request_uri OIDC parameter, which we use to reduce the size of the QR.
-func (l *login) APIWalletAuthenticationRequest(w http.ResponseWriter, r *http.Request) {
-
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
-		return
-	}
-	authReqId := r.FormValue("state")
-
-	// Get the original auth request from the Client
-	authReq, err := l.authenticate.GetWalletAuthenticationRequest(authReqId)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error getting the Wallet AuthorizationRequest:%s", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Get the auth request that was sent to the Wallet
-	walletAuthRequest := authReq.WalletAuthRequest
-
-	w.Write([]byte(walletAuthRequest))
-
-}
-
 func (l *login) APIWalletPoll(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseForm()
@@ -428,230 +385,238 @@ func (l *login) APIWalletPoll(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (l *login) APIWalletAuthenticationResponse(w http.ResponseWriter, r *http.Request) {
-	var theCredential *yaml.YAML
-	// var isEnterpriseWallet bool
+// func (l *login) APIWalletAuthenticationResponse(w http.ResponseWriter, r *http.Request) {
+// 	var theCredential *yaml.YAML
+// 	// var isEnterpriseWallet bool
 
-	body, _ := io.ReadAll(r.Body)
+// 	body, _ := io.ReadAll(r.Body)
 
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
-		return
+// 	err := r.ParseForm()
+// 	if err != nil {
+// 		http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	authReqId := r.FormValue("state")
+// 	log.Println("APIWalletAuthenticationResponse", "stateKey", authReqId)
+
+// 	// Decode into a map
+// 	authResponse, err := yaml.ParseJson(string(body))
+// 	if err != nil {
+// 		http.Error(w, fmt.Sprintf("cannot parse body:%s", err), http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	// Get the vp_token field
+// 	vp_token := authResponse.String("vp_token")
+// 	if len(vp_token) == 0 {
+// 		http.Error(w, "vp_token not found", http.StatusInternalServerError)
+// 		return
+// 	}
+// 	// Decode VP from B64Url
+// 	rawVP, err := base64.RawURLEncoding.DecodeString(vp_token)
+// 	if err != nil {
+// 		http.Error(w, fmt.Sprintf("error decoding VP:%s", err), http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	// Parse the VP object into a map
+// 	vp, err := yaml.ParseJson(string(rawVP))
+// 	if err != nil {
+// 		http.Error(w, fmt.Sprintf("error parsing the VP object:%s", err), http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	// Get the list of credentials in the VP
+// 	credentials := vp.List("verifiableCredential")
+// 	if len(credentials) == 0 {
+// 		http.Error(w, "no credentials found in VP", http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	// TODO: for the moment, we accept only the first credential inside the VP
+// 	firstCredential := credentials[0]
+// 	theCredential = yaml.New(firstCredential)
+
+// 	// Serialize the credential into a JSON string
+// 	serialCredential, err := json.Marshal(theCredential.Data())
+// 	if err != nil {
+// 		http.Error(w, fmt.Sprintf("error serialising the credential:%s", err), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	log.Println("credential", string(serialCredential))
+
+// 	// Invoke the PDP (Policy Decision Point) to authenticate/authorize this request
+// 	accepted, err := pdp.TakeAuthnDecision(Authenticate, r, string(serialCredential), "")
+// 	if err != nil {
+// 		http.Error(w, fmt.Sprintf("error evaluating authentication rules:%s", err), http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	if !accepted {
+// 		http.Error(w, "authentication failed", http.StatusUnauthorized)
+// 		return
+// 	}
+
+// 	// Update the storage object with the Wallet Authentication Response and signal login completed
+// 	err = l.authenticate.CheckWalletAuthenticationResponse(authReqId, theCredential)
+// 	if err != nil {
+// 		http.Error(w, fmt.Sprintf("error updating Wallet authentication response:%s", err), http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	resp := map[string]string{
+// 		"authenticatorRequired": "no",
+// 		"type":                  "login",
+// 		"email":                 "email",
+// 	}
+// 	out, _ := json.Marshal(resp)
+
+// 	w.Header().Add("Content-Type", "application/json")
+// 	w.Write(out)
+// 	return
+
+// // Invoke the PDP (Policy Decision Point) to authenticate/authorize this request
+// accepted := v.pdp.TakeAuthnDecision(Authenticate, c, string(serialCredential), "")
+// zlog.Info().Bool("Authenticated", accepted).Msg("")
+
+// if !accepted {
+
+// 	// Deny access
+// 	// Set the credential in storage, and wait for the polling from client
+// 	newState := handlers.NewState()
+// 	newState.SetStatus(handlers.StateDenied)
+// 	newState.SetContent(serialCredential)
+
+// 	v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
+
+// 	zlog.Info().Msg("Authentication denied")
+// 	return fiber.NewError(fiber.StatusUnauthorized, "access denied")
+
+// }
+
+// // Get the email of the user
+// email := theCredential.String("credentialSubject.mandate.mandatee.email")
+// // name := theCredential.String("credentialSubject.name")
+// // zlog.Info().Str("email", email).Msg("data in vp_token")
+
+// // // Get user from Database
+// // usr, err := v.vault.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
+// // if err != nil {
+// // 	zlog.Err(err).Msg("CreateOrGetUserWithDIDKey error")
+// // 	return err
+// // }
+
+// // // Check if the user has a registered WebAuthn credential
+// var userNotRegistered bool
+// // if len(usr.WebAuthnCredentials()) == 0 {
+// // 	userNotRegistered = true
+// // 	zlog.Info().Msg("user does not have a registered WebAuthn credential")
+// // }
+
+// if isEnterpriseWallet {
+
+// 	// Set the credential in storage, and wait for the polling from client
+// 	newState := handlers.NewState()
+// 	newState.SetStatus(handlers.StateCompleted)
+// 	newState.SetContent(serialCredential)
+
+// 	v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
+
+// 	zlog.Info().Msg("AuthenticationResponse from enterprise wallet success")
+// 	return c.SendString(email)
+
+// } else {
+
+// 	if !v.cfg.Bool("authenticatorRequired", false) {
+
+// 		// Set the credential in storage, and wait for the polling from client
+// 		newState := handlers.NewState()
+// 		newState.SetStatus(handlers.StateCompleted)
+// 		newState.SetContent(serialCredential)
+// 		newStateString := newState.String()
+
+// 		err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
+// 		if err != nil {
+// 			zlog.Err(err).Send()
+// 			return err
+// 		}
+
+// 		zlog.Info().
+// 			Str("state", newStateString).
+// 			Str("email", email).
+// 			Msg("AuthenticationResponse success, not requiring webAuthn")
+
+// 		resp := map[string]string{
+// 			"authenticatorRequired": "no",
+// 			"type":                  "login",
+// 			"email":                 email,
+// 		}
+
+// 		return c.JSON(resp)
+
+// 	}
+
+// 	if userNotRegistered {
+// 		// The user does not have WebAuthn credentials, so we require initial registration of the Authenticator
+
+// 		// Set the credential in storage, and wait for the polling from client
+// 		newState := handlers.NewState()
+// 		newState.SetStatus(handlers.StateRegistering)
+// 		newState.SetContent(serialCredential)
+
+// 		err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
+// 		if err != nil {
+// 			zlog.Err(err).Send()
+// 			return err
+// 		}
+
+// 		zlog.Info().Msg("AuthenticationResponse success, new user created")
+
+// 		resp := map[string]string{
+// 			"authenticatorRequired": "yes",
+// 			"authType":              "registration",
+// 			"email":                 email,
+// 		}
+
+// 		return c.JSON(resp)
+
+// 	} else {
+// 		// The user already has WebAuthn credentials, so this should be a login operation with the Authenticator
+
+// 		// Set the credential in storage, and wait for the polling from client
+// 		newState := handlers.NewState()
+// 		newState.SetStatus(handlers.StateAuthenticating)
+// 		newState.SetContent(serialCredential)
+// 		newStateString := newState.String()
+
+// 		err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
+// 		if err != nil {
+// 			zlog.Err(err).Send()
+// 			return err
+// 		}
+
+// 		zlog.Info().
+// 			Str("state", newStateString).
+// 			Str("email", email).
+// 			Msg("AuthenticationResponse success, existing user")
+
+// 		resp := map[string]string{
+// 			"authenticatorRequired": "yes",
+// 			"type":                  "login",
+// 			"email":                 email,
+// 		}
+
+// 		return c.JSON(resp)
+// 	}
+
+// }
+
+// }
+
+func errMsg(err error) string {
+	if err == nil {
+		return ""
 	}
-	authReqId := r.FormValue("state")
-	log.Println("APIWalletAuthenticationResponse", "stateKey", authReqId)
-
-	// Decode into a map
-	authResponse, err := yaml.ParseJson(string(body))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("cannot parse body:%s", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Get the vp_token field
-	vp_token := authResponse.String("vp_token")
-	if len(vp_token) == 0 {
-		http.Error(w, "vp_token not found", http.StatusInternalServerError)
-		return
-	}
-	// Decode VP from B64Url
-	rawVP, err := base64.RawURLEncoding.DecodeString(vp_token)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error decoding VP:%s", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Parse the VP object into a map
-	vp, err := yaml.ParseJson(string(rawVP))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error parsing the VP object:%s", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Get the list of credentials in the VP
-	credentials := vp.List("verifiableCredential")
-	if len(credentials) == 0 {
-		http.Error(w, "no credentials found in VP", http.StatusInternalServerError)
-		return
-	}
-
-	// TODO: for the moment, we accept only the first credential inside the VP
-	firstCredential := credentials[0]
-	theCredential = yaml.New(firstCredential)
-
-	// Serialize the credential into a JSON string
-	serialCredential, err := json.Marshal(theCredential.Data())
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error serialising the credential:%s", err), http.StatusInternalServerError)
-		return
-	}
-	log.Println("credential", string(serialCredential))
-
-	// Invoke the PDP (Policy Decision Point) to authenticate/authorize this request
-	accepted, err := pdp.TakeAuthnDecision(Authenticate, r, string(serialCredential), "")
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error evaluating authentication rules:%s", err), http.StatusInternalServerError)
-		return
-	}
-
-	if !accepted {
-		http.Error(w, "authentication failed", http.StatusUnauthorized)
-		return
-	}
-
-	// Update the storage object with the Wallet Authentication Response and signal login completed
-	err = l.authenticate.CheckWalletAuthenticationResponse(authReqId, theCredential)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error updating Wallet authentication response:%s", err), http.StatusInternalServerError)
-		return
-	}
-
-	resp := map[string]string{
-		"authenticatorRequired": "no",
-		"type":                  "login",
-		"email":                 "email",
-	}
-	out, _ := json.Marshal(resp)
-
-	w.Header().Add("Content-Type", "application/json")
-	w.Write(out)
-	return
-
-	// // Invoke the PDP (Policy Decision Point) to authenticate/authorize this request
-	// accepted := v.pdp.TakeAuthnDecision(Authenticate, c, string(serialCredential), "")
-	// zlog.Info().Bool("Authenticated", accepted).Msg("")
-
-	// if !accepted {
-
-	// 	// Deny access
-	// 	// Set the credential in storage, and wait for the polling from client
-	// 	newState := handlers.NewState()
-	// 	newState.SetStatus(handlers.StateDenied)
-	// 	newState.SetContent(serialCredential)
-
-	// 	v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
-
-	// 	zlog.Info().Msg("Authentication denied")
-	// 	return fiber.NewError(fiber.StatusUnauthorized, "access denied")
-
-	// }
-
-	// // Get the email of the user
-	// email := theCredential.String("credentialSubject.mandate.mandatee.email")
-	// // name := theCredential.String("credentialSubject.name")
-	// // zlog.Info().Str("email", email).Msg("data in vp_token")
-
-	// // // Get user from Database
-	// // usr, err := v.vault.CreateOrGetUserWithDIDKey(email, name, "naturalperson", "ThePassword")
-	// // if err != nil {
-	// // 	zlog.Err(err).Msg("CreateOrGetUserWithDIDKey error")
-	// // 	return err
-	// // }
-
-	// // // Check if the user has a registered WebAuthn credential
-	// var userNotRegistered bool
-	// // if len(usr.WebAuthnCredentials()) == 0 {
-	// // 	userNotRegistered = true
-	// // 	zlog.Info().Msg("user does not have a registered WebAuthn credential")
-	// // }
-
-	// if isEnterpriseWallet {
-
-	// 	// Set the credential in storage, and wait for the polling from client
-	// 	newState := handlers.NewState()
-	// 	newState.SetStatus(handlers.StateCompleted)
-	// 	newState.SetContent(serialCredential)
-
-	// 	v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
-
-	// 	zlog.Info().Msg("AuthenticationResponse from enterprise wallet success")
-	// 	return c.SendString(email)
-
-	// } else {
-
-	// 	if !v.cfg.Bool("authenticatorRequired", false) {
-
-	// 		// Set the credential in storage, and wait for the polling from client
-	// 		newState := handlers.NewState()
-	// 		newState.SetStatus(handlers.StateCompleted)
-	// 		newState.SetContent(serialCredential)
-	// 		newStateString := newState.String()
-
-	// 		err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
-	// 		if err != nil {
-	// 			zlog.Err(err).Send()
-	// 			return err
-	// 		}
-
-	// 		zlog.Info().
-	// 			Str("state", newStateString).
-	// 			Str("email", email).
-	// 			Msg("AuthenticationResponse success, not requiring webAuthn")
-
-	// 		resp := map[string]string{
-	// 			"authenticatorRequired": "no",
-	// 			"type":                  "login",
-	// 			"email":                 email,
-	// 		}
-
-	// 		return c.JSON(resp)
-
-	// 	}
-
-	// 	if userNotRegistered {
-	// 		// The user does not have WebAuthn credentials, so we require initial registration of the Authenticator
-
-	// 		// Set the credential in storage, and wait for the polling from client
-	// 		newState := handlers.NewState()
-	// 		newState.SetStatus(handlers.StateRegistering)
-	// 		newState.SetContent(serialCredential)
-
-	// 		err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
-	// 		if err != nil {
-	// 			zlog.Err(err).Send()
-	// 			return err
-	// 		}
-
-	// 		zlog.Info().Msg("AuthenticationResponse success, new user created")
-
-	// 		resp := map[string]string{
-	// 			"authenticatorRequired": "yes",
-	// 			"authType":              "registration",
-	// 			"email":                 email,
-	// 		}
-
-	// 		return c.JSON(resp)
-
-	// 	} else {
-	// 		// The user already has WebAuthn credentials, so this should be a login operation with the Authenticator
-
-	// 		// Set the credential in storage, and wait for the polling from client
-	// 		newState := handlers.NewState()
-	// 		newState.SetStatus(handlers.StateAuthenticating)
-	// 		newState.SetContent(serialCredential)
-	// 		newStateString := newState.String()
-
-	// 		err := v.stateSession.Set(stateKey, newState.Bytes(), handlers.StateExpirationDuration)
-	// 		if err != nil {
-	// 			zlog.Err(err).Send()
-	// 			return err
-	// 		}
-
-	// 		zlog.Info().
-	// 			Str("state", newStateString).
-	// 			Str("email", email).
-	// 			Msg("AuthenticationResponse success, existing user")
-
-	// 		resp := map[string]string{
-	// 			"authenticatorRequired": "yes",
-	// 			"type":                  "login",
-	// 			"email":                 email,
-	// 		}
-
-	// 		return c.JSON(resp)
-	// 	}
-
-	// }
-
+	logrus.Error(err)
+	return err.Error()
 }

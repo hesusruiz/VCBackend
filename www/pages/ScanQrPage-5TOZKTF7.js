@@ -177,7 +177,10 @@ MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
       qrType = this.detectQRtype(qrData);
     }
     mylog(`QRTYPE: ${qrType}`);
-    alert(qrData);
+    if (MHR.debug) {
+      alert(qrData);
+      alert(qrType);
+    }
     if (qrType === QR_UNKNOWN) {
       setTimeout(() => this.detectCode(), this.detectionInterval);
       return;

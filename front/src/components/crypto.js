@@ -13,7 +13,19 @@ export async function createDidKey() {
     var publicJWK = await exportToJWK(keyPair.publicKey)
     var privateJWK = await exportToJWK(keyPair.privateKey)
     const did = util.createDid(publicJWK)
-    return {did: did, privateKey: privateJWK}
+    return { did: did, privateKey: privateJWK }
+}
+
+/**
+ * 
+ * @returns {Promise<{did: string, privateKey: JsonWebKey}>}
+ */
+export async function createDidKeyED() {
+    var keyPair = await generateEd25519KeyPair()
+    var publicJWK = await exportToJWK(keyPair.publicKey)
+    var privateJWK = await exportToJWK(keyPair.privateKey)
+    const did = util.createDid(publicJWK)
+    return { did: did, privateKey: privateJWK }
 }
 
 /**
@@ -82,15 +94,15 @@ export async function signJWT(header, payload, keyJWK) {
 
     const stringifiedHeader = JSON.stringify(header);
     const stringifiedPayload = JSON.stringify(payload);
-  
+
     const headerBase64 = UTF8StringToBase64Url(stringifiedHeader)
     const payloadBase64 = UTF8StringToBase64Url(stringifiedPayload)
     const headerAndPayload = `${headerBase64}.${payloadBase64}`
-    
+
     const signature = await signWithJWK(headerAndPayload, keyJWK)
-  
+
     return `${headerAndPayload}.${signature}`;
-  }
+}
 
 
 /**
@@ -117,12 +129,38 @@ export async function generateECDSAKeyPair() {
 }
 
 /**
+ * Create an Ed25519 CryptoKey
+ * @returns {Promise<CryptoKey>}
+ * 
+ * Caution: For information about Ed25519 support, see SubtleCrypto: Browser compatibility and Secure Curves
+ * in the Web Cryptography API. Chrome requires the enable-experimental-web-platform-features preference 
+ * to be set via command-line switch or via chrome://flags/#enable-experimental-web-platform-features.
+ */
+export async function generateEd25519KeyPair() {
+
+    const extractable = true;
+    const algorithm = {
+        name: "Ed25519",
+    };
+    const keyUsages = ["sign", "verify"];
+
+    // Ask browser to create a key pair with the P256 curve
+    let keyPair = await crypto.subtle.generateKey(
+        algorithm,
+        extractable,
+        keyUsages
+    );
+
+    return keyPair;
+}
+
+/**
  * Convert a key from CryptoKey (native) format to JWK format
  * @param {CryptoKey} key 
  * @returns {Promise<JsonWebKey>}
  */
 export async function exportToJWK(key) {
-    
+
     // Export the key to the JWK format (see spec for details)
     let keyJWK = await crypto.subtle.exportKey("jwk", key);
     return keyJWK;
@@ -137,8 +175,8 @@ export async function exportToJWK(key) {
 export async function importFromJWK(jwk) {
     // Create a CryptoKey from JWK format
 
-    // Fix the "use" field for malformed keys from Sweden
-    jwk["use"] = "sig";
+    // // Fix the "use" field for malformed keys from Sweden
+    // jwk["use"] = "sig";
     const extractable = true;
     const format = "jwk";
     const keyType = jwk["kty"];
@@ -210,9 +248,9 @@ export async function verify(key, signature, bytes) {
             saltLength: 32,
         }
     } else if (key.algorithm.name === "ECDSA") {
-        algo = {       
+        algo = {
             name: "ECDSA",
-            hash: "SHA-256"         
+            hash: "SHA-256"
         }
     } else {
         throw `Invalid signature algorithm: ${key.algorithm.name}`;
@@ -255,7 +293,7 @@ async function importKeyFromPEM(certPem) {
             true,
             ["verify"]
         );
-        
+
     } catch (error) {
         try {
             publicKey = await window.crypto.subtle.importKey(
@@ -268,7 +306,7 @@ async function importKeyFromPEM(certPem) {
                 true,
                 ["verify"]
             );
-    
+
         } catch (error) {
             throw "Key is neither RSA not ECDSA key type"
         }
@@ -485,9 +523,9 @@ class DGCKey {
                 saltLength: 32,
             }
         } else if (key.algorithm.name === "ECDSA") {
-            algo = {       
+            algo = {
                 name: "ECDSA",
-                hash: "SHA-256"         
+                hash: "SHA-256"
             }
         } else {
             throw `Invalid signature algorithm: ${key.algorithm.name}`;

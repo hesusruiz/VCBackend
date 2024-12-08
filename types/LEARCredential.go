@@ -1,4 +1,4 @@
-package issuernew
+package types
 
 import (
 	"fmt"

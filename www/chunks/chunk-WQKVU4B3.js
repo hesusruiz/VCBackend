@@ -13047,7 +13047,6 @@ async function exportToJWK(key) {
   return keyJWK;
 }
 async function importFromJWK(jwk) {
-  jwk["use"] = "sig";
   const extractable = true;
   const format2 = "jwk";
   const keyType = jwk["kty"];

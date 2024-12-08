@@ -24,6 +24,7 @@ window.MHR.register("IssuerSignerHome", class extends window.MHR.AbstractPage {
     pb.authStore.clear();
     try {
       const authData = await pb.send("/apisigner/loginwithcert");
+      debugger;
       if (authData.token) {
         pb.authStore.save(authData.token, authData.record);
         console.log(authData);

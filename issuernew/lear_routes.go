@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"io"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,11 +13,15 @@ import (
 	"time"
 
 	"github.com/evidenceledger/vcdemo/issuernew/usertpl"
+	"github.com/evidenceledger/vcdemo/types"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/forms"
+	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tokens"
 	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/zitadel/logging"
@@ -31,6 +36,10 @@ func (is *IssuerServer) addLearRoutes(e *core.ServeEvent) {
 	// TODO: document authentication used
 	learGroup := e.Router.Group(learGroupPrefix)
 	learGroup.Use(middleware.CORS())
+	learGroup.Use(is.retrieveLEARUserFromRequest)
+
+	loginGroup := e.Router.Group(learLoginGroupPrefix)
+	loginGroup.Use(middleware.CORS())
 
 	// **********************************************************
 	// Prepare and set the OpenID Connect login with the Verifier
@@ -50,7 +59,7 @@ func (is *IssuerServer) addLearRoutes(e *core.ServeEvent) {
 	clientSecret := ""
 
 	callbackPath := is.config.CallbackPath
-	redirectURI := is.config.IssuerURL + learGroupPrefix + callbackPath
+	redirectURI := is.config.IssuerURL + learLoginGroupPrefix + callbackPath
 
 	// Request a LEARCredential as the result of authentication
 	scopes := strings.Split(is.config.Scopes, " ")
@@ -86,9 +95,10 @@ func (is *IssuerServer) addLearRoutes(e *core.ServeEvent) {
 		return uuid.New().String()
 	}
 
+	// ***************************************************
 	// Set the handler for the Login route, which will use redirect to invoke the auth endpoint of the Verifier,
 	// following the OIDC standard
-	learGroup.GET("/login", echo.WrapHandler(rp.AuthURLHandler(
+	loginGroup.GET("/login", echo.WrapHandler(rp.AuthURLHandler(
 		state,
 		provider,
 		urlOptions...,
@@ -117,7 +127,7 @@ func (is *IssuerServer) addLearRoutes(e *core.ServeEvent) {
 
 		// Verify that we have received a well-formed LEARCredential. We trust on the Verifier for performing other
 		// validations like credential signature and holder binding to the LearCredential.
-		lc, err := VerifyLEARCredential(learCredential)
+		lc, err := types.VerifyLEARCredential(learCredential)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -125,8 +135,6 @@ func (is *IssuerServer) addLearRoutes(e *core.ServeEvent) {
 
 		// The user (a LEAR) will act on behalf of an organisation, identified in the Mandator object
 		organizationIdentifier := lc.String("credentialSubject.mandate.mandator.organizationIdentifier")
-
-		learEmail := lc.String("credentialSubject.mandate.mandatee.email")
 
 		// Check if the organisation is already registered in our database
 		record, err := is.App.Dao().FindFirstRecordByData("signers", "organizationIdentifier", organizationIdentifier)
@@ -139,8 +147,62 @@ func (is *IssuerServer) addLearRoutes(e *core.ServeEvent) {
 			return
 		}
 
+		// Get or Create the LEAR if it does not exist
+		learEmail := lc.String("credentialSubject.mandate.mandatee.email")
+		learFirstName := lc.String("credentialSubject.mandate.mandatee.first_name")
+		learLastName := lc.String("credentialSubject.mandate.mandatee.last_name")
+		learOrganization := lc.String("credentialSubject.mandate.mandator.organization")
+
+		learUser, err := is.App.Dao().FindAuthRecordByEmail("lears", learEmail)
+		if err != nil {
+
+			// Create a new user
+			collection, err := is.App.Dao().FindCollectionByNameOrId("lears")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			newLEAR := models.NewRecord(collection)
+
+			form := forms.NewRecordUpsert(is.App, newLEAR)
+
+			// or form.LoadRequest(r, "")
+			form.LoadData(map[string]any{
+				"email":                  learEmail,
+				"first_name":             learFirstName,
+				"last_name":              learLastName,
+				"organizationIdentifier": organizationIdentifier,
+				"organization":           learOrganization,
+				"password":               "pepepepepepe",
+				"passwordConfirm":        "pepepepepepe",
+			})
+
+			if err := form.Submit(); err != nil {
+				logger.Error("error creating the LEAR user", "error", err.Error())
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// Retrieve the record
+			learUser, err = is.App.Dao().FindAuthRecordByEmail("lears", learEmail)
+			if err != nil {
+				logger.Error("error creating the LEAR user", "error", err.Error())
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			logger.Info("LEAR user created", "id", learUser.Email())
+
+		} else {
+			// Perform some validations
+			if learUser.GetString("organizationIdentifier") != organizationIdentifier {
+				usertpl.AuthenticationError("The user is already registered with another Organisation").Render(r.Context(), w)
+				return
+			}
+		}
+
 		// Generate new auth token for this user session
-		authtoken, err := tokens.NewRecordAuthToken(is.App, record)
+		authtoken, err := tokens.NewRecordAuthToken(is.App, learUser)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -151,7 +213,7 @@ func (is *IssuerServer) addLearRoutes(e *core.ServeEvent) {
 		cookie := new(http.Cookie)
 		cookie.Name = "authpbtoken"
 		cookie.Value = authtoken
-		cookie.Path = "/lear/"
+		cookie.Path = "/"
 		// cookie.Secure = true
 		// cookie.HttpOnly = true
 		cookie.MaxAge = 3600
@@ -162,18 +224,78 @@ func (is *IssuerServer) addLearRoutes(e *core.ServeEvent) {
 
 	}
 
+	// ***************************************************
 	// Set the callback route that will be called by the Verifier.
 	// The route will receive the 'code' which wil be exchanged for an access token.
-	learGroup.GET(callbackPath, echo.WrapHandler(rp.CodeExchangeHandler(processOIDCTokens, provider)))
+	loginGroup.GET(callbackPath, echo.WrapHandler(rp.CodeExchangeHandler(processOIDCTokens, provider)))
 
-	learGroup.GET("/logoff", is.learLogoff)
+	// ***************************************************
+	loginGroup.GET("/logoff", is.learLogoff)
 
+	is.generalLoginRoute = loginGroup.GET("/generallogin", is.GeneralLoginScreen)
+
+	// ***************************************************
 	// Retrieve all credentials that the LEAR can access
 	learGroup.GET("/learRetrieveAllCredentials", is.learRetrieveAllCredentials)
 
+	// ***************************************************
 	// Retrieve a credential, applying the proper access control depending on the status
 	learGroup.GET("/retrievecredential/:credid", is.displayLEARCredential)
 
+	// ***************************************************
+	// Handle the LEARCredential form
+	learGroup.GET("/credentialform", is.displayLEARCredentialForm)
+	learGroup.POST("/credentialform", is.processLEARCredentialForm)
+
+}
+
+// Middleware for the LEAR routes to check authenticated LEAR.
+// If the user is not authenticated, we redirect to the general login page.
+// Otherwise, we setup the user data in the 'authUser' struct in the server and pass control to the next middleware.
+func (is *IssuerServer) retrieveLEARUserFromRequest(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+
+		authUser, err := is.requireLEAR(c)
+		if err != nil {
+			usertpl.LoggedUser = ""
+			is.authUser = nil
+
+			// Send the user to the general login page via a redirection
+			return c.Redirect(http.StatusFound, is.generalLoginRoute.Path())
+		}
+
+		// Store the authenticated user info for use by the handlers down the chain
+		is.authUser = authUser
+		usertpl.LoggedUser = authUser.Email
+
+		return next(c) // proceed with the request chain
+	}
+}
+
+func (is *IssuerServer) GeneralLoginScreen(c echo.Context) error {
+
+	return Render(c, http.StatusOK, usertpl.GeneralLogin())
+}
+
+func (is *IssuerServer) LEARHomeHandler(c echo.Context) error {
+
+	// rr, _ := c.Echo().RouterFor("")
+	// routes := rr.Routes()
+
+	// fmt.Println("====================================================")
+	// for _, route := range routes {
+	// 	fmt.Println(route.Name())
+	// }
+	// fmt.Println("====================================================")
+
+	authUser, err := is.requireLEAR(c)
+	if err != nil {
+		usertpl.LoggedUser = ""
+		return c.Redirect(http.StatusFound, "/lear/generallogin")
+	} else {
+		usertpl.LoggedUser = authUser.Email
+		return Render(c, http.StatusOK, usertpl.FormLEARCredential(authUser))
+	}
 }
 
 func (is *IssuerServer) learLogoff(c echo.Context) error {
@@ -181,7 +303,7 @@ func (is *IssuerServer) learLogoff(c echo.Context) error {
 	cookie := new(http.Cookie)
 	cookie.Name = "authpbtoken"
 	cookie.Value = ""
-	cookie.Path = "/lear/"
+	cookie.Path = "/"
 	cookie.MaxAge = 0
 	// cookie.Secure = true
 	// cookie.HttpOnly = true
@@ -192,16 +314,51 @@ func (is *IssuerServer) learLogoff(c echo.Context) error {
 
 }
 
+func (is *IssuerServer) displayLEARCredentialForm(c echo.Context) error {
+	authUser, err := is.requireLEAR(c)
+	if err != nil {
+		usertpl.LoggedUser = ""
+		return err
+	}
+
+	return Render(c, http.StatusOK, usertpl.FormLEARCredential(authUser))
+
+}
+
+func (is *IssuerServer) processLEARCredentialForm(c echo.Context) error {
+
+	authUser, err := is.requireLEAR(c)
+	if err != nil {
+		usertpl.LoggedUser = ""
+		return err
+	}
+
+	info := apis.RequestInfo(c)
+
+	// We received the body data in form of a map[string]any
+	data := info.Data
+
+	// Serialize to JSON
+	raw, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+	log.Println("RAW", string(raw))
+
+	return Render(c, http.StatusOK, usertpl.FormLEARCredential(authUser))
+
+}
+
 func (is *IssuerServer) learRetrieveAllCredentials(c echo.Context) error {
 
-	creatorEmail, err := is.requireLEAR(c)
+	authUser, err := is.requireLEAR(c)
 	if err != nil {
 		usertpl.LoggedUser = ""
 		return err
 	}
 
 	// Retrieve all records which can be signed by the user and in the state 'tobesigned'
-	expr1 := dbx.HashExp{"creator_email": creatorEmail, "status": "tobesigned"}
+	expr1 := dbx.HashExp{"organizationIdentifier": authUser.OrganizationIdentifier, "status": "tobesigned"}
 	records, err := is.App.Dao().FindRecordsByExpr("credentials", expr1)
 	if err != nil {
 		return err
@@ -214,7 +371,7 @@ func (is *IssuerServer) learRetrieveAllCredentials(c echo.Context) error {
 
 func (is *IssuerServer) displayLEARCredential(c echo.Context) error {
 
-	creatorEmail, err := is.requireLEAR(c)
+	authUser, err := is.requireLEAR(c)
 	if err != nil {
 		return Render(c, http.StatusOK, usertpl.Error("Please provide valid credentials"))
 	}
@@ -224,7 +381,7 @@ func (is *IssuerServer) displayLEARCredential(c echo.Context) error {
 	id := c.PathParam("credid")
 
 	record, err := app.Dao().FindRecordById("credentials", id)
-	if err != nil || record.GetString("creator_email") != creatorEmail {
+	if err != nil || record.GetString("organizationIdentifier") != authUser.OrganizationIdentifier {
 		return Render(c, http.StatusOK, usertpl.Error("Credential "+id+" not found"))
 	}
 
@@ -242,29 +399,35 @@ func (is *IssuerServer) displayLEARCredential(c echo.Context) error {
 		return err
 	}
 
-	return Render(c, http.StatusOK, usertpl.DisplayLEARCredential(creatorEmail, string(out)))
+	return Render(c, http.StatusOK, usertpl.DisplayLEARCredential(string(out)))
 
 	// return c.JSON(http.StatusOK, map[string]any{"credential": credential, "type": credType, "status": status, "id": id})
 
 }
 
-func (is *IssuerServer) requireLEAR(c echo.Context) (creatorEmail string, err error) {
+func (is *IssuerServer) requireLEAR(c echo.Context) (authUser *types.AuthenticatedUser, err error) {
 	app := is.App
 
 	// Retrieve the auth cookie
 	cookie, err := c.Cookie("authpbtoken")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Verify the token received in the cookie
 	authRecord, err := app.Dao().FindAuthRecordByToken(cookie.Value, app.Settings().RecordAuthToken.Secret)
 	if err != nil {
-		return "", echo.NewHTTPError(http.StatusForbidden, "Please provide valid credentials")
+		return nil, echo.NewHTTPError(http.StatusForbidden, "Please provide valid credentials")
 	}
 
-	// Get the email of the caller
-	creatorEmail = authRecord.Email()
+	authUser = &types.AuthenticatedUser{}
+	if authRecord.Collection().Name == "lears" {
+		authUser.Type = "lear"
+		authUser.Email = authRecord.Email()
+		authUser.OrganizationIdentifier = authRecord.GetString("organizationIdentifier")
+	} else {
+		return nil, echo.NewHTTPError(http.StatusForbidden, "Invalid authenticated user")
+	}
 
 	return
 }
