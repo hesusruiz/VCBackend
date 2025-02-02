@@ -28,10 +28,21 @@ window.MHR.register(pageName, class extends window.MHR.AbstractPage {
             return
         }
 
+        this.loginData = pb.authStore.model.commonName
+
         // Get the list of credentials
-        const records = await pb.collection('credentials').getFullList({
-            sort: '-created',
-        });
+        try {
+            var records = await pb.collection('credentials').getFullList({
+                sort: '-created',
+            });                
+        } catch (error) {
+            // There was a problem with the logged-in user. Clean the authstore and present and error.
+            pb.authStore.clear()
+            console.log(error)
+            gotoPage("ErrorPage", {title: "Error accessing credentials", msg: error.message})
+            return
+            
+        }
 
         var theHtml
         theHtml = listCredentialOffers(records)
@@ -44,7 +55,10 @@ window.MHR.register(pageName, class extends window.MHR.AbstractPage {
 
 function listCredentialOffers(records) {
 
+    const user = pb.authStore.model.commonName
+
     return html`
+
 <ion-card>
     <ion-card-header>
         <ion-card-title>List of Credentials</ion-card-title>
@@ -258,7 +272,7 @@ function renderMandateReadOnly(cred) {
             ${T("Sign in Local")}
         </ion-button>
         <ion-button @click=${()=> signCredentialOfferingInServer(cred)}>
-            ${T("Sign Credential")}
+            ${T("Sign in Cloud")}
         </ion-button>
         ` : null}
 
@@ -290,6 +304,9 @@ async function sendReminder(id) {
 }
 
 async function signCredentialOfferingLocal(record) {
+
+    window.location = "elsigner:"
+    return
 
     var learcred = decodeJWT(record.raw).body
 

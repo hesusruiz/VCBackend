@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	// LEARCredentialScope is an example for how to use custom scopes in this library
-	//(in this scenario, when requested, it will return a custom claim)
+	// LEARCredentialScope is the scope that the Client must request in addition to 'openid'
 	LEARCredentialScope = "learcred"
 
-	// CustomClaim is an example for how to return custom claims with this library
+	// CustomClaim is the name of the claim that will be added to the token_id sent to the Client.
+	// The Client will be able to retrieve the whote LEARCredential from this claim
 	CustomClaim = "learcred"
 
 	// CustomScopeImpersonatePrefix is an example scope prefix for passing user id to impersonate using token exchage
@@ -90,7 +90,7 @@ func (a *InternalAuthRequest) GetCodeChallenge() *oidc.CodeChallenge {
 	return CodeChallengeToOIDC(a.CodeChallenge)
 }
 
-func (a *InternalAuthRequest) GetWalletAuthRequest() string {
+func (a *InternalAuthRequest) GetWalletAuthRequestByID() string {
 	return a.WalletAuthRequest
 }
 

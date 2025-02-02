@@ -175,37 +175,21 @@ func WebClient(id, secret string, redirectURIs ...string) *Client {
 	if len(redirectURIs) == 0 {
 		redirectURIs = []string{
 			"https://demo.mycredential.eu/auth/callback",
+			"https://demo.mycredential.es/auth/callback",
+			"https://issuer.mycredential.eu/lear/auth/callback",
 		}
 	}
 	return &Client{
 		id:                             id,
-		secret:                         secret,
+		secret:                         "", // no secret needed (due to PKCE)
 		redirectURIs:                   redirectURIs,
 		applicationType:                op.ApplicationTypeWeb,
-		authMethod:                     oidc.AuthMethodBasic,
+		authMethod:                     oidc.AuthMethodNone,
 		loginURL:                       defaultLoginURL,
-		responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode, oidc.ResponseTypeIDTokenOnly, oidc.ResponseTypeIDToken},
+		responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode},
 		grantTypes:                     []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken, oidc.GrantTypeTokenExchange},
 		accessTokenType:                op.AccessTokenTypeBearer,
 		devMode:                        true,
-		idTokenUserinfoClaimsAssertion: false,
-		clockSkew:                      0,
-	}
-}
-
-// DeviceClient creates a device client with Basic authentication.
-func DeviceClient(id, secret string) *Client {
-	return &Client{
-		id:                             id,
-		secret:                         secret,
-		redirectURIs:                   nil,
-		applicationType:                op.ApplicationTypeWeb,
-		authMethod:                     oidc.AuthMethodBasic,
-		loginURL:                       defaultLoginURL,
-		responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode},
-		grantTypes:                     []oidc.GrantType{oidc.GrantTypeDeviceCode},
-		accessTokenType:                op.AccessTokenTypeBearer,
-		devMode:                        false,
 		idTokenUserinfoClaimsAssertion: false,
 		clockSkew:                      0,
 	}

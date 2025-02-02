@@ -1,0 +1,69 @@
+package usertpl
+
+templ layout() {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<script src="/css-scope-inline.js"></script>
+			<script src="/surreal.js"></script>
+			<link rel="stylesheet" href="/w3.css"/>
+			<!-- Load the application -->
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<meta name="description" content="DOME Onboarding"/>
+			<meta name="theme-color" content="#919597"/>
+			<title>DOME Issuer</title>
+			<meta itemprop="name" content="DOME Onboarding"/>
+			<meta itemprop="description" content="DOME Onboarding"/>
+			<!-- Facebook Meta Tags -->
+			<meta property="og:type" content="website"/>
+			<meta property="og:title" content="DOME Onboarding"/>
+			<meta
+				property="og:description"
+				content="Privacy-focused Wallet for Verifiable Credentials"
+			/>
+			<!-- <link rel="manifest" href="./manifest.webmanifest"> -->
+			<link rel="icon" type="image/png" href="/favicon.ico"/>
+			<meta name="mobile-web-app-capable" content="yes"/>
+			<meta name="apple-mobile-web-app-capable" content="yes"/>
+			<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+			<meta name="apple-mobile-web-app-title" content="DOME Onboarding"/>
+			<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+			<link href="/prism.css" rel="stylesheet"/>
+			<style>
+				@font-face {
+					font-family: "Roboto";
+					src: url("/fonts/Roboto-Regular.ttf") format("truetype");
+				}
+				
+				@font-face {
+					font-family: "Roboto";
+					src: url("/fonts/Roboto-Medium.ttf") format("truetype");
+					font-weight: 450 500;
+				}
+			</style>
+		</head>
+		<body class="w3-content" style="max-width:1000px">
+			@headerTemplate()
+			<main>
+				{ children... }
+			</main>
+			@footerTemplate()
+			<script src="/prism.js"></script>
+		</body>
+	</html>
+}
+
+templ headerTemplate() {
+	<div class="w3-bar w3-border  w3-large dome-bg-color">
+		<a href="/" class="w3-bar-item w3-button">DOME Onboarding</a>
+		if len(LoggedUser) > 0 {
+			<a href="/lear/logoff" class="w3-bar-item w3-button w3-blue w3-right">Logoff</a>
+			<span class="w3-bar-item w3-right">{ LoggedUser }</span>
+		}
+	</div>
+}
+
+templ footerTemplate() {
+	<footer data-testid="footerTemplate"></footer>
+}

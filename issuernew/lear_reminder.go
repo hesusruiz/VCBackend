@@ -124,7 +124,7 @@ func (is *IssuerServer) sendLEARCredentialEmail(credId string) error {
 
 	t := fasttemplate.New(templateLEARCredentialEmail, "{{", "}}")
 	emailBody := t.ExecuteString(map[string]interface{}{
-		"issuerurl":     is.settings.URL,
+		"issuerurl":     is.config.IssuerURL,
 		"credential_id": credId,
 	})
 

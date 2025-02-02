@@ -29,7 +29,8 @@
   <p>We have received information about you, which we can use to allow you to continue with the application or not.
   </p>
   <p>Actually, we have received a machine-readable electronic Mandate, in the form of a Verifiable Credential 
-    digitally signed by <b>{{.mandator.commonName}}</b>.</p>
+    digitally signed by <b>{{.mandator.commonName}}</b>, stating that you are an employee of <b>{{.mandator.organization}} ({{.mandator.organizationIdentifier}})</b>.</p>
+  <p>The credential is signed with a digital certificate of representation, stating that <b>{{.mandator.commonName}}</b> is a legal representative of your employer. We trust on that digital certificate of representation because we trust on the eIDAS Trust Framework and the certificate was issued and signed by a QTSP included in the EU LOTL (List of Trusted Lists).</p>
   <p>But this is just a small subset of the information that we have received. For the techies, you can see below
     the JSON representation of the Verifiable Credential that we have received.</p>
   <p>Many more details can be found in this document: <a href="https://dome-marketplace.github.io/powers-of-representation/index.html">Authentication and authorization of entities acting on behalf of legal persons with Verifiable Credentials under eIDAS framework</a>

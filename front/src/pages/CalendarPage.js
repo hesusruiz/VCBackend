@@ -17,7 +17,6 @@ window.MHR.register("CalendarPage", class extends window.MHR.AbstractPage {
         `       
         this.render(theHtml, true)
 
-        debugger
         var calendarEl = document.getElementById('calendar');
         var calendar = new window.FullCalendar.Calendar(calendarEl, {
           initialView: 'dayGridMonth'

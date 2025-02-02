@@ -15,17 +15,17 @@ var testQR = {
 var debugging = false
 
 // Types of QR codes that we can scan
-const QR_UNKNOWN = 0
-const QR_URL = 1
-const QR_MULTI = 2
-const QR_HC1 = 3
-const QR_Verifiable_Presentation = "QR_Verifiable_Presentation"
-const QR_VP_old = "QR_VP_old"
-const QR_W3C_VC = "QR_W3C_VC"
-const QR_Verifiable_Issuance = "QR_Verifiable_Issuance"
+const QR_UNKNOWN = 0                        // Malformed QR, like when reading errors occurred
+const QR_URL = 1                            // A normal QR with a URL, like a restaurant menu
+const QR_MULTI = 2                          // A multi-part QR, to transmit big amounts of information
+const QR_HC1 = 3                            // An EU  Digital Covid Certificate
+const QR_Verifiable_Presentation = "QR_VP"  // OpenID for Verifiable Presentation
+const QR_Verifiable_Issuance = "QR_VI"      // OpenID for Verifiable Credential Issuance
+const QR_VP_old = "QR_VP_old"               // Deprecated: For backwards compatibility with a Verifiable Presentation
+const QR_W3C_VC = "QR_W3C_VC"               // Deprecated: A standard W3VC Credential
 
 
-window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
+MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
     displayPage                 // The page name used to display the HC1 QR code
     detectionInterval = 200     // Milliseconds between attempts to decode QR
     videoElement = {}           // DOMElement where the video is displayed, reused across invocations
@@ -36,7 +36,7 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
     canvasSpace
 
     constructor(id) {
-    
+
         super(id);
 
         // Check if native barcode detection is supported
@@ -58,7 +58,7 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
 
     }
 
-    // Scan a QR and then route to the displayPage to display the QR
+    // Scan a QR and then route to the proper page to display the QR
     async enter(displayPage) {
 
         // displayPage is the page that should display the scanned QR
@@ -88,8 +88,8 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
         // The 'ref' in the template will set the 'current' property in the specified object
         // to the video DOM element. In this case, the video DOM element can be accessed later at
         // this.videoElement.current
-        let theHtml = html`<div class="w3-content" style="max-width:500px">
-        <video style="max-width:500px" ref=${this.videoElement} oncanPlay=${()=>this.canPlay()}></video>
+        let theHtml = html`<div class="w3-content" style="margin:auto;max-width:500px">
+        <video style="max-width:500px" ref=${this.videoElement} oncanPlay=${() => this.canPlay()}></video>
         </div>`;
         this.render(theHtml)
 
@@ -134,7 +134,7 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
 
         } catch (error) {
             log.error("Error getting stream", error)
-            window.MHR.gotoPage("ErrorPage", {title: "Error getting video stream", msg: "There was an error trying to start the camera."})
+            window.MHR.gotoPage("ErrorPage", { title: "Error getting video stream", msg: "There was an error trying to start the camera." })
             return
         }
 
@@ -212,13 +212,13 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
                 log.error(error);
                 return;
             }
-    
+
             // If not detected, try again
             if (codes.length === 0) {
                 setTimeout(() => this.detectCode(), this.detectionInterval)
                 return;
             }
-    
+
             // There may be several QR codes detected
             // We will process the first one that is recognized
             for (const barcode of codes) {
@@ -231,25 +231,28 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
                     break;
                 }
             }
-    
+
         } else {
             // Native support not available, use the JavaScript library
 
             try {
-                const result = await this.zxingReader.decodeOnceFromVideoElement(this.videoElement.current);     
+                const result = await this.zxingReader.decodeOnceFromVideoElement(this.videoElement.current);
                 qrData = result.text
                 mylog("RESULT", qrData)
             } catch (error) {
                 log.error("ZXING decoding error", error)
             }
-            
+
             qrType = this.detectQRtype(qrData)
 
         }
 
         mylog(`QRTYPE: ${qrType}`)
 
-        alert(qrData)
+        if (MHR.debug) {
+            alert(qrData)
+            alert(qrType)
+        }
 
         // If no QR code recognized, keep trying
         if (qrType === QR_UNKNOWN) {
@@ -331,7 +334,7 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
             return QR_Verifiable_Presentation;
 
         } else if (qrData.startsWith("openid:")) {
-            // An Authentication Request, for Verifiable Presentation
+            // An old Authentication Request, for Verifiable Presentation
             return QR_VP_old;
 
         } else if (qrData.startsWith("openid-credential-offer://")) {
@@ -340,7 +343,7 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
 
         } else if (qrData.includes("credential_offer_uri=")) {
             return QR_Verifiable_Issuance
-            
+
         } else if (qrData.startsWith("VC1:")) {
             // A Verifiable Credential in raw format
             return QR_W3C_VC;
@@ -352,11 +355,11 @@ window.MHR.register("ScanQrPage", class extends window.MHR.AbstractPage {
             if (jar == "yes") {
                 return QR_Verifiable_Presentation
             }
-    
+
             // Normal QR with a URL where the real data is located
             // We require secure connections with https, and do not accept http schemas
             return QR_URL;
-            
+
         } else {
             return QR_UNKNOWN
         }

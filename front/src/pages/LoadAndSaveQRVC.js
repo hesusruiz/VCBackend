@@ -26,7 +26,6 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         this.qrData = qrData
 
         mylog(`LoadAndSaveQRVC: ${qrData}`)
-        debugger
 
         let html = this.html
 
@@ -56,9 +55,9 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             gotoPage("EBSIRedirectCode", qrData)
             return
         }
-        
+
         mylog(qrData)
-    
+
         if (qrData.includes("credential_offer_uri=")) {
             // The QR points to an an OpenID4VCI credential issuance offer
 
@@ -142,7 +141,6 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
 
             // var myDid = await getOrCreateDidKey()
             // const theProof = await generateDIDKeyProof(myDid, "https://issuer.mycredential.eu", "1234567890")
-            // debugger
             // var result = await this.updateCredentialPOST(theProof, qrData)
 
             var result = await doGETJSON(qrData)
@@ -163,7 +161,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
                     this.showError(error.name, error.message)
                     return
                 }
-    
+
                 if (this.VCStatus == "offered") {
 
                     // The credential has been offered, and the user can authorise its issuance or not
@@ -182,7 +180,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
                     `
                     this.render(theHtml)
                     return
-    
+
                 } else if (this.VCStatus == "signed") {
 
                     // The credential is already signed. The user has the option to store it in her wallet
@@ -201,9 +199,9 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
                     `
                     this.render(theHtml)
                     return
-    
+
                 }
-    
+
             }
 
             // The credential is not in a correct state. Present an error screen
@@ -223,7 +221,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
                 jwt: proof
             }
         }
-    
+
         console.log("Body " + JSON.stringify(credentialReq))
         let response = await fetch(credentialEndpoint, {
             method: "POST",
@@ -235,8 +233,8 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             body: JSON.stringify(credentialReq),
             mode: "cors"
         });
-    
-    
+
+
         if (response.ok) {
             // The reply is the complete JWT
             const credentialResponse = await response.json();
@@ -246,12 +244,12 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             if (response.status == 400) {
                 throw new Error("Bad request 400 retrieving credential")
             } else {
-                throw new Error(response.statusText)            
+                throw new Error(response.statusText)
             }
         }
-    
+
     }
-    
+
 
     // startPreAuthorizedCodeFlow asks the user for the PIN (required) and then processes the flow
     async startPreAuthorizedCodeFlow() {
@@ -259,17 +257,17 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         let theHtml = html`
         <ion-card style="max-width:600px">
             <ion-card-content>
-            <p>Enter the PIN shown in the EBSI screen.<b>
+            <p>Enter the PIN shown in the EBSI screen.</p>
             <ion-input id="thepin" label="PIN" label-placement="stacked" type="number" placeholder="0000"></ion-input>
             </ion-card-content>
             
             <div class="ion-margin-start ion-margin-bottom">
                 <ion-button @click=${async () => {
-                    const ionpin = document.getElementById("thepin")
-                    const nativepin = await ionpin.getInputElement()
-                    const pin = nativepin.value
-                    if (pin.length > 0) {this.renderPreAuthorizedCodeFlow(pin)}
-                } }>
+                const ionpin = document.getElementById("thepin")
+                const nativepin = await ionpin.getInputElement()
+                const pin = nativepin.value
+                if (pin.length > 0) { this.renderPreAuthorizedCodeFlow(pin) }
+            }}>
                 ${T("Continue")}
                 </ion-button>
             </div>
@@ -323,7 +321,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             credentialOffer,
             issuerMetaData,
             authServerMetaData)
-        
+
         // Store in an instance variable
         this.VC = jwtCredential
         this.VCType = "EBSI"
@@ -387,7 +385,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             if (!saved) {
                 return
             }
-    
+
         } else if (this.VCType == "jwt_vc") {
             debugger
 
@@ -437,7 +435,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             if (!saved) {
                 return
             }
-    
+
             alert("Credential succesfully saved")
 
         } else {
@@ -453,9 +451,9 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             if (!saved) {
                 return
             }
-        
+
         }
-        
+
         // Reload the application with a clean URL
         location = window.location.origin + window.location.pathname
         return
@@ -473,8 +471,8 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         const vcTypeArray = vc["type"]
 
         // Get the last element of the array
-        const vcType = vcTypeArray[vcTypeArray.length -1]
-    
+        const vcType = vcTypeArray[vcTypeArray.length - 1]
+
         const div = html`
         <ion-card>
     
@@ -505,9 +503,9 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
         </ion-card>
         `
         return div
-    
+
     }
-    
+
     prerenderCredential(vcencoded, vctype, vcstatus) {
 
         if (vctype == "jwt_vc") {
@@ -544,7 +542,7 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             </ion-card>
             `
             return div
-    
+
         }
 
         const div = html`
@@ -635,11 +633,11 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
     }
 
     var client_metadata = {
-        "vp_formats_supported":{
-            "jwt_vp":{"alg":["ES256"]},
-            "jwt_vc":{"alg":["ES256"]}
+        "vp_formats_supported": {
+            "jwt_vp": { "alg": ["ES256"] },
+            "jwt_vc": { "alg": ["ES256"] }
         },
-        "response_types_supported":["vp_token","id_token"],
+        "response_types_supported": ["vp_token", "id_token"],
         "authorization_endpoint": window.location.origin
     }
 
@@ -901,13 +899,13 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
     var iterations = 0
 
     while (acceptance_token && iterations < max_iterations) {
-        
+
         console.log("Waiting for credential ...")
         await delay(1000)
         console.log("Finished waiting for credential")
 
         // Get the credential from EBSI
-        
+
         credentialResponse = await requestDeferredEBSICredential(acceptance_token, issuerMetaData["deferred_credential_endpoint"])
         // credentialResponse = await requestEBSICredential(proof, acceptance_token, issuerMetaData.credential_endpoint, credentialTypes)
         console.log("CredentialResponse", credentialResponse)
@@ -975,7 +973,7 @@ async function performPreAuthorizedCodeFlow(credentialOffer, issuerMetaData, aut
     // Get the credential from EBSI
     const credentialResponse = await requestEBSICredential(proof, access_token, issuerMetaData.credential_endpoint, credentialTypes)
 
-   return credentialResponse.credential
+    return credentialResponse.credential
 }
 
 async function getPreAuthToken(tokenEndpoint, preAuthCode, user_pin) {
@@ -1061,7 +1059,7 @@ async function requestEBSICredential(proof, accessToken, credentialEndpoint, cre
         if (response.status == 400) {
             throw new Error("Bad request 400 retrieving credential")
         } else {
-            throw new Error(response.statusText)            
+            throw new Error(response.statusText)
         }
     }
 
@@ -1143,7 +1141,7 @@ async function getIssuerMetadata(issuerAddress) {
     });
     if (response.ok) {
         var openIdInfo = await response.json();
-        mylog("IssuerMetadata",openIdInfo);
+        mylog("IssuerMetadata", openIdInfo);
         return openIdInfo;
     } else {
         throw new Error("error retrieving OpenID metadata")
@@ -1357,7 +1355,7 @@ function btoaUrl(input) {
 //     const credentialResponse = await requestEBSICredential(proof, access_token, issuerMetaData.credential_endpoint, credentialTypes)
 
 //     return credentialResponse.credential
-    
+
 
 // }
 
@@ -1424,7 +1422,7 @@ window.MHR.register("EBSIRedirect", class extends window.MHR.AbstractPage {
 
         if (resp.ok && resp.redirected) {
             // The reply is the complete JWT
-            debugger        
+            debugger
             console.log(resp.url)
             location = resp.url
             return
@@ -1459,7 +1457,7 @@ async function generateDIDKeyProof(subjectDID, issuerID, nonce) {
     }
 
     // It expires in one day (it could be much shorter in many flows)
-    const iat = Math.floor(Date.now()/1000) - 2
+    const iat = Math.floor(Date.now() / 1000) - 2
     const exp = iat + 86500
 
     // The issuer of the JWT is the person who will receive the Verifiable Credential at the end of the OID4VCI flow.
@@ -1492,7 +1490,7 @@ async function generateEBSIIDToken(subjectDID, issuerID, state, nonce) {
         kid: subjectKid
     }
 
-    const iat = Math.floor(Date.now()/1000) - 2
+    const iat = Math.floor(Date.now() / 1000) - 2
     const exp = iat + 86500
 
     var jwtPayload = {
@@ -1531,7 +1529,7 @@ window.MHR.register("EBSIRedirectCode", class extends window.MHR.AbstractPage {
 
         const IDToken = await generateEBSIIDToken(myDID, client_id, state, nonce)
         console.log("IDToken", IDToken)
-        debugger        
+        debugger
 
         var formAttributes = {
             id_token: IDToken,
@@ -1572,7 +1570,7 @@ window.MHR.register("EBSIRedirectCode", class extends window.MHR.AbstractPage {
 async function doGETJSON(serverURL) {
 
     try {
-        var response = await fetch(serverURL)      
+        var response = await fetch(serverURL)
     } catch (error) {
         myerror(error.message)
         await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": error.message })
@@ -1587,7 +1585,7 @@ async function doGETJSON(serverURL) {
         myerror(errormsg)
         await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": errormsg })
         return
-    }                
+    }
 
 }
 
@@ -1597,11 +1595,11 @@ async function doGETText(serverURL) {
         var response = await fetch(serverURL, {
             cache: "no-cache",
             mode: "cors"
-        });            
+        });
     } catch (error) {
         myerror(error.message)
         await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": error.message })
-        return        
+        return
     }
     if (response.ok) {
         var responseText = await response.text();
@@ -1612,22 +1610,22 @@ async function doGETText(serverURL) {
         myerror(errormsg)
         await gotoPage("ErrorPage", { "title": "Error fetching data", "msg": errormsg })
         return
-    }                
+    }
 
 }
 
 async function doPOST(serverURL, body) {
     try {
         var response = await fetch(serverURL,
-        {
-            method: "POST",
-            body: JSON.stringify(body),
-            headers: {
-                "Content-Type": "application/json",
-            },
-            cache: "no-cache",
-        })
-        console.log(response)            
+            {
+                method: "POST",
+                body: JSON.stringify(body),
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                cache: "no-cache",
+            })
+        console.log(response)
     } catch (error) {
         myerror(error.message)
         await gotoPage("ErrorPage", { "title": "Error sending data", "msg": error.message })
@@ -1643,7 +1641,7 @@ async function doPOST(serverURL, body) {
         myerror(errormsg)
         await gotoPage("ErrorPage", { "title": "Error sending data", "msg": errormsg })
         return
-    }                
+    }
 
 }
 
@@ -1671,7 +1669,7 @@ window.MHR.register("VCAcceptedPage", class extends window.MHR.AbstractPage {
             </ion-card-content>
     
             <div class="ion-margin-start ion-margin-bottom">
-                <ion-button @click=${() => {window.MHR.cleanReload()}}>
+                <ion-button @click=${() => { window.MHR.cleanReload() }}>
                     <ion-icon slot="start" name="home"></ion-icon>
                     ${T("Home")}
                 </ion-button>

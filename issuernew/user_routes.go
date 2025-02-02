@@ -1,17 +1,28 @@
 package issuernew
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
+	"github.com/evidenceledger/vcdemo/issuernew/usertpl"
+	"github.com/evidenceledger/vcdemo/types"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tokens"
+	"github.com/zitadel/logging"
+	"github.com/zitadel/oidc/v3/pkg/client/rp"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 func (is *IssuerServer) addUserRoutes(e *core.ServeEvent) {
@@ -20,6 +31,107 @@ func (is *IssuerServer) addUserRoutes(e *core.ServeEvent) {
 	// TODO: document authentication used
 	userGroup := e.Router.Group(userApiGroupPrefix)
 	userGroup.Use(middleware.CORS())
+
+	logger := slog.New(
+		slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+			AddSource: true,
+			Level:     slog.LevelDebug,
+		}),
+	)
+
+	ctx := logging.ToContext(context.TODO(), logger)
+
+	vcverifier := "https://verifier.mycredential.eu"
+	clientID := "domemarketplace"
+	clientSecret := "secret"
+
+	callbackPath := "/auth/callback"
+	redirectURI := "https://issuer.mycredential.eu" + userApiGroupPrefix + callbackPath
+
+	scopes := strings.Split("openid learcred profile email", " ")
+
+	provider, err := rp.NewRelyingPartyOIDC(ctx, vcverifier, clientID, clientSecret, redirectURI, scopes)
+	if err != nil {
+		logger.Error("error creating provider", "error", err.Error())
+		os.Exit(1)
+	}
+
+	urlOptions := []rp.URLParamOpt{
+		rp.WithPromptURLParam("Welcome back!"),
+	}
+
+	state := func() string {
+		return uuid.New().String()
+	}
+
+	echoHandler := echo.WrapHandler(rp.AuthURLHandler(
+		state,
+		provider,
+		urlOptions...,
+	))
+
+	userGroup.GET("/login", echoHandler)
+
+	// This function is called by the OIDC library when the Verifier calls the RP callback URL.
+	processOIDCTokens := func(w http.ResponseWriter, r *http.Request, oitokens *oidc.Tokens[*oidc.IDTokenClaims], state string, rp rp.RelyingParty) {
+		idTokenClaims := oitokens.IDTokenClaims
+		learCredential := idTokenClaims.Claims["learcred"]
+		// data, err := json.MarshalIndent(learCredential, "", "  ")
+		// if err != nil {
+		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+		// 	return
+		// }
+
+		lc, err := types.VerifyLEARCredential(learCredential)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		organizationIdentifier := lc.String("credentialSubject.mandate.mandator.organizationIdentifier")
+
+		learEmail := lc.String("credentialSubject.mandate.mandatee.email")
+
+		// Check if there is a Signer in the DB with that organizationIdentifier
+		record, err := is.App.Dao().FindFirstRecordByData("signers", "organizationIdentifier", organizationIdentifier)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if !record.Verified() && record.Collection().AuthOptions().OnlyVerified {
+			usertpl.AuthenticationError("Organisation does not exist").Render(r.Context(), w)
+			return
+		}
+
+		// Generate new auth token
+		authtoken, err := tokens.NewRecordAuthToken(is.App, record)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		cookie := new(http.Cookie)
+		cookie.Name = "authpbtoken"
+		cookie.Value = authtoken
+		cookie.Path = "/apiuser/"
+		// cookie.Secure = true
+		// cookie.HttpOnly = true
+		cookie.Expires = time.Now().Add(1 * time.Hour)
+		http.SetCookie(w, cookie)
+
+		usertpl.LoggedUser = learEmail
+		usertpl.AfterLEARLogin(lc).Render(r.Context(), w)
+
+	}
+
+	codeExchangerEcho := echo.WrapHandler(rp.CodeExchangeHandler(processOIDCTokens, provider))
+	userGroup.GET(callbackPath, codeExchangerEcho)
+
+	// userGroup.GET("/learRetrieveAllCredentials", is.learRetrieveAllCredentials)
+
+	// ***************************************************
+	// ***************************************************
+	// ***************************************************
+	// ***************************************************
 
 	userGroup.GET("/startissuancepage/:credid", func(c echo.Context) error {
 		return is.startCredentialIssuancePage(c)
@@ -39,11 +151,6 @@ func (is *IssuerServer) addUserRoutes(e *core.ServeEvent) {
 	userGroup.POST("/senddid/:credid", func(c echo.Context) error {
 		return is.sendDid(c)
 	})
-
-	// // Retrieve a credential, applying the proper access control depending on the status
-	// userGroup.GET("/retrievecredentialpage/:credid", func(c echo.Context) error {
-	// 	return is.retrieveCredentialPage(c)
-	// })
 
 }
 
@@ -66,7 +173,7 @@ func (is *IssuerServer) startCredentialIssuancePage(c echo.Context) error {
 	}
 
 	// QRcode for downloading the Wallet
-	walletQRcode, err := qrcodeFromUrl(is.settings.SamedeviceWallet)
+	walletQRcode, err := qrcodeFromUrl(is.config.SamedeviceWallet)
 	if err != nil {
 		return err
 	}
@@ -87,9 +194,9 @@ func (is *IssuerServer) startCredentialIssuancePage(c echo.Context) error {
 
 	// URL for retrieving the credential in the same-device flow
 	credURIsameDevice := "https://" + issuerHostName + pathRetrieval + id
-	sameDeviceCredentialHref := is.settings.SamedeviceWallet + "/?command=getvc&vcid=" + credURIsameDevice
+	sameDeviceCredentialHref := is.config.SamedeviceWallet + "/?command=getvc&vcid=" + credURIsameDevice
 
-	html := renderLEARCredentialOffer(credentialRecord, walletQRcode, credentialQRcode, sameDeviceCredentialHref, is.settings.SamedeviceWallet)
+	html := renderLEARCredentialOffer(credentialRecord, walletQRcode, credentialQRcode, sameDeviceCredentialHref, is.config.SamedeviceWallet)
 
 	return c.HTML(http.StatusOK, html)
 
@@ -154,7 +261,7 @@ func (is *IssuerServer) sendDid(c echo.Context) error {
 	}
 
 	// Build the Go struct from the JSON credential
-	var learCred LEARCredentialEmployee
+	var learCred types.LEARCredentialEmployee
 	err = json.Unmarshal(claimsDecoded, &learCred)
 	if err != nil {
 		return err
@@ -171,7 +278,7 @@ func (is *IssuerServer) sendDid(c echo.Context) error {
 	}
 
 	// Sign the credential with the server certificate
-	credential, err := CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
+	credential, err := types.CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
 	if err != nil {
 		return err
 	}
@@ -272,7 +379,7 @@ func (is *IssuerServer) retrieveCredentialPOST(c echo.Context) error {
 	}
 
 	// Build the Go struct from the JSON credential
-	var learCred LEARCredentialEmployee
+	var learCred types.LEARCredentialEmployee
 	err = json.Unmarshal(claimsDecoded, &learCred)
 	if err != nil {
 		return err
@@ -297,7 +404,7 @@ func (is *IssuerServer) retrieveCredentialPOST(c echo.Context) error {
 	}
 
 	// Sign the signedCredential with the server certificate
-	signedCredential, err := CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
+	signedCredential, err := types.CreateLEARCredentialJWTtoken(learCred, jwt.SigningMethodRS256, privateKey)
 	if err != nil {
 		return err
 	}
@@ -316,64 +423,3 @@ func (is *IssuerServer) retrieveCredentialPOST(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]any{"credential": signedCredential, "type": credType, "status": status, "id": id})
 
 }
-
-// func (is *IssuerServer) retrieveCredentialPage(c echo.Context) error {
-// 	app := is.App
-
-// 	id := c.PathParam("credid")
-
-// 	credentialRecord, err := app.Dao().FindRecordById("credentials", id)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	// This is the url for Wallet
-// 	wallet_url := is.cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
-
-// 	// Create the QR code
-// 	png, err := qrcode.Encode(wallet_url, qrcode.Medium, 256)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	// Convert the image data to a dataURL
-// 	walletQRcode := base64.StdEncoding.EncodeToString(png)
-// 	walletQRcode = "data:image/png;base64," + walletQRcode
-
-// 	// QR code for cross-device SIOP
-// 	template := "{{protocol}}://{{hostname}}{{prefix}}/retrievecredential/{{id}}"
-
-// 	t := fasttemplate.New(template, "{{", "}}")
-// 	credURIforQR := t.ExecuteString(map[string]interface{}{
-// 		"protocol": "openid-credential-offer",
-// 		"hostname": app.Settings().Meta.AppUrl,
-// 		"prefix":   userApiGroupPrefix,
-// 		"id":       id,
-// 	})
-
-// 	// Create the QR
-// 	png, err = qrcode.Encode(credURIforQR, qrcode.Medium, 256)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	t = fasttemplate.New(template, "{{", "}}")
-// 	credURIsameDevice := t.ExecuteString(map[string]interface{}{
-// 		"protocol": c.Scheme(),
-// 		"hostname": app.Settings().Meta.AppUrl,
-// 		"prefix":   userApiGroupPrefix,
-// 		"id":       id,
-// 	})
-
-// 	credentialHref := wallet_url + "/?command=getvc&vcid=" + credURIsameDevice
-
-// 	// Convert to a dataURL
-// 	credentialQRcode := base64.StdEncoding.EncodeToString(png)
-// 	credentialQRcode = "data:image/png;base64," + credentialQRcode
-// 	log.Println(credentialQRcode)
-
-// 	html := templateOfferingParse(credentialRecord, walletQRcode, credentialQRcode, credentialHref, credURIsameDevice)
-
-// 	return c.HTML(http.StatusOK, html)
-
-// }

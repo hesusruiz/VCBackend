@@ -16,8 +16,18 @@ import logo_img from './img/logo.png'
 
 // The database operations
 import { storage } from "./components/db"
-const myerror = storage.myerror
-const mylog = storage.mylog
+// @ts-ignore
+window.myerror = storage.myerror
+// @ts-ignore
+window.mylog = storage.mylog
+
+// Initialise the debug flag based on the current settings
+if (!localStorage.getItem("MHRdebug")) {
+    localStorage.setItem("MHRdebug", "false")
+}
+
+var debug = (localStorage.getItem("MHRdebug") == "true")
+console.log("DEBUG", debug)
 
 // Prepare for lazy-loading the pages composing the application.
 // Typically, the window.pageModules variable is set in the HTML page importing us, but
@@ -34,12 +44,12 @@ const mylog = storage.mylog
 //     "ScanQrPage": "/pages/ScanQrPage-SMX7ETOS.js",
 //     "SelectCamera": "/pages/SelectCamera-PXJHLD5U.js",
 // }
-  
+
 // @ts-ignore
 const pageModulesMap = window.pageModules
 
 // Get the base path of the application in runtime
-const parsedUrl  = new URL(import.meta.url)
+const parsedUrl = new URL(import.meta.url)
 const fullPath = parsedUrl.pathname
 console.log("Fullpath of app:", fullPath)
 const basePath = fullPath.substring(0, fullPath.lastIndexOf('/'))
@@ -119,7 +129,7 @@ async function gotoPage(pageName, pageData) {
         if (!pageClass) {
 
             // Try to load dynamically the page.
-            await import(pageModulesMap[pageName])            
+            await import(pageModulesMap[pageName])
 
             // If pageName still does not exist, go to the 404 error page
             // passing the target page name as pageData
@@ -139,13 +149,11 @@ async function gotoPage(pageName, pageData) {
 
         // Process the page transition
         await processPageEntered(pageNameToClass, pageName, pageData, false);
-        
-    } catch (error) {
 
+    } catch (error) {
         myerror(error)
         // Show an error
-        await processPageEntered(pageNameToClass, "ErrorPage", {title: error.name, msg: error.message}, false);
-        
+        await processPageEntered(pageNameToClass, "ErrorPage", { title: error.name, msg: error.message }, false);
     }
 
 }
@@ -174,7 +182,7 @@ async function processPageEntered(pageNameToClass, pageName, pageData, historyDa
             } catch (error) {
                 // We just log the error and continue the loop
                 myerror(`error calling exit() on ${name}: ${error.name}`);
-            }            
+            }
         }
     }
 
@@ -226,11 +234,11 @@ window.addEventListener("popstate", async function (event) {
 
     // Process the page transition
     try {
-        await processPageEntered(pageNameToClass, pageName, pageData, true);        
+        await processPageEntered(pageNameToClass, pageName, pageData, true);
     } catch (error) {
         myerror(error)
         // Show an error
-        await processPageEntered(pageNameToClass, "ErrorPage", {title: error.name, msg: error.message}, false);
+        await processPageEntered(pageNameToClass, "ErrorPage", { title: error.name, msg: error.message }, false);
     }
 
 });
@@ -286,7 +294,7 @@ window.addEventListener('load', async (event) => {
 
     // Install Service Worker only when in Production
     // @ts-ignore
-    if ( JR_IN_DEVELOPMENT ) {
+    if (JR_IN_DEVELOPMENT) {
         console.log("In development")
         INSTALL_SERVICE_WORKER = false
     } else {
@@ -375,70 +383,51 @@ function T(e) {
     // @ts-ignore
     if (window.T) {
         // @ts-ignore
-        return(window.T(e))
+        return (window.T(e))
     }
     return (e)
 }
 
-// @ts-ignore
-/**
- * @param {undefined} [e]
- */
-function resetAndGoHome(e) {
-    HeaderBar()
-    goHome()
-}
-
-
 /**
  * @param {boolean} backButton - If true, a back button is shown in the header
+ * @param {string} loginData? - Login data to show in header
  */
-function HeaderBar(backButton = true) {
+function HeaderBar(backButton = true, loginData) {
 
-    var menuB = html`
-        <ion-buttons slot="end">
-        </ion-buttons>
-    `
-    if (!backButton) {
-        menuB = html`
-        <ion-buttons slot="end">
-            <ion-button @click=${()=> gotoPage("MenuPage", "")}>
-                <ion-icon name="menu"></ion-icon>
+    var backButtonHTML
+    if (backButton) {
+        backButtonHTML = html`
+        <ion-buttons slot="start">
+            <ion-button @click=${() => history.back()}>
+                <ion-icon slot="start" name="chevron-back"></ion-icon>
+                Back
             </ion-button>
         </ion-buttons>`
     }
 
-    if (backButton) {
-        return html`
-        <ion-toolbar color="primary">
-        <ion-buttons slot="start">
-            <ion-button @click=${()=> history.back()}>
-                <ion-icon slot="start" name="chevron-back"></ion-icon>
-                Back
+    var menuButton = html`
+        <ion-buttons slot="end">
+            <ion-button @click=${() => gotoPage("MenuPage", "")}>
+                <ion-icon name="menu"></ion-icon>
             </ion-button>
-        </ion-buttons>
-        <ion-title>${myAppTitle}</ion-title>
-        ${menuB}
-        </ion-toolbar>
-        `;
-    } else {
-        return html`
+        </ion-buttons>`
+
+    return html`
         <ion-toolbar color="primary">
-        <ion-title>${myAppTitle}</ion-title>
-        ${menuB}
+        ${backButtonHTML}
+        <ion-title>${loginData ? loginData : myAppTitle}</ion-title>
+        ${menuButton}
         </ion-toolbar>
-    `;
-
-    }    
-
+        `
 }
 
 
 /**
  * @param {string} title
  * @param {string} message
+ * @param {string} details
  */
-function ErrorPanel(title, message) {
+function ErrorPanel(title, message, details) {
     let theHtml = html`
 
     <ion-card>
@@ -450,9 +439,15 @@ function ErrorPanel(title, message) {
             <div class="text-larger">${message}</div>
         </ion-card-content>
 
+        ${details ? html`
+        <ion-card-content class="ion-padding-bottom">
+            <div class="text-medium">${details}</div>
+        </ion-card-content>            
+        ` : null}
+
         <div class="ion-margin-start ion-margin-bottom">
 
-            <ion-button color="danger" @click=${()=> cleanReload()}>
+            <ion-button color="danger" @click=${() => cleanReload()}>
                 <ion-icon slot="start" name="home"></ion-icon>
                 ${T("Home")}
             </ion-button>
@@ -466,21 +461,22 @@ function ErrorPanel(title, message) {
 
 
 
-// *****************************************************
+// **************************************************************
 // AbstractPage is the superclass of all pages in the application
-// *****************************************************
+// **************************************************************
 
 class AbstractPage {
     html;           // The uhtml html function, for subclasses
     domElem;        // The DOM Element that holds the page
     pageName;       // The name of the page for routing
     headerBar = HeaderBar
+    loginData = ""
 
     /**
      * @param {string} id - The name of the page to be registered. This will be used for page routing
      */
     constructor(id) {
-        if (!id) { throw "A page name is needed"}
+        if (!id) { throw "A page name is needed" }
 
         // Set the 'html' and 'svg' tag function so subclasses do not have to import 'uhtml'
         this.html = html
@@ -518,7 +514,7 @@ class AbstractPage {
         let elem = document.getElementById("SplashScreen")
         if (elem) {
             elem.style.display = "none"
-        }    
+        }
 
         // Mark the page as visible
         this.domElem.style.display = "block"
@@ -527,8 +523,8 @@ class AbstractPage {
         // The caller can specify if the back button has to be displayed in the header
         let header = document.getElementById('the_header')
         if (header) {
-            render(header, HeaderBar(backButton))
-        }    
+            render(header, HeaderBar(backButton, this.loginData))
+        }
 
         // Render the html of the page into the DOM element of this page
         render(this.domElem, theHtml)
@@ -557,7 +553,7 @@ function cleanReload() {
     // Reload the application with a clean URL
     //@ts-ignore
     window.location = window.location.origin + window.location.pathname
-    return    
+    return
 }
 
 register("Page404", class extends AbstractPage {
@@ -588,25 +584,44 @@ register("ErrorPage", class extends AbstractPage {
     }
 
     /**
-     * @param {{title: string;msg: string;back:boolean}} pageData
+     * @param {{title:string; msg:string; details:string; back:boolean; level:string}} pageData
      */
     enter(pageData) {
         let html = this.html
+        if (!pageData) {
+            pageData = {
+                title: "Error",
+                msg: "An error has happened",
+                details: "",
+                back: false,
+                level: "error"
+            }
+        }
 
-        // We expect pageData to be an object with two fields:
+        // We expect pageData to be an object with four fields:
         // - title: the string to be used for the title of the error page
         // - msg: the string with the details of the error
+        // - back: a boolean indicating if a back button must be displayed
+        // - level: a string with the level ("error", "warning", "info")
 
         // Provide a default title if the user did not set the title
         let title = T("Error")
-        if (pageData && pageData.title) {
+        if (pageData.title) {
             title = T(pageData.title)
         }
 
-        //Provide a defaul message if the user did not specify it
+        //Provide a default message if the user did not specify it
         let msg = T("An error has happened.")
-        if (pageData && pageData.msg) {
+        if (pageData.msg) {
             msg = T(pageData.msg)
+        }
+
+        //Provide a default color for the button in the page
+        let color = "danger"
+        if (pageData.level == "info") {
+            color = "primary"
+        } else if (pageData.level == "warning") {
+            color = "warning"
         }
 
         // Display the title and message, with a button that reloads the whole application
@@ -620,22 +635,32 @@ register("ErrorPage", class extends AbstractPage {
 
             <ion-card-content class="ion-padding-bottom">
                 <div class="text-larger">${msg}</div>
-                ${pageData && (pageData.back == true) ? null : html`<div>${T("Please click Accept to refresh the page.")}</div>`}
+
+                ${pageData.details ? html`
+                    <div class="text-medium">${pageData.details}</div>
+                ` : null}
+
             </ion-card-content>
+
+            ${(pageData.back == true) ? null : html`
+                <ion-card-content class="ion-padding-bottom">
+                <div>${T("Please click Accept to refresh the page.")}</div>
+                </ion-card-content>
+            `}
 
             <div class="ion-margin-start ion-margin-bottom">
 
-                ${pageData && (pageData.back == true) ? html`
-                <ion-button @click=${()=> history.back()}>
+                ${(pageData.back == true) ? html`
+                <ion-button .color=${color} @click=${() => history.back()}>
                     <ion-icon slot="start" name="chevron-back"></ion-icon>${T("Back")}
                 </ion-button>` : html`
-                <ion-button color="danger" @click=${()=> cleanReload()}>${T("Accept")}
+                <ion-button .color=${color} @click=${() => cleanReload()}>${T("Accept")}
                 </ion-button>`}
 
             </div>
         </ion-card>
         `
-        this.render(theHtml)
+        this.render(theHtml, pageData.back)
     }
 })
 
@@ -673,14 +698,17 @@ function atobUrl(input) {
 // the relevant functions that we want globally available to other modules.
 // This way they do not have to import us (and avoid circular references in some cases) and
 // we do not pollute the global namespace with our functions and variables
+
 // @ts-ignore
 window.MHR = {
+    debug: debug,
     mylog: storage.mylog,
     storage: storage,
     route: route,
     goHome: goHome,
     gotoPage: gotoPage,
     processPageEntered: processPageEntered,
+    // @ts-ignore
     AbstractPage: AbstractPage,
     register: register,
     ErrorPanel: ErrorPanel,
@@ -691,3 +719,4 @@ window.MHR = {
     atobUrl: atobUrl,
     pageNameToClass: pageNameToClass
 }
+

@@ -1,3 +1,5 @@
+// @ts-check
+
 // **************************************************
 // Local database management
 // **************************************************
@@ -24,22 +26,28 @@ db.version(0.7).stores({
 });
 
 
-// The _credential object has the following structure:
-//    _credential = {
-//        type: the type of credential: "w3cvc", "eHealth", "ukimmigration", etc
-//        status: the status in the lifecycle of the credential: offered, tobesigned, signed
-//        encoded: the credential encoded in JWT, COSE or any other suitable format
-//        decoded: the credential in plain format as a Javascript object
-//    }
-// If 'replace' is true, the new record replaces an existing one with the same primary key.
-// Otherwise, the new record is not saved and an error page displayed
+/**
+ * @param {{ id: string; encoded: string; type: string; status: string; decoded: Object; }} _credential
+ * @param {boolean} replace
+ * 
+ * The _credential object has the following structure:
+ *   _credential = {
+ *      type: the type of credential: "w3cvc", "eHealth", "ukimmigration", etc
+ *      status: the status in the lifecycle of the credential: offered, tobesigned, signed
+ *      encoded: the credential encoded in JWT, COSE or any other suitable format
+ *      decoded: the credential in plain format as a Javascript object
+ *   }
+ * If 'replace' is true, the new record replaces an existing one with the same primary key.
+ * Otherwise, the new record is not saved and an error page displayed
+ * 
+ */
 async function credentialsSave(_credential, replace) {
 
     log.log("CredentialSave", _credential)
 
-    var hashHex
+
     if (_credential.id) {
-        hashHex = _credential.id
+        var hashHex = _credential.id
     } else {
         // Calculate the hash of the encoded credential to avoid duplicates
         var data = new TextEncoder().encode(_credential.encoded);
@@ -63,21 +71,23 @@ async function credentialsSave(_credential, replace) {
     if (replace) {
         // Store the object, catching the exception if duplicated, but not displaying any error to the user
         try {
+            //@ts-ignore
             await db.credentials.put(credential_to_store)
         } catch (error) {
-            window.MHR.gotoPage("ErrorPage", {"title": "Error saving credential", "msg": error.message})
+            window.MHR.gotoPage("ErrorPage", { "title": "Error saving credential", "msg": error.message })
             log.error("Error saving credential", error)
             return;
         }
     } else {
         // Store the object, catching the exception if duplicated, but not displayng any error to the user
         try {
+            // @ts-ignore
             await db.credentials.add(credential_to_store)
         } catch (error) {
             if (error.name == "ConstraintError") {
-                window.MHR.gotoPage("ErrorPage", {"title": "Credential already exists", "msg": "Can not save credential: already exists"})
+                window.MHR.gotoPage("ErrorPage", { "title": "Credential already exists", "msg": "Can not save credential: already exists" })
             } else {
-                window.MHR.gotoPage("ErrorPage", {"title": "Error saving credential", "msg": error.message})
+                window.MHR.gotoPage("ErrorPage", { "title": "Error saving credential", "msg": error.message })
             }
             log.error("Error saving credential", error)
             return;
@@ -88,7 +98,7 @@ async function credentialsSave(_credential, replace) {
     // var oldCred = await credentialsGet(hashHex)
     // if (oldCred != undefined) {
     //     log.error("Credential already exists", oldCred, hashHex)
-    //     window.MHR.gotoPage("ErrorPage", {"title": "Credential already exists", "msg": "Can not save credential: already exists"})
+    //     window.MHR.window.MHR.gotoPage("ErrorPage", {"title": "Credential already exists", "msg": "Can not save credential: already exists"})
     //     // Return an error
     //     return;
     // }
@@ -120,34 +130,38 @@ async function credentialsDeleteCred(_credential) {
 
     // Delete the credential
     try {
+        // @ts-ignore
         await db.credentials.delete(hashHex)
     } catch (error) {
         log.error(error);
-        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error deleting credential"})
+        window.MHR.gotoPage("ErrorPage", { "title": "Error", "msg": "Error deleting credential" })
     }
 }
 
 
 async function credentialsDelete(key) {
     try {
+        // @ts-ignore
         await db.credentials.delete(key)
     } catch (error) {
         log.error(error);
-        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error deleting credential"})
+        window.MHR.gotoPage("ErrorPage", { "title": "Error", "msg": "Error deleting credential" })
     }
 }
 
 async function credentialsDeleteAll() {
     try {
+        // @ts-ignore
         await db.credentials.clear()
     } catch (error) {
         log.error(error);
-        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error deleting all credential"})
+        window.MHR.gotoPage("ErrorPage", { "title": "Error", "msg": "Error deleting all credential" })
     }
 }
 
 async function credentialsGet(key) {
     try {
+        // @ts-ignore
         var credential = await db.credentials.get(key)
     } catch (error) {
         log.error(error);
@@ -159,13 +173,19 @@ async function credentialsGet(key) {
 }
 
 // Retrieve all credentials since some period
+
+/**
+ * @param {number} days
+ * @returns [Object]
+ */
 async function credentialsGetAllRecent(days) {
     if (days == undefined) {
         days = 365
     }
-    const dateInThePast = Date.now() - 60 * 60 *  24 * 1000 * days;
+    const dateInThePast = Date.now() - 60 * 60 * 24 * 1000 * days;
 
     try {
+        // @ts-ignore
         var credentials = await db.credentials
             .where('timestamp').aboveOrEqual(dateInThePast).toArray();
     } catch (error) {
@@ -179,10 +199,11 @@ async function credentialsGetAllRecent(days) {
 // Get all the keys to iterate all credentials in the store
 async function credentialsGetAllKeys() {
     try {
+        // @ts-ignore
         var keys = await db.credentials.orderBy("timestamp").primaryKeys();
     } catch (error) {
         log.error(error);
-        window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": "Error getting all credentials"})
+        window.MHR.gotoPage("ErrorPage", { "title": "Error", "msg": "Error getting all credentials" })
     }
 
     return keys;
@@ -191,12 +212,14 @@ async function credentialsGetAllKeys() {
 
 
 async function recentLogs() {
+    // @ts-ignore
     var rlogs = await db.logs.reverse().limit(200).toArray()
     return rlogs
 }
 
 // Clears the logs table, preserving the other tables
 async function clearLogs() {
+    // @ts-ignore
     await db.logs.clear()
     alert("Logs cleared")
     // Reload application in the same page
@@ -232,6 +255,7 @@ async function mylog_entry(_level, _desc, _item) {
 
     // Store the object
     try {
+        // @ts-ignore
         await db.logs.add(logItem)
     } catch (error) {
         // If error, we can not do anything
@@ -239,14 +263,17 @@ async function mylog_entry(_level, _desc, _item) {
     }
 
     // Check if we should prune old records
+    // @ts-ignore
     var numEntries = await db.logs.count()
     if (numEntries <= MAX_LOG_ENTRIES) {
         return
     }
 
     // Perform pruning of the oldest entry
+    // @ts-ignore
     var oldestEntry = await db.logs.orderBy("id").first()
     try {
+        // @ts-ignore
         await db.logs.delete(oldestEntry.id)
     } catch (error) {
         console.error("Error in log prune")
@@ -287,20 +314,29 @@ async function mylog(_desc, ...additional) {
 // }
 
 async function myerror(_desc, ...additional) {
-    let msg = _desc
-    // Get the stack trace if available
-    try {
-        let e = new Error(_desc)
-        msg = e.stack
-    } catch {}
-    console.error(msg, ...additional)
-    mylog_entry("E", msg, _desc, ...additional)
+    if (_desc instanceof Error) {
+        console.error(_desc, ...additional)
+        // @ts-ignore
+        mylog_entry("E", _desc.stack, ...additional)
+
+    } else {
+        let msg = _desc
+        // Get the stack trace if available
+        try {
+            let e = new Error(_desc)
+            msg = e.stack
+        } catch { }
+        console.error(msg, ...additional)
+        // @ts-ignore
+        mylog_entry("E", msg, _desc, ...additional)
+    }
 }
 
 
 // The following are simple wrappers to insulate from future changes in the db
 async function settingsPut(key, value) {
     try {
+        // @ts-ignore
         await db.settings.put({ key: key, value: value })
     } catch (error) {
         console.error(error);
@@ -310,6 +346,7 @@ async function settingsPut(key, value) {
 
 async function settingsGet(key) {
     try {
+        // @ts-ignore
         var setting = await db.settings.get(key)
     } catch (error) {
         console.error(error);
@@ -323,6 +360,7 @@ async function settingsGet(key) {
 
 async function settingsDelete(key) {
     try {
+        // @ts-ignore
         await db.settings.delete(key)
     } catch (error) {
         console.error(error);
@@ -332,6 +370,7 @@ async function settingsDelete(key) {
 
 async function settingsDeleteAll() {
     try {
+        // @ts-ignore
         await db.settings.clear()
     } catch (error) {
         console.error(error);
@@ -341,9 +380,13 @@ async function settingsDeleteAll() {
 }
 
 
+
+/**
+ * @param {string} _text
+ */
 async function showError(_text) {
     myerror(_text)
-    window.MHR.gotoPage("ErrorPage", {"title": "Error", "msg": _text})
+    window.MHR.gotoPage("ErrorPage", { "title": "Error", "msg": _text })
     return;
 }
 
@@ -354,11 +397,12 @@ async function showError(_text) {
 /**
  * 
  * @param {{did: string, privateKey: CryptoKey}} _didObject 
- * @returns {Promise<{did: string, privateKey: string, timestamp: number}>}
+ * @returns {Promise<{did: string, privateKey: CryptoKey, timestamp: number}>}
  */
 async function didSave(_didObject) {
 
     // Check if did already exists
+    // @ts-ignore
     const oldDID = await db.dids.get(_didObject.did)
     if (oldDID) {
         log.log("DID already existed")
@@ -367,12 +411,13 @@ async function didSave(_didObject) {
 
     // Create the object to store
     var object_to_store = {
-        did:        _didObject.did,
+        did: _didObject.did,
         privateKey: _didObject.privateKey,
-        timestamp:  Date.now(),
+        timestamp: Date.now(),
     }
 
     // Store the object
+    // @ts-ignore
     await db.dids.add(object_to_store)
 
     // Successful save, return the credential stored
@@ -382,9 +427,11 @@ async function didSave(_didObject) {
 
 /**
  * 
- * @returns {Promise<{did: string, privateKey: string, timestamp: number}>}
+ * @param {string} did
+ * @returns {Promise<{did: string, privateKey: CryptoKey, timestamp: number}>}
  */
 async function didGet(did) {
+    // @ts-ignore
     const oldDID = await db.dids.get(did)
     return oldDID
 }
@@ -394,6 +441,7 @@ async function didGet(did) {
  * @returns {Promise<{did: string, privateKey: string, timestamp: number}>}
  */
 async function didFirst() {
+    // @ts-ignore
     const firstDID = await db.dids.toCollection().first()
     return firstDID
 }
@@ -401,8 +449,9 @@ async function didFirst() {
 /**
  * 
  * @param {string} inputString 
- * @returns {string}
+ * @returns {Promise<string>}
  */
+// @ts-ignore
 async function hash(inputString) {
     var data = new TextEncoder().encode(inputString);
     var hash = await crypto.subtle.digest('SHA-256', data)

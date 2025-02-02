@@ -14,13 +14,15 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/a-h/templ"
+	"github.com/evidenceledger/vcdemo/types"
 	"github.com/evidenceledger/vcdemo/vault/x509util"
 	"github.com/google/uuid"
 	my "github.com/hesusruiz/vcutils/yaml"
@@ -38,17 +40,10 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
-const defaultCredentialTemplatesDir = "vault/templates"
 const signerApiGroupPrefix = "/apisigner"
 const userApiGroupPrefix = "/apiuser"
-
-var credTemplate *template.Template
-
-func initCredentialTemplates(credentialTemplatesPath string) {
-
-	credTemplate = template.Must(template.New("base").Funcs(sprig.TxtFuncMap()).ParseGlob(credentialTemplatesPath))
-
-}
+const learGroupPrefix = "/lear/pages"
+const learLoginGroupPrefix = "/lear"
 
 // LookupEnvOrString gets a value from the environment or returns the specified default value
 func LookupEnvOrString(key string, defaultVal string) string {
@@ -59,16 +54,31 @@ func LookupEnvOrString(key string, defaultVal string) string {
 }
 
 type IssuerServer struct {
-	App      *pocketbase.PocketBase
-	cfg      *my.YAML
-	settings Settings
-	treg     *pbtemplate.Registry
+	App *pocketbase.PocketBase
+	// cfg    *my.YAML
+	config            *Config
+	treg              *pbtemplate.Registry
+	authUser          *types.AuthenticatedUser
+	generalLoginRoute echo.RouteInfo
 }
 
 func New(cfg *my.YAML) *IssuerServer {
+
+	config, err := ConfigFromMap(cfg)
+	if err != nil {
+		panic(err)
+	}
+
 	is := &IssuerServer{}
-	is.App = pocketbase.New()
-	is.cfg = cfg
+
+	_, isUsingGoRun := inspectRuntime()
+
+	is.App = pocketbase.NewWithConfig(pocketbase.Config{
+		DefaultDev: isUsingGoRun,
+	})
+
+	// is.cfg = cfg
+	is.config = config
 	return is
 }
 
@@ -76,23 +86,11 @@ func New(cfg *my.YAML) *IssuerServer {
 func (is *IssuerServer) Start() error {
 
 	app := is.App
-	cfg := is.cfg
-
-	// // Check that we can access to the certificate
-	// if _, err := getConfigPrivateKey(); err != nil {
-	// 	return err
-	// }
-
-	is.settings.SamedeviceWallet = is.cfg.String("samedeviceWallet", "https://wallet.mycredential.eu")
+	// cfg := is.cfg
 
 	// Create the HTML templates registry
 	is.treg = pbtemplate.NewRegistry()
 	is.treg.AddFuncs(sprig.FuncMap())
-
-	// Initialize the Go HTML templates for credential creation
-	credentialTemplatesDir := cfg.String("credentialTemplatesDir", defaultCredentialTemplatesDir)
-	credentialTemplatesPath := path.Join(credentialTemplatesDir, "*.tpl")
-	initCredentialTemplates(credentialTemplatesPath)
 
 	// Perform initialization of Pocketbase before serving requests
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
@@ -100,34 +98,32 @@ func (is *IssuerServer) Start() error {
 		dao := e.App.Dao()
 
 		// The configured TCP address for the server to listen
-		e.Server.Addr = cfg.String("listenAddress", ":8090")
+		e.Server.Addr = is.config.ListenAddress
 
 		// The default Settings
-		settings, _ := dao.FindSettings()
-		settings.Meta.AppName = cfg.String("Meta.appName", "DOME Issuer")
-		settings.Meta.AppUrl = cfg.String("Meta.appUrl", "issuer.mycredential.eu")
-		is.settings.URL = settings.Meta.AppUrl
-		settings.Logs.MaxDays = 2
+		pbSettings, _ := dao.FindSettings()
+		pbSettings.Meta.AppName = is.config.AppName
+		pbSettings.Meta.AppUrl = is.config.IssuerURL
+		pbSettings.Logs.MaxDays = 2
 
-		settings.Meta.SenderName = cfg.String("Meta.senderName", "Support")
-		settings.Meta.SenderAddress = cfg.String("Meta.senderAddress", "admin@mycredential.eu")
+		pbSettings.Meta.SenderName = is.config.SenderName
+		pbSettings.Meta.SenderAddress = is.config.SenderAddress
 
-		settings.Smtp.Enabled = cfg.Bool("SMTP.Enabled", true)
-		settings.Smtp.Host = cfg.String("SMTP.Host", "example.com")
-		settings.Smtp.Port = cfg.Int("SMTP.Port", 465)
-		settings.Smtp.Tls = cfg.Bool("SMTP.Tls", true)
-		settings.Smtp.Username = cfg.String("SMTP.Username", "admin@mycredential.eu")
-		// settings.Smtp.Password = cfg.String("SMTP.Password")
+		pbSettings.Smtp.Enabled = is.config.SMTP.Enabled
+		pbSettings.Smtp.Host = is.config.SMTP.Host
+		pbSettings.Smtp.Port = is.config.SMTP.Port
+		pbSettings.Smtp.Tls = is.config.SMTP.Tls
+		pbSettings.Smtp.Username = is.config.SMTP.Username
 
 		// Write the settings to the database
-		err := dao.SaveSettings(settings)
+		err := dao.SaveSettings(pbSettings)
 		if err != nil {
 			return err
 		}
-		log.Println("Running as", settings.Meta.AppName, "in", settings.Meta.AppUrl)
+		log.Println("Running as", pbSettings.Meta.AppName, "in", pbSettings.Meta.AppUrl)
 
 		// Create the default admin if needed
-		adminEmail := cfg.String("admin.email")
+		adminEmail := is.config.AdminEmail
 		if len(adminEmail) == 0 {
 			log.Fatal("Email for server administrator is not specified in the configuration file")
 		}
@@ -150,7 +146,7 @@ func (is *IssuerServer) Start() error {
 		}
 
 		// Middleware to select the home page depending on the type of user (signers or holders)
-		e.Router.Use(selectHomePage)
+		e.Router.Use(is.selectHomePage)
 
 		// Serves static files from the provided public dir (if exists)
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./www"), false))
@@ -160,6 +156,9 @@ func (is *IssuerServer) Start() error {
 
 		// Add routes for Holders
 		is.addUserRoutes(e)
+
+		// Add routes for the LEAR
+		is.addLearRoutes(e)
 
 		return nil
 	})
@@ -231,13 +230,45 @@ func (is *IssuerServer) Start() error {
 
 		// Check if the Subject Key Identifier are the same in the received certificate and in the registered one
 		receivedSKI := hex.EncodeToString(receivedCert.SubjectKeyId)
-		log.Printf("SubjectKeyId: %s", receivedCert.SubjectKeyId)
-
 		registeredSKI := e.Record.GetString("ski")
-		log.Printf("ReceivedSKI: %s - RegisteredSKI: %s", receivedSKI, registeredSKI)
 
 		if receivedSKI != registeredSKI {
-			return fmt.Errorf("invalid SKI")
+			log.Printf("The received x509 certificate is not associated to the one registered: %s - RegisteredSKI: %s", receivedSKI, registeredSKI)
+			return apis.NewUnauthorizedError("The received x509 certificate is not associated to the one registered", nil)
+		}
+
+		return nil
+	})
+
+	app.OnRecordsListRequest("credentials").Add(func(e *core.RecordsListEvent) error {
+
+		// Get the context from the request
+		c := e.HttpContext
+
+		receivedCert, _, _, err := getX509UserFromHeader(c.Request())
+		if err != nil {
+			return apis.NewUnauthorizedError("The request requires x509 authorization token to be set.", nil)
+		}
+
+		// Check that the current authenticated user corresponds to the received certificate
+		info := apis.RequestInfo(c)
+
+		admin := info.Admin
+		if admin != nil {
+			return nil
+		}
+
+		record := info.AuthRecord
+		if record == nil {
+			return apis.NewUnauthorizedError("The request requires an authenticated user.", nil)
+		}
+
+		receivedSKI := hex.EncodeToString(receivedCert.SubjectKeyId)
+		registeredSKI := record.GetString("ski")
+
+		if receivedSKI != registeredSKI {
+			log.Printf("The received x509 certificate is not associated to the one registered: %s - RegisteredSKI: %s", receivedSKI, registeredSKI)
+			return apis.NewUnauthorizedError("The received x509 certificate is not associated to the one registered", nil)
 		}
 
 		return nil
@@ -333,14 +364,14 @@ func (is *IssuerServer) Start() error {
 
 // selectHomePage determines the HTML file to serve for the root path, depending on wether the server requires client certificate
 // authorization or not.
-func selectHomePage(next echo.HandlerFunc) echo.HandlerFunc {
+func (is *IssuerServer) selectHomePage(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if c.Request().URL.Path == "/" {
 			log.Println("My host is", c.Request().Host)
 			clientCertDer := c.Request().Header.Get("Tls-Client-Certificate")
 			if clientCertDer == "" {
 				// We did not receive a client certificate, serve the public pages
-				return c.File("www/issuerLandingPage.html")
+				return is.LEARHomeHandler(c)
 			} else {
 				// We received a client certificate identifying the user, who will act as Signer
 				return c.File("www/indexSigner.html")
@@ -402,12 +433,30 @@ func RequireAdminOrX509Auth() echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			admin, _ := c.Get(apis.ContextAdminKey).(*models.Admin)
 			if admin != nil {
+				log.Printf("Request received and looged as ADMIN")
 				return next(c)
 			}
 			_, _, _, err := getX509UserFromHeader(c.Request())
 			if err != nil {
 				return apis.NewUnauthorizedError("The request requires admin or x509 authorization token to be set.", nil)
 			}
+
+			// // Check that the current authenticated user corresponds to the received certificate
+			// info := apis.RequestInfo(c)
+			// record := info.AuthRecord
+			// if record == nil {
+			// 	return apis.NewUnauthorizedError("The request requires an authenticated user.", nil)
+			// }
+
+			// receivedSKI := hex.EncodeToString(receivedCert.SubjectKeyId)
+			// log.Printf("SubjectKeyId: %s", receivedCert.SubjectKeyId)
+
+			// registeredSKI := record.GetString("ski")
+			// log.Printf("ReceivedSKI: %s - RegisteredSKI: %s", receivedSKI, registeredSKI)
+
+			// if receivedSKI != registeredSKI {
+			// 	return apis.NewUnauthorizedError("Invalid SKI received.", nil)
+			// }
 
 			return next(c)
 		}
@@ -518,4 +567,29 @@ func qrcodeFromUrl(url string) (string, error) {
 	imgDataUrl = "data:image/png;base64," + imgDataUrl
 
 	return imgDataUrl, nil
+}
+
+// This custom Render replaces Echo's echo.Context.Render() with templ's templ.Component.Render().
+func Render(ctx echo.Context, statusCode int, t templ.Component) error {
+	buf := templ.GetBuffer()
+	defer templ.ReleaseBuffer(buf)
+
+	if err := t.Render(ctx.Request().Context(), buf); err != nil {
+		return err
+	}
+
+	return ctx.HTML(statusCode, buf.String())
+}
+
+func inspectRuntime() (baseDir string, withGoRun bool) {
+	if strings.HasPrefix(os.Args[0], os.TempDir()) {
+		// probably ran with go run
+		withGoRun = true
+		baseDir, _ = os.Getwd()
+	} else {
+		// probably ran with go build
+		withGoRun = false
+		baseDir = filepath.Dir(os.Args[0])
+	}
+	return
 }

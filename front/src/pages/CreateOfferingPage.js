@@ -24,7 +24,7 @@ window.MHR.register(pageName, class extends window.MHR.AbstractPage {
 
         if (!pb.authStore.isValid || !pb.authStore.model.verified) {
             myerror(`${pageName}: user not verified`)
-            gotoPage("ErrorPage", {title: "User not verified"})
+            gotoPage("ErrorPage", { title: "User not verified" })
             return
         }
 
@@ -185,10 +185,10 @@ function mandateForm() {
     </ion-card-content>
 
     <div class="ion-margin-start ion-margin-bottom">
-        <ion-button @click=${()=> createCredentialOffer()}>
+        <ion-button @click=${() => createCredentialOffer()}>
             ${T("Create")}
         </ion-button>
-        <ion-button @click=${()=> window.MHR.cleanReload()}>
+        <ion-button @click=${() => window.MHR.cleanReload()}>
             ${T("Cancel")}
         </ion-button>
     </div>
@@ -278,7 +278,7 @@ async function createCredentialOffer() {
     }
 
     if (errorMessages.length > 0) {
-        gotoPage("ErrorPage", {title: "The form is invalid", msg: errorMessages, back: true})
+        gotoPage("ErrorPage", { title: "The form is invalid", msg: errorMessages, back: true })
         return
     }
 
@@ -287,21 +287,21 @@ async function createCredentialOffer() {
         Mandatee: mandatee,
         Power: powers
     }
-        
+
 
     // Create the JSON structure of the credential but do not store anything yet in the server
     try {
-        var jsonCredential = await pb.send('/apisigner/createjsoncredential', 
-        {
-            method: "POST",
-            body: JSON.stringify(data),
-            headers: {
-                "Content-Type": "application/json",
-            },
-        })
-        console.log(jsonCredential)            
+        var jsonCredential = await pb.send('/apisigner/createjsoncredential',
+            {
+                method: "POST",
+                body: JSON.stringify(data),
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+        console.log(jsonCredential)
     } catch (error) {
-        gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
+        gotoPage("ErrorPage", { title: "Error creating credential", msg: error.message })
         return
     }
 
@@ -325,7 +325,7 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
         console.log(pb.authStore.model)
 
         if (!pb.authStore.isValid || !pb.authStore.model.verified) {
-            gotoPage("ErrorPage", {title: "User not verified"})
+            gotoPage("ErrorPage", { title: "User not verified" })
             return
         }
 
@@ -338,11 +338,11 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
         </div>
         
         <div class="ion-margin-start ion-margin-bottom">
-            <ion-button @click=${()=> storeOfferingInServer(jsonCredential)}>
+            <ion-button @click=${() => storeOfferingInServer(jsonCredential)}>
                 <ion-icon slot="start" name="home"></ion-icon>
                 ${T("Save Credential Offer")}
             </ion-button>
-            <ion-button @click=${()=> history.back()}>
+            <ion-button @click=${() => history.back()}>
                 <ion-icon slot="start" name="chevron-back"></ion-icon>
                 ${T("Back")}
             </ion-button>
@@ -361,24 +361,25 @@ window.MHR.register("DisplayOfferingPage", class extends window.MHR.AbstractPage
 
 async function storeOfferingInServer(jsonCredential) {
     const userEmail = jsonCredential.credentialSubject.mandate.mandatee.email
+    const organizationIdentifier = jsonCredential.credentialSubject.mandate.mandator.organizationIdentifier
     const learcred = JSON.stringify(jsonCredential)
 
     var model = pb.authStore.model
 
     // Sign the credential in the server with the x509 certificate
     try {
-        var result = await pb.send('/apisigner/signcredential', 
-        {
-            method: "POST",
-            body: learcred,
-            headers: {
-                "Content-Type": "application/json",
-            },
-        })
+        var result = await pb.send('/apisigner/signcredential',
+            {
+                method: "POST",
+                body: learcred,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
         var signedCredential = result.signed
-        console.log(signedCredential)            
+        console.log(signedCredential)
     } catch (error) {
-        gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
+        gotoPage("ErrorPage", { title: "Error creating credential", msg: error.message })
         return
     }
 
@@ -386,6 +387,7 @@ async function storeOfferingInServer(jsonCredential) {
     var data = {
         status: "offered",
         email: userEmail,
+        organizationIdentifier: organizationIdentifier,
         type: "jwt_vc",
         raw: signedCredential,
         creator_email: model.email,
@@ -394,9 +396,9 @@ async function storeOfferingInServer(jsonCredential) {
 
     try {
         var tobesignedRecord = await pb.collection('credentials').create(data);
-        console.log(tobesignedRecord)            
+        console.log(tobesignedRecord)
     } catch (error) {
-        gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
+        gotoPage("ErrorPage", { title: "Error saving credential", msg: error.message })
         return
     }
 
