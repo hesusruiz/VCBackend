@@ -248,9 +248,6 @@ function renderMandateReadOnly(cred) {
         <ion-button @click=${() => signCredentialOfferingLocal(cred)}>
             ${T("Sign in Local")}
         </ion-button>
-        <ion-button @click=${() => signCredentialOfferingInServer(cred)}>
-            ${T("Sign in Cloud")}
-        </ion-button>
         ` : null}
 
         <ion-button @click=${() => sendReminder(cred.id)}>
@@ -306,62 +303,6 @@ async function signCredentialOfferingLocal(record) {
     console.log("Storing signed credential in Record", record.id);
     const result2 = await pb.collection("credentials").update(record.id, record);
     console.log(result2);
-  } catch (error) {
-    gotoPage("ErrorPage", { title: "Error saving credential", msg: error.message });
-    return;
-  }
-  alert("Credential signed!!");
-  goHome();
-  return;
-}
-async function signCredentialOfferingInServer(record) {
-  const serverURL = "https://dts-sign-engine-demo.pre-api.digitelts.com/api/v1/services/signworker/signjades";
-  var learcred = decodeJWT(record.raw).body;
-  if (!learcred.credentialSubject) {
-    gotoPage("ErrorPage", { title: "Invalid credential", msg: "signCredentialOfferingLocal: Invalid credential received" });
-    return;
-  }
-  var body = {
-    "document": learcred
-  };
-  console.log("The payload before stringify", body);
-  const strbody = JSON.stringify(body);
-  console.log("The payload after stringify", strbody);
-  try {
-    var response = await fetch(
-      serverURL,
-      {
-        method: "POST",
-        body: strbody,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
-    );
-    console.log(response);
-  } catch (error) {
-    await gotoPage("ErrorPage", { "title": "Error signing credential", "msg": error.message });
-    return;
-  }
-  if (!response.ok) {
-    const errormsg = `POST ${serverURL}: ${response.statusText}`;
-    myerror(errormsg);
-    await gotoPage("ErrorPage", { "title": "Error sending data", "msg": errormsg });
-    return;
-  }
-  var responseJSON = await response.json();
-  console.log(responseJSON);
-  mylog(`doPOST ${serverURL}:`, responseJSON);
-  const signedDocument = responseJSON.data.signedDocument;
-  record.status = "signed";
-  record.raw = signedDocument;
-  record.signer_email = pb.authStore.model.email;
-  console.log("Updating credential");
-  console.log(record);
-  try {
-    console.log("Storing signed credential in Record", record.id);
-    const result = await pb.collection("credentials").update(record.id, record);
-    console.log(result);
   } catch (error) {
     gotoPage("ErrorPage", { title: "Error saving credential", msg: error.message });
     return;

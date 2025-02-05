@@ -24,7 +24,7 @@ window.MHR.register(pageName, class extends window.MHR.AbstractPage {
 
         if (!pb.authStore.isValid || !pb.authStore.model.verified) {
             myerror(`${pageName}: user not verified`)
-            gotoPage("ErrorPage", {title: "User not verified"})
+            gotoPage("ErrorPage", { title: "User not verified" })
             return
         }
 
@@ -34,14 +34,14 @@ window.MHR.register(pageName, class extends window.MHR.AbstractPage {
         try {
             var records = await pb.collection('credentials').getFullList({
                 sort: '-created',
-            });                
+            });
         } catch (error) {
             // There was a problem with the logged-in user. Clean the authstore and present and error.
             pb.authStore.clear()
             console.log(error)
-            gotoPage("ErrorPage", {title: "Error accessing credentials", msg: error.message})
+            gotoPage("ErrorPage", { title: "Error accessing credentials", msg: error.message })
             return
-            
+
         }
 
         var theHtml
@@ -82,16 +82,17 @@ function listCredentialOffers(records) {
                 </tr>
 
 
-                ${records.map((cred) => {return html`
+                ${records.map((cred) => {
+        return html`
                 <tr>
-                    <td><ion-button size="small" @click=${()=> gotoPage("DisplayOfferingQRCode", cred)}> View </ion-button></td>
+                    <td><ion-button size="small" @click=${() => gotoPage("DisplayOfferingQRCode", cred)}> View </ion-button></td>
                     <td>${cred.created}</td>
                     <td>${cred.status}</td>
                     <td>${cred.email}</td>
                     <td>${cred.creator_email}</td>
                     <td>${cred.signer_email}</td>
                 </tr>`
-                })}
+    })}
 
             </table>
         </div>
@@ -101,7 +102,7 @@ function listCredentialOffers(records) {
     </ion-card-content>
 
     <div class="ion-margin-start ion-margin-bottom">
-        <ion-button @click=${()=> gotoPage("CreateOfferingPage")}>
+        <ion-button @click=${() => gotoPage("CreateOfferingPage")}>
             ${T("Create New Credential")}
         </ion-button>
     </div>
@@ -123,7 +124,7 @@ window.MHR.register("DisplayOfferingQRCode", class extends window.MHR.AbstractPa
     async enter(cred) {
 
         const theHtml = renderMandateReadOnly(cred)
-      
+
         this.render(theHtml, false)
 
     }
@@ -143,7 +144,7 @@ function renderMandateReadOnly(cred) {
     const powers = mandate.power
     console.log(powers)
 
-    var theHtml =  html`
+    var theHtml = html`
 <ion-card>
     <ion-card-header>
         <ion-card-title>Credential Offer</ion-card-title>
@@ -226,13 +227,14 @@ function renderMandateReadOnly(cred) {
             </ion-row>
 
             <ion-row>
-                ${powers.map((pow, index) => {return html`
+                ${powers.map((pow, index) => {
+        return html`
                     <ion-col size="12" size-md="6">
 
                         <ion-item-group>
     
                             <ion-item-divider>
-                                <ion-label> Powers (${index+1} of ${powers.length}) </ion-label>
+                                <ion-label> Powers (${index + 1} of ${powers.length}) </ion-label>
                             </ion-item-divider>
     
                             <ion-item>
@@ -253,7 +255,7 @@ function renderMandateReadOnly(cred) {
                     </ion-col>    
 
                 `
-                })}
+    })}
 
             </ion-row>
 
@@ -263,20 +265,17 @@ function renderMandateReadOnly(cred) {
 
     <div class="ion-margin-start ion-margin-bottom">
 
-        <ion-button @click=${()=> history.back()}>
+        <ion-button @click=${() => history.back()}>
             ${T("Back")}
         </ion-button>
 
         ${(cred.status == "tobesigned") ? html`
-        <ion-button @click=${()=> signCredentialOfferingLocal(cred)}>
+        <ion-button @click=${() => signCredentialOfferingLocal(cred)}>
             ${T("Sign in Local")}
-        </ion-button>
-        <ion-button @click=${()=> signCredentialOfferingInServer(cred)}>
-            ${T("Sign in Cloud")}
         </ion-button>
         ` : null}
 
-        <ion-button @click=${()=> sendReminder(cred.id)}>
+        <ion-button @click=${() => sendReminder(cred.id)}>
             ${T("Send reminder")}
         </ion-button>
     
@@ -286,16 +285,16 @@ function renderMandateReadOnly(cred) {
 </ion-card>
 `
 
-return theHtml
+    return theHtml
 
 }
 
 async function sendReminder(id) {
     try {
-        var record = await pb.send('/apisigner/sendreminder/'+id)
-        console.log(record)            
+        var record = await pb.send('/apisigner/sendreminder/' + id)
+        console.log(record)
     } catch (error) {
-        gotoPage("ErrorPage", {title: "Error sending reminder "+id, msg: error.message})
+        gotoPage("ErrorPage", { title: "Error sending reminder " + id, msg: error.message })
         return
     }
 
@@ -311,24 +310,24 @@ async function signCredentialOfferingLocal(record) {
     var learcred = decodeJWT(record.raw).body
 
     if (!learcred.credentialSubject) {
-        gotoPage("ErrorPage", {title: "Invalid credential", msg: "signCredentialOfferingLocal: Invalid credential received"})
+        gotoPage("ErrorPage", { title: "Invalid credential", msg: "signCredentialOfferingLocal: Invalid credential received" })
         return
     }
 
     // Sign the credential in the local machine, to be able to access the certificate store
     try {
-        var result = await fetch('http://127.0.0.1/signcredential', 
-        {
-            method: "POST",
-            body: learcred,
-            headers: {
-                "Content-Type": "application/json",
-            },
-        })
+        var result = await fetch('http://127.0.0.1/signcredential',
+            {
+                method: "POST",
+                body: learcred,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
         var signedCredential = result.signed
-        console.log(signedCredential)            
+        console.log(signedCredential)
     } catch (error) {
-        gotoPage("ErrorPage", {title: "Error creating credential", msg: error.message})
+        gotoPage("ErrorPage", { title: "Error creating credential", msg: error.message })
         return
     }
 
@@ -339,9 +338,9 @@ async function signCredentialOfferingLocal(record) {
     try {
         console.log("Storing signed credential in Record", record.id)
         const result = await pb.collection('credentials').update(record.id, record);
-        console.log(result)            
+        console.log(result)
     } catch (error) {
-        gotoPage("ErrorPage", {title: "Error saving credential", msg: error.message})
+        gotoPage("ErrorPage", { title: "Error saving credential", msg: error.message })
         return
     }
 
@@ -395,7 +394,7 @@ async function signCredentialOfferingInServer(record) {
         myerror(errormsg)
         await gotoPage("ErrorPage", { "title": "Error sending data", "msg": errormsg })
         return
-    }                
+    }
 
     var responseJSON = await response.json();
     console.log(responseJSON)

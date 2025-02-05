@@ -1,6 +1,22 @@
 {{ define "content" -}}
 
-<img src="/static/img/kpmg_header.jpeg" style="width:100%">
+<!-- Navigation bar with social media icons -->
+<div class="w3-bar color-primary ">
+  <a href="#" class="w3-bar-item w3-button"><i class="fa fa-linkedin"></i></a>
+  <a href="#" class="w3-bar-item w3-button"><i class="fa fa-facebook-official"></i></a>
+  <a href="#" class="w3-bar-item w3-button"><i class="fa fa-instagram"></i></a>
+  <a href="#" class="w3-bar-item w3-button w3-right"><i class="fa fa-search"></i></a>
+</div>
+
+<!-- Navbar -->
+<div class="w3-bar w3-white w3-padding w3-card" style="letter-spacing:4px;">
+  <a href="/" class="w3-bar-item w3-button">DEMO</a>
+  <!-- Right-sided navbar links. Hide them on small screens -->
+  <div class="w3-right w3-hide-small">
+    <a href="#about" class="w3-bar-item w3-button">About</a>
+    <a href="/login" class="w3-bar-item w3-button">Login</a>
+  </div>
+</div>
 
 {{with .learCredential.credentialSubject.mandate}}
 

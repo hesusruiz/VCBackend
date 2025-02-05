@@ -167,7 +167,7 @@ hr{border:0;border-top:1px solid #eee;margin:5px 0}
 /* The color system, using variables */
 :root {
     --fore-color-primary:  white!important;
-    --bg-color-primary:  #153A31!important;
+    --bg-color-primary:  rgb(45, 88, 167)!important;
 
     --fore-color-medium:  white!important;
     --bg-color-medium:  #3f51b5!important;
