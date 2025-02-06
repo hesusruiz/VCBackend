@@ -111,6 +111,7 @@ func (l *login) createRouter() {
 		// Get the auth request that was sent to the Wallet
 		walletAuthRequest := authReq.WalletAuthRequest
 
+		w.Header().Add("Content-Type", "application/oauth-authz-req+jwt")
 		w.Write([]byte(walletAuthRequest))
 
 	})

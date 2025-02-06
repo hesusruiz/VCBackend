@@ -139,10 +139,6 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             this.OriginServer = theurl.origin
             console.log("Origin:", this.OriginServer)
 
-            // var myDid = await getOrCreateDidKey()
-            // const theProof = await generateDIDKeyProof(myDid, "https://issuer.mycredential.eu", "1234567890")
-            // var result = await this.updateCredentialPOST(theProof, qrData)
-
             var result = await doGETJSON(qrData)
 
             // Store some values to facilitate later retrieval

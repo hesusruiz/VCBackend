@@ -25,10 +25,9 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
     }
 
     /**
-     * @param {string} openIdUrl
+     * @param {string} openIdUrl The url for an OID4VP Authentication Request
      */
     async enter(openIdUrl) {
-        // openIdUrl is the url for a SIOP/OpenID4VP Authentication Request
         let html = this.html
 
         if (debug) {
@@ -42,7 +41,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             return
         }
 
-        // check whether current browser supports WebAuthn
+        // Check whether current browser supports WebAuthn
         if (window.PublicKeyCredential) {
             console.log("WebAuthn is supported")
             this.WebAuthnSupported = true
@@ -56,7 +55,9 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             console.log("WebAuthn NOT supported")
         }
 
-        // Derive from the received URL a simple one ready for parsing
+        // Derive from the received URL a simple one ready for parsing.
+        // We do not use the host name for anything, except to make happy the url parser.
+        // The "interesting" part is in the query parameters.
         openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.mycredential.eu/?")
 
 
@@ -73,7 +74,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         // We detect which one is it by looking at the query parameters:
         // 1. If 'request_uri' is in the url, then the AR is by reference, and the object can be retrieved
         //    by fetching the object.
-        // 2. Otherwise, the AR object is in the url. We do not support this.
+        // 2. Otherwise, the AR object is in the url. We do not yet support this.
 
         // Get the relevant parameters from the query string
         const params = new URLSearchParams(inputURL.search)
@@ -96,7 +97,6 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         }
 
         // Retrieve the AR from the Verifier
-        // const authRequestJWT = await getAuthRequestDelegated(request_uri)
         const authRequestJWT = await getAuthRequest(request_uri)
         if (!authRequestJWT) {
             mylog("authRequest is null, aborting")
@@ -118,9 +118,15 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
 
     }
 
+
+    /**
+     * Displays the Authentication Request (AR) details on the UI, for debugging purposes
+     *
+     * @param {string} authRequestJWT - The JWT containing the Authentication Request.
+     * @returns {Promise<void>} A promise that resolves when the AR details are rendered.
+     */
     async displayAR(authRequestJWT) {
 
-        // openIdUrl is the url for a SIOP/OpenID4VP Authentication Request
         let html = this.html
 
         // The AR is in the payload of the received JWT
@@ -150,7 +156,17 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
 
     }
 
+    /**
+     * Displays the credentials that the user has in the Wallet and that match the requested type in the AR.
+     * The user must select the one he wants to send to the Verifier, or cancel the operation
+     * 
+     * @param {string} authRequestJWT - The JWT containing the Authentication Request.
+     * @returns {Promise<void>} A promise that resolves when the list of credentials are rendered.
+     */
     async displayCredentials(authRequestJWT) {
+
+        // TODO: verify the signature and that the signer is the expected one and that it is in the
+        // corresponding trusted list.
 
         // The AR is in the payload of the received JWT
         const authRequest = decodeJWT(authRequestJWT)
@@ -806,6 +822,12 @@ function bufferEncode(value) {
         .replace(/=/g, "");;
 }
 
+/**
+ * Retrieves the Authorization Request from the Verifier at the uri specified
+ * 
+ * @param {string} uri - The uri of the server
+ * @returns {Promise<string>} The Authorization Request as a JWT
+ */
 async function getAuthRequest(uri) {
 
     try {
@@ -836,35 +858,6 @@ async function getAuthRequest(uri) {
     }
 }
 
-async function getAuthRequestDelegated(uri) {
-
-    var theBody = {
-        method: "GET",
-        url: uri
-    }
-    theBody = JSON.stringify(theBody)
-    mylog(theBody)
-
-    let response = await fetch("https://verifier.mycredential.eu/reqonbehalf", {
-        method: "POST",
-        mode: "cors",
-        cache: "no-cache",
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: theBody,
-    })
-
-    if (response.status != 200) {
-        // There was an error, present it
-        throw Error("Arrojado error sending request on behalf (" + response.status + ")")
-    }
-
-    const res = await response.text()
-    mylog(res)
-    return res
-
-}
 
 async function postDelegatedRequest(uri, body) {
 

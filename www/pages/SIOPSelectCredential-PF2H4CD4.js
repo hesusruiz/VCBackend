@@ -180,7 +180,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
     super(id);
   }
   /**
-   * @param {string} openIdUrl
+   * @param {string} openIdUrl The url for an OID4VP Authentication Request
    */
   async enter(openIdUrl) {
     let html2 = this.html;
@@ -239,6 +239,12 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
     }
     return;
   }
+  /**
+   * Displays the Authentication Request (AR) details on the UI, for debugging purposes
+   *
+   * @param {string} authRequestJWT - The JWT containing the Authentication Request.
+   * @returns {Promise<void>} A promise that resolves when the AR details are rendered.
+   */
   async displayAR(authRequestJWT) {
     let html2 = this.html;
     const authRequest = decodeJWT(authRequestJWT);
@@ -264,6 +270,13 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         `;
     this.render(theHtml);
   }
+  /**
+   * Displays the credentials that the user has in the Wallet and that match the requested type in the AR.
+   * The user must select the one he wants to send to the Verifier, or cancel the operation
+   * 
+   * @param {string} authRequestJWT - The JWT containing the Authentication Request.
+   * @returns {Promise<void>} A promise that resolves when the list of credentials are rendered.
+   */
   async displayCredentials(authRequestJWT) {
     const authRequest = decodeJWT(authRequestJWT);
     mylog("Decoded authRequest", authRequest);
