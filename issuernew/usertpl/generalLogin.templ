@@ -1,11 +1,13 @@
 package usertpl
 
-templ GeneralLogin() {
+var LoggedUser = ""
+
+templ GeneralLogin(issuerCertificateURL string) {
 	@layout() {
 		<div class="w3-panel w3-border">
 			<div class="w3-cell-row">
 				<div class="w3-container w3-cell w3-cell-bottom">
-					@glIdWithCert()
+					@glIdWithCert(issuerCertificateURL)
 				</div>
 				<div class="w3-container w3-cell w3-cell-bottom">
 					@glIdWithVC()
@@ -15,7 +17,7 @@ templ GeneralLogin() {
 	}
 }
 
-templ glIdWithCert() {
+templ glIdWithCert(issuerCertificateURL string) {
 	<div class="w3-panel w3-card-2">
 		<h3>Identify with a certificate</h3>
 		<p>
@@ -23,7 +25,7 @@ templ glIdWithCert() {
 			Please, click the button below.
 		</p>
 		<div class="w3-section">
-			<a href="https://issuersec.mycredential.eu" class="w3-btn w3-black" title="Submit button">Login with a certificate</a>
+			<a href={ templ.URL(issuerCertificateURL) } class="w3-btn w3-black" title="Submit button">Login with a certificate</a>
 		</div>
 	</div>
 }

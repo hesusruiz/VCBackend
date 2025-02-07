@@ -10,9 +10,9 @@ import {
 } from "../chunks/chunk-25UXO2KX.js";
 import {
   credentialsSave
-} from "../chunks/chunk-T6LHJ32I.js";
-import "../chunks/chunk-BFXLU5VG.js";
+} from "../chunks/chunk-XVNNYFGL.js";
 import "../chunks/chunk-CJ4ZD2TO.js";
+import "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
 // front/src/pages/LoadAndSaveQRVC.js

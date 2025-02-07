@@ -27,8 +27,8 @@ db.version(0.7).stores({
 
 
 /**
- * @param {{ id: string; encoded: string; type: string; status: string; decoded: Object; }} _credential
- * @param {boolean} replace
+ * @param {{id: string; encoded: string; type: string; status: string; decoded: Object; }} _credential
+ * @param {boolean} [replace=false]
  * 
  * The _credential object has the following structure:
  *   _credential = {
@@ -41,7 +41,7 @@ db.version(0.7).stores({
  * Otherwise, the new record is not saved and an error page displayed
  * 
  */
-async function credentialsSave(_credential, replace) {
+async function credentialsSave(_credential, replace = false) {
 
     log.log("CredentialSave", _credential)
 
@@ -93,16 +93,6 @@ async function credentialsSave(_credential, replace) {
             return;
         }
     }
-
-    // // Check if the credential is already in the database
-    // var oldCred = await credentialsGet(hashHex)
-    // if (oldCred != undefined) {
-    //     log.error("Credential already exists", oldCred, hashHex)
-    //     window.MHR.window.MHR.gotoPage("ErrorPage", {"title": "Credential already exists", "msg": "Can not save credential: already exists"})
-    //     // Return an error
-    //     return;
-    // }
-
 
     // Successful save, return the credential stored
     return credential_to_store;
@@ -179,7 +169,7 @@ async function credentialsGet(key) {
  * @returns [Object]
  */
 async function credentialsGetAllRecent(days) {
-    if (days == undefined) {
+    if (days == undefined || days <= 0) {
         days = 365
     }
     const dateInThePast = Date.now() - 60 * 60 * 24 * 1000 * days;

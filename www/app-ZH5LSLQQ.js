@@ -1,8 +1,8 @@
 import {
   storage
-} from "./chunks/chunk-T6LHJ32I.js";
-import "./chunks/chunk-BFXLU5VG.js";
+} from "./chunks/chunk-XVNNYFGL.js";
 import "./chunks/chunk-CJ4ZD2TO.js";
+import "./chunks/chunk-BFXLU5VG.js";
 import {
   html,
   render,
@@ -295,7 +295,7 @@ var AbstractPage = class {
     }
   }
   /**
-   * @param {(() => import("uhtml").Renderable) | import("uhtml").Renderable} theHtml
+   * @param {import("uhtml").Renderable} theHtml
    * @param {boolean} [backButton=true] 
    */
   render(theHtml, backButton = true) {
@@ -313,9 +313,10 @@ var AbstractPage = class {
   /**
    * @param {string} title
    * @param {string} message
+   * @param {string} details
    */
-  showError(title, message) {
-    this.render(ErrorPanel(title, message));
+  showError(title, message, details) {
+    this.render(ErrorPanel(title, message, details));
   }
 };
 function register(pageName, classDefinition) {
@@ -336,7 +337,7 @@ register("Page404", class extends AbstractPage {
    * @param {string} pageData
    */
   enter(pageData) {
-    this.showError("Page not found", `The requested page does not exist: ${pageData}`);
+    this.showError("Page not found", `The requested page does not exist: ${pageData}`, "");
   }
 });
 register("ErrorPage", class extends AbstractPage {
@@ -422,7 +423,7 @@ function atobUrl(input) {
   let bstr = decodeURIComponent(escape(atob(input)));
   return bstr;
 }
-window.MHR = {
+globalThis.MHR = {
   debug,
   mylog: storage.mylog,
   storage,

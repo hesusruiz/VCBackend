@@ -41,12 +41,12 @@ func (is *IssuerServer) addUserRoutes(e *core.ServeEvent) {
 
 	ctx := logging.ToContext(context.TODO(), logger)
 
-	vcverifier := "https://verifier.mycredential.eu"
+	vcverifier := is.config.VerifierURL
 	clientID := "domemarketplace"
 	clientSecret := "secret"
 
 	callbackPath := "/auth/callback"
-	redirectURI := "https://issuer.mycredential.eu" + userApiGroupPrefix + callbackPath
+	redirectURI := is.config.IssuerURL + userApiGroupPrefix + callbackPath
 
 	scopes := strings.Split("openid learcred profile email", " ")
 

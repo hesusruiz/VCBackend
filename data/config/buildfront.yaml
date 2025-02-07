@@ -12,7 +12,6 @@ cleantarget: true
 htmlfiles:
   - index.html
   - indexSigner.html
-  - issuerLandingPage.html
 
 # The JavaScript files which are the entrypoints (normally included in the HTML files)
 # Name is relative to the 'sourcedir'

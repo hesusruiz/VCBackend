@@ -8,7 +8,9 @@ package usertpl
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-func GeneralLogin() templ.Component {
+var LoggedUser = ""
+
+func GeneralLogin(issuerCertificateURL string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -45,7 +47,7 @@ func GeneralLogin() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = glIdWithCert().Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = glIdWithCert(issuerCertificateURL).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -71,7 +73,7 @@ func GeneralLogin() templ.Component {
 	})
 }
 
-func glIdWithCert() templ.Component {
+func glIdWithCert(issuerCertificateURL string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -92,7 +94,16 @@ func glIdWithCert() templ.Component {
 			templ_7745c5c3_Var3 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"w3-panel w3-card-2\"><h3>Identify with a certificate</h3><p>If you have a certificate of representation, you can use it to login. Please, click the button below.</p><div class=\"w3-section\"><a href=\"https://issuersec.mycredential.eu\" class=\"w3-btn w3-black\" title=\"Submit button\">Login with a certificate</a></div></div>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"w3-panel w3-card-2\"><h3>Identify with a certificate</h3><p>If you have a certificate of representation, you can use it to login. Please, click the button below.</p><div class=\"w3-section\"><a href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var4 templ.SafeURL = templ.URL(issuerCertificateURL)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var4)))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" class=\"w3-btn w3-black\" title=\"Submit button\">Login with a certificate</a></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -116,9 +127,9 @@ func glIdWithVC() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var4 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var4 == nil {
-			templ_7745c5c3_Var4 = templ.NopComponent
+		templ_7745c5c3_Var5 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var5 == nil {
+			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"w3-panel w3-card-2\"><h3>Identify with a LEARCredential</h3><p>If you are a LEAR you can use your LEARCredential to login. Please, click the button below.</p><div class=\"w3-section\"><a href=\"/lear/login\" class=\"w3-btn w3-black\" title=\"Submit button\">Login with a VC</a></div></div>")

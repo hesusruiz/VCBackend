@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -18,7 +19,7 @@ var (
 )
 
 // Client represents the storage model of an OAuth/OIDC client
-// this could also be your database model
+// this could also be the database model, but for our case we use the YAML config file
 type Client struct {
 	id                             string
 	secret                         string
@@ -171,28 +172,25 @@ func NativeClient(id string, redirectURIs ...string) *Client {
 // user-defined redirectURIs may include:
 // - http://localhost with port specification (e.g. http://localhost:9999/auth/callback)
 // (the example will be used as default, if none is provided)
-func WebClient(id, secret string, redirectURIs ...string) *Client {
+func WebClient(id, secret string, redirectURIs ...string) (*Client, error) {
 	if len(redirectURIs) == 0 {
-		redirectURIs = []string{
-			"https://demo.mycredential.eu/auth/callback",
-			"https://demo.mycredential.es/auth/callback",
-			"https://issuer.mycredential.eu/lear/auth/callback",
-		}
+		return nil, fmt.Errorf("web clients must provide at least one redirect_uri, client: %s", id)
 	}
 	return &Client{
-		id:                             id,
-		secret:                         "", // no secret needed (due to PKCE)
-		redirectURIs:                   redirectURIs,
-		applicationType:                op.ApplicationTypeWeb,
-		authMethod:                     oidc.AuthMethodNone,
-		loginURL:                       defaultLoginURL,
-		responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode},
-		grantTypes:                     []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken, oidc.GrantTypeTokenExchange},
-		accessTokenType:                op.AccessTokenTypeBearer,
-		devMode:                        true,
-		idTokenUserinfoClaimsAssertion: false,
-		clockSkew:                      0,
-	}
+			id:                             id,
+			secret:                         "", // no secret needed (due to PKCE)
+			redirectURIs:                   redirectURIs,
+			applicationType:                op.ApplicationTypeWeb,
+			authMethod:                     oidc.AuthMethodNone,
+			loginURL:                       defaultLoginURL,
+			responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode},
+			grantTypes:                     []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken, oidc.GrantTypeTokenExchange},
+			accessTokenType:                op.AccessTokenTypeBearer,
+			devMode:                        true,
+			idTokenUserinfoClaimsAssertion: false,
+			clockSkew:                      0,
+		},
+		nil
 }
 
 type hasRedirectGlobs struct {

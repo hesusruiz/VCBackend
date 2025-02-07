@@ -34,8 +34,8 @@ var (
 	_ op.ClientCredentialsStorage = &Storage{}
 )
 
-// storage implements the op.Storage interface
-// typically you would implement this as a layer on top of your database
+// Storage implements the op.Storage interface.
+// Typically you would implement this as a layer on top of your database
 // In our case (Verifiable Credentials), we only need to store the registered clients,
 // and everything else is either transitory or comes from the VC
 type Storage struct {
@@ -51,6 +51,7 @@ type Storage struct {
 	deviceCodes          map[string]deviceAuthorizationEntry
 	userCodes            map[string]string
 	serviceUsers         map[string]*Client
+	verifierURL          string
 }
 
 type signingKey struct {
@@ -91,11 +92,11 @@ func (s *publicKey) Key() any {
 	return &s.key.PublicKey
 }
 
-func NewStorage(userStore UserStore) *Storage {
-	return NewStorageWithClients(userStore, clients)
+func NewStorage(verifierUrl string, userStore UserStore) *Storage {
+	return NewStorageWithClients(verifierUrl, userStore, clients)
 }
 
-func NewStorageWithClients(userStore UserStore, clients map[string]*Client) *Storage {
+func NewStorageWithClients(verifierUrl string, userStore UserStore, clients map[string]*Client) *Storage {
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	return &Storage{
 		internalAuthRequests: make(map[string]*InternalAuthRequest),
@@ -128,6 +129,7 @@ func NewStorageWithClients(userStore UserStore, clients map[string]*Client) *Sto
 				accessTokenType: op.AccessTokenTypeBearer,
 			},
 		},
+		verifierURL: verifierUrl,
 	}
 }
 
@@ -196,7 +198,7 @@ func (s *Storage) CreateAuthRequest(ctx context.Context, authReq *oidc.AuthReque
 	// This is because the Wallet will send us identity information about the user, in the form of a LEARCredential.
 
 	// This is the endpoint inside the QR that the wallet will use to send the VC/VP
-	response_uri := "https://verifier.mycredential.eu/login/authenticationresponse"
+	response_uri := s.verifierURL + "/login/authenticationresponse"
 
 	// The new AuthRequest for the Wallet contains the ID of the AuthRequest received from the Application.
 	// When the Wallet sends the AuthReponse, we will be able to match the Wallet response with the Application request.

@@ -2,6 +2,7 @@ package verifiernew
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/hesusruiz/vcutils/yaml"
@@ -56,17 +57,20 @@ func (s *Config) SetDefaults() {
 
 func (s *Config) Validate() (err error) {
 
+	// SamedeviceWallet and VerifierURL are required
+	if len(s.SamedeviceWallet) == 0 {
+		return errors.New("samedeviceWallet is required")
+	}
+	if len(s.VerifierURL) == 0 {
+		return errors.New("verifierURL is required")
+	}
+
+	// Other values are optional and will be set to default values if not provided
 	if len(s.ListenAddress) == 0 {
 		s.ListenAddress = defaultConfig.ListenAddress
 	}
-	if len(s.VerifierURL) == 0 {
-		s.VerifierURL = defaultConfig.VerifierURL
-	}
 	if len(s.AuthnPolicies) == 0 {
 		s.AuthnPolicies = defaultConfig.AuthnPolicies
-	}
-	if len(s.SamedeviceWallet) == 0 {
-		s.SamedeviceWallet = defaultConfig.SamedeviceWallet
 	}
 	if len(s.CredentialTemplatesDir) == 0 {
 		s.CredentialTemplatesDir = defaultConfig.CredentialTemplatesDir
@@ -100,5 +104,6 @@ func (s *Config) OverrideWith(other Config) {
 }
 
 func (s *Config) String() string {
-	return ""
+	out, _ := json.MarshalIndent(s, "", "  ")
+	return string(out)
 }

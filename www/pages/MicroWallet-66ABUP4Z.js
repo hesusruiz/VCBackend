@@ -20,8 +20,8 @@ MHR.register("MicroWallet", class extends MHR.AbstractPage {
     const mydid = await getOrCreateDidKey();
     console.log("My DID", mydid);
     let html = this.html;
-    let params = new URL(document.location).searchParams;
-    console.log("MicroWallet", document.location);
+    let params = new URL(globalThis.document.location.href).searchParams;
+    console.log("MicroWallet", globalThis.document.location);
     if (document.URL.includes("state=") && document.URL.includes("auth-mock")) {
       console.log("MicroWallet ************Redirected with state**************");
       MHR.gotoPage("LoadAndSaveQRVC", document.URL);
@@ -63,7 +63,7 @@ MHR.register("MicroWallet", class extends MHR.AbstractPage {
           break;
       }
     }
-    var credentials = await MHR.storage.credentialsGetAllRecent();
+    var credentials = await MHR.storage.credentialsGetAllRecent(-1);
     if (!credentials) {
       MHR.gotoPage("ErrorPage", { "title": "Error", "msg": "Error getting recent credentials" });
       return;
@@ -206,6 +206,7 @@ MHR.register("SaveIN2Credential", class extends MHR.AbstractPage {
     console.log(encodedBody);
     var encodedCredential = rawIN2Header + "." + encodedBody + rawIN2Signature;
     var credStruct = {
+      id: null,
       type: "jwt_vc",
       status: "signed",
       encoded: encodedCredential,

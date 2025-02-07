@@ -165,12 +165,12 @@ var gBase64 = {
 };
 
 // front/src/pages/SIOPSelectCredential.js
-var MHR = window.MHR;
+var MHR = globalThis.MHR;
 var gotoPage = MHR.gotoPage;
 var goHome = MHR.goHome;
 var storage = MHR.storage;
-var myerror = window.MHR.storage.myerror;
-var mylog = window.MHR.storage.mylog;
+var myerror = globalThis.MHR.storage.myerror;
+var mylog = globalThis.MHR.storage.mylog;
 var html = MHR.html;
 var debug = MHR.debug;
 MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
@@ -193,7 +193,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
       this.showError("Error", "No URL has been specified");
       return;
     }
-    if (window.PublicKeyCredential) {
+    if (globalThis.PublicKeyCredential) {
       console.log("WebAuthn is supported");
       this.WebAuthnSupported = true;
       let available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
@@ -351,7 +351,7 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
                 ${T("Cancel")}
             </ion-button>
 
-            <ion-button @click=${(e) => sendAuthenticationResponseOld(e, holder, response_uri, credentials, state, webAuthnSupported)}>
+            <ion-button @click=${(e) => sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported)}>
                 <ion-icon slot="start" name="paper-plane"></ion-icon>
                 ${T("Send Credential")}
             </ion-button>
@@ -360,12 +360,13 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
     `;
   return div;
 }
-async function sendAuthenticationResponseOld(e, holder, backEndpoint, credentials, state, authSupported) {
+async function sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported) {
   e.preventDefault();
-  const endpointURL = new URL(backEndpoint);
+  debugger;
+  const endpointURL = new URL(response_uri);
   const origin = endpointURL.origin;
-  mylog("sending AuthenticationResponse to:", backEndpoint + "?state=" + state);
-  const uuid = self.crypto.randomUUID();
+  mylog("sending AuthenticationResponse to:", response_uri + "?state=" + state);
+  const uuid = globalThis.crypto.randomUUID();
   var vpToken = {
     context: ["https://www.w3.org/ns/credentials/v2"],
     type: ["VerifiablePresentation"],
@@ -376,12 +377,12 @@ async function sendAuthenticationResponseOld(e, holder, backEndpoint, credential
   mylog("The encoded vpToken ", gBase64.encodeURI(JSON.stringify(vpToken)));
   var formAttributes = {
     "vp_token": gBase64.encodeURI(JSON.stringify(vpToken)),
-    "presentation_submission": gBase64.encodeURI(JSON.stringify(presentationSubmissionJWT()))
+    "presentation_submission": gBase64.encodeURI(JSON.stringify(presentationSubmissionJSON()))
   };
   var formBody = JSON.stringify(formAttributes);
   mylog("The body: " + formBody);
   try {
-    let response = await fetch(backEndpoint + "?state=" + state, {
+    let response = await fetch(response_uri + "?state=" + state, {
       method: "POST",
       mode: "cors",
       cache: "no-cache",
@@ -391,34 +392,36 @@ async function sendAuthenticationResponseOld(e, holder, backEndpoint, credential
       body: formBody
     });
     if (response.status == 200) {
-      const res2 = await response.json();
-      mylog(res2);
-      if (res2.authenticatorRequired == "yes") {
-        if (!authSupported) {
+      const res = await response.json();
+      debugger;
+      mylog(res);
+      if (res.authenticatorRequired == "yes") {
+        if (!webAuthnSupported) {
           gotoPage("ErrorPage", {
             title: "Error",
             msg: "Authenticator not supported in this device"
           });
           return;
         }
-        res2["origin"] = origin;
-        res2["state"] = state;
+        res["origin"] = origin;
+        res["state"] = state;
         mylog("Authenticator required");
-        gotoPage("AuthenticatorPage", res2);
+        gotoPage("AuthenticatorPage", res);
         return;
       } else {
         gotoPage("AuthenticatorSuccessPage");
         return;
       }
+    } else {
+      myerror("error sending credential", response.status);
+      const res = await response.text();
+      myerror("error response:", res);
+      gotoPage("ErrorPage", {
+        title: "Error",
+        msg: "Error sending the credential"
+      });
+      return;
     }
-    myerror("error sending credential", response.status);
-    const res = await response.text();
-    mylog("response:", res);
-    gotoPage("ErrorPage", {
-      title: "Error",
-      msg: "Error sending the credential"
-    });
-    return;
   } catch (error) {
     myerror(error);
     gotoPage("ErrorPage", {
@@ -428,7 +431,7 @@ async function sendAuthenticationResponseOld(e, holder, backEndpoint, credential
     return;
   }
 }
-function presentationSubmissionJWT() {
+function presentationSubmissionJSON() {
   return {
     "definition_id": "SingleCredentialPresentation",
     "id": "SingleCredentialSubmission",
@@ -444,30 +447,13 @@ function presentationSubmissionJWT() {
   };
 }
 async function getAuthRequest(uri) {
-  try {
-    if (debug) {
-      alert("fetching " + uri);
-    }
-    var response = await fetch(
-      uri,
-      {
-        // mode: "cors"
-      }
-    );
-    if (!response.ok) {
-      var errorText = await response.text();
-      alert(errorText);
-      mylog(errorText);
-      return "error";
-    }
-    var responseText = await response.text();
-    return responseText;
-  } catch (error) {
-    alert(error);
-    gotoPage("ErrorPage", {
-      title: "Error",
-      msg: error
-    });
-    return;
+  mylog("Fetching AuthReq from", uri);
+  var response = await fetch(uri);
+  if (!response.ok) {
+    var errorText = await response.text();
+    myerror(errorText);
+    throw Error("Error fetching Authorization Request: " + errorText);
   }
+  var responseText = await response.text();
+  return responseText;
 }

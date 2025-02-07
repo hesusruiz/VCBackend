@@ -391,6 +391,8 @@ function T(e) {
 /**
  * @param {boolean} backButton - If true, a back button is shown in the header
  * @param {string} loginData? - Login data to show in header
+ * 
+ * @returns {import("uhtml").Renderable} The HTML structure.
  */
 function HeaderBar(backButton = true, loginData) {
 
@@ -423,9 +425,13 @@ function HeaderBar(backButton = true, loginData) {
 
 
 /**
- * @param {string} title
- * @param {string} message
- * @param {string} details
+ * Generates an HTML structure for an error panel using the provided title, message, and optional details.
+ *
+ * @param {string} title - The title of the error panel.
+ * @param {string} message - The main message to display in the error panel.
+ * @param {string} [details] - Optional additional details to display in the error panel.
+ * 
+ * @returns {import("uhtml").Renderable} The HTML structure for the error panel.
  */
 function ErrorPanel(title, message, details) {
     let theHtml = html`
@@ -504,7 +510,7 @@ class AbstractPage {
     }
 
     /**
-     * @param {(() => import("uhtml").Renderable) | import("uhtml").Renderable} theHtml
+     * @param {import("uhtml").Renderable} theHtml
      * @param {boolean} [backButton=true] 
      */
     render(theHtml, backButton = true) {
@@ -533,9 +539,10 @@ class AbstractPage {
     /**
      * @param {string} title
      * @param {string} message
+     * @param {string} details
      */
-    showError(title, message) {
-        this.render(ErrorPanel(title, message))
+    showError(title, message, details) {
+        this.render(ErrorPanel(title, message, details))
     }
 
 }
@@ -570,7 +577,7 @@ register("Page404", class extends AbstractPage {
      */
     enter(pageData) {
 
-        this.showError("Page not found", `The requested page does not exist: ${pageData}`)
+        this.showError("Page not found", `The requested page does not exist: ${pageData}`, '')
     }
 })
 
@@ -700,7 +707,7 @@ function atobUrl(input) {
 // we do not pollute the global namespace with our functions and variables
 
 // @ts-ignore
-window.MHR = {
+globalThis.MHR = {
     debug: debug,
     mylog: storage.mylog,
     storage: storage,
