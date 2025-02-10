@@ -57,40 +57,69 @@ async function registerScreen(authData) {
   const organization = authData.organization;
   const serial_number = authData.serial_number;
   const common_name = authData.common_name;
+  var certificate_type = "personal";
   if (organization_identifier) {
-    var introMessage = html`
-        <ion-card>
-        <ion-card-header>
-            <ion-card-subtitle>Organisation</ion-card-subtitle>
-        </ion-card-header>
-        <ion-card-content>
+    if (serial_number) {
+      certificate_type = "legalRepresentative";
+    } else {
+      certificate_type = "seal";
+    }
+  }
+  var introMessage;
+  switch (certificate_type) {
+    case "personal":
+      introMessage = html`
+            <ion-card color="warning">
+                <ion-card-header>
+                    <ion-card-subtitle>Warning</ion-card-subtitle>
+                </ion-card-header>
 
-            <p>You have authenticated with a certificate with the following information:</p>
-            <ul>
-                <li>Organization: <b>${organization}</b></li>
-                <li>Organization identifier: <b>${organization_identifier}</b></li>
-            </ul>
-        </ion-card-content>
-        </ion-card>
-        `;
-  } else {
-    introMessage = html`
+                <ion-card-content>
 
-        <ion-card color="warning">
-        <ion-card-header>
-            <ion-card-subtitle>Warning</ion-card-subtitle>
-        </ion-card-header>
-        <ion-card-content>
+                    <p>It seems that you have authenticated with a <b>personal certificate</b>. DOME requires LEARCredentials to be signed with an organisational certificate
+                        (either a certificate for a legal representative or a certificate for seals).
+                    </p>
+                    <p>However, for testing purposes we allow you to use your personal certificate to generate test LEARCredentials (which will not be usable in production in DOME)</p>
+                    <p>In this case, we will simulate a "fictitious" organisation with an identifier equal to your serial number (which is <b>${serial_number}</b>).</p>
 
-            <p>It seems that you have authenticated with a <b>personal certificate</b>. DOME requires LEARCredentials to be signed with an organisational certificate
-                (either a certificate for a legal representative or a certificate for seals).
-            </p>
-            <p>However, for testing purposes we allow you to use your personal certificate to generate test LEARCredentials (which will not be usable in production in DOME)</p>
-            <p>In this case, we will simulate a "fictitious" organisation with an identifier equal to your serial number (which is <b>${serial_number}</b>).</p>
+                </ion-card-content>
+            </ion-card>
+            `;
+      break;
+    case "legalRepresentative":
+      introMessage = html`
+            <ion-card>
+                <ion-card-header>
+                    <ion-card-subtitle>Organisation</ion-card-subtitle>
+                </ion-card-header>
+                <ion-card-content>
 
-        </ion-card-content>
-        </ion-card>
-        `;
+                    <p>You have authenticated with a certificate with the following information:</p>
+                    <ul>
+                        <li>Organization: <b>${organization}</b></li>
+                        <li>Organization identifier: <b>${organization_identifier}</b></li>
+                    </ul>
+                </ion-card-content>
+            </ion-card>
+            `;
+      break;
+    case "seal":
+      introMessage = html`
+            <ion-card>
+                <ion-card-header>
+                    <ion-card-subtitle>Organisation</ion-card-subtitle>
+                </ion-card-header>
+                <ion-card-content>
+
+                    <p>You have authenticated with a certificate with the following information:</p>
+                    <ul>
+                        <li>Organization: <b>${organization}</b></li>
+                        <li>Organization identifier: <b>${organization_identifier}</b></li>
+                    </ul>
+                </ion-card-content>
+            </ion-card>
+            `;
+      break;
   }
   return html`
     <div>

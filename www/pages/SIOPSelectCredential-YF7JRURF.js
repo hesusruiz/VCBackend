@@ -203,7 +203,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
     } else {
       console.log("WebAuthn NOT supported");
     }
-    openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.mycredential.eu/?");
+    openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.myhost.eu/?");
     const inputURL = new URL(openIdUrl);
     if (debug) {
       alert(inputURL);

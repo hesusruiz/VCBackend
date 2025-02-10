@@ -17,22 +17,17 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-type loginwithcertResponse struct {
-	NotVerified bool `json:"not_verified,omitempty"`
-	*x509util.ELSIName
-}
-
 func (is *IssuerServer) addSignerRoutes(e *core.ServeEvent) {
 	// Add special Issuer routes with a common prefix
 	// All requests for this group should be authenticated as Admin or with x509 certificate
 	signerApiGroup := e.Router.Group(signerApiGroupPrefix, RequireAdminOrX509Auth())
 
 	signerApiGroup.GET("/loginwithcert", func(c echo.Context) error {
-		receivedCert, _, subject, err := getX509UserFromHeader(c.Request())
+		receivedCert, _, receivedSubject, err := getX509UserFromHeader(c.Request())
 		if err != nil {
 			return err
 		}
-		log.Println(subject)
+		log.Println(receivedSubject)
 
 		// This is the unique identifier of the certificate
 		receivedSKI := hex.EncodeToString(receivedCert.SubjectKeyId)
@@ -44,17 +39,33 @@ func (is *IssuerServer) addSignerRoutes(e *core.ServeEvent) {
 
 		record, err := is.App.Dao().FindFirstRecordByData("signers", "ski", receivedSKI)
 		if err != nil {
+
+			// If the certificate is not in the database, just return the certificate subject
+			// that came in the request.
 			log.Println("WARNING: SKI not found")
-			return c.JSON(http.StatusOK, subject)
+			return c.JSON(http.StatusOK, receivedSubject)
+
 		} else {
+
 			if !record.Verified() && record.Collection().AuthOptions().OnlyVerified {
+
+				// If the certificate is in the database but the email is not verified, return a special response
+				// with the certificate received in the request and a flag indicating that the email is not verified.
+				type loginwithcertResponse struct {
+					NotVerified bool `json:"not_verified,omitempty"`
+					*x509util.ELSIName
+				}
 				ci := &loginwithcertResponse{}
-				ci.ELSIName = subject
+				ci.ELSIName = receivedSubject
 				ci.NotVerified = true
 				log.Println("record found but email not verified")
 				return c.JSON(http.StatusOK, ci)
 			}
+
+			// At this point, we know that the certificate is in the database and the email is verified.
+			// We use the PocketBase API to create a token for the user.
 			return apis.RecordAuthResponse(is.App, c, record, nil)
+
 		}
 
 	})
