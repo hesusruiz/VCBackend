@@ -37,7 +37,7 @@ type VerifierServer struct {
 
 func Start(cfg *yaml.YAML) error {
 
-	ver := New(cfg)
+	ver := NewVerifier(cfg)
 
 	// Register the configured clients
 	for _, cfgClient := range ver.Config.RegisteredClients {
@@ -142,7 +142,7 @@ func RequestOnBehalf(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func New(cfg *yaml.YAML) *VerifierServer {
+func NewVerifier(cfg *yaml.YAML) *VerifierServer {
 	ver := &VerifierServer{}
 
 	c, err := ConfigFromMap(cfg)

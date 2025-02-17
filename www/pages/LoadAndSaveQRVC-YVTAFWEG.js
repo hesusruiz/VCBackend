@@ -11,8 +11,8 @@ import {
 import {
   credentialsSave
 } from "../chunks/chunk-XVNNYFGL.js";
-import "../chunks/chunk-CJ4ZD2TO.js";
 import "../chunks/chunk-BFXLU5VG.js";
+import "../chunks/chunk-CJ4ZD2TO.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
 // front/src/pages/LoadAndSaveQRVC.js

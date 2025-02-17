@@ -57,6 +57,11 @@ func (is *IssuerServer) addSignerRoutes(e *core.ServeEvent) {
 				}
 				ci := &loginwithcertResponse{}
 				ci.ELSIName = receivedSubject
+				ci.ELSIName.EmailAddress = record.Email()
+				ci.ELSIName.StreetAddress = record.GetString("street")
+				ci.ELSIName.PostalCode = record.GetString("postalCode")
+				ci.ELSIName.Locality = record.GetString("city")
+
 				ci.NotVerified = true
 				log.Println("record found but email not verified")
 				return c.JSON(http.StatusOK, ci)

@@ -221,7 +221,6 @@ func (l *login) createRouter() {
 }
 
 type authenticate interface {
-	CheckUsernamePassword(username, password, id string) error
 	GetWalletAuthRequestByID(id string) (*storage.InternalAuthRequest, error)
 	SaveWalletAuthenticationResponse(id string, cred *yaml.YAML) error
 	CheckLoginDone(id string) bool

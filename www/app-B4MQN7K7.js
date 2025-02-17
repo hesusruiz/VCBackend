@@ -1,13 +1,13 @@
 import {
-  storage
-} from "./chunks/chunk-XVNNYFGL.js";
-import "./chunks/chunk-CJ4ZD2TO.js";
-import "./chunks/chunk-BFXLU5VG.js";
-import {
   html,
   render,
   svg
 } from "./chunks/chunk-U2D4LOFI.js";
+import {
+  storage
+} from "./chunks/chunk-XVNNYFGL.js";
+import "./chunks/chunk-BFXLU5VG.js";
+import "./chunks/chunk-CJ4ZD2TO.js";
 import "./chunks/chunk-U5RRZUYZ.js";
 
 // front/src/i18n/translations.js
