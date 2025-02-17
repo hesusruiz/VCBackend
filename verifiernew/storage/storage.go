@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/google/uuid"
 	"github.com/hesusruiz/vcutils/yaml"
 
@@ -34,8 +34,8 @@ var (
 	_ op.ClientCredentialsStorage = &Storage{}
 )
 
-// storage implements the op.Storage interface
-// typically you would implement this as a layer on top of your database
+// Storage implements the op.Storage interface.
+// Typically you would implement this as a layer on top of your database
 // In our case (Verifiable Credentials), we only need to store the registered clients,
 // and everything else is either transitory or comes from the VC
 type Storage struct {
@@ -51,6 +51,7 @@ type Storage struct {
 	deviceCodes          map[string]deviceAuthorizationEntry
 	userCodes            map[string]string
 	serviceUsers         map[string]*Client
+	verifierURL          string
 }
 
 type signingKey struct {
@@ -91,11 +92,11 @@ func (s *publicKey) Key() any {
 	return &s.key.PublicKey
 }
 
-func NewStorage(userStore UserStore) *Storage {
-	return NewStorageWithClients(userStore, clients)
+func NewStorage(verifierUrl string, userStore UserStore) *Storage {
+	return NewStorageWithClients(verifierUrl, userStore, clients)
 }
 
-func NewStorageWithClients(userStore UserStore, clients map[string]*Client) *Storage {
+func NewStorageWithClients(verifierUrl string, userStore UserStore, clients map[string]*Client) *Storage {
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	return &Storage{
 		internalAuthRequests: make(map[string]*InternalAuthRequest),
@@ -128,45 +129,8 @@ func NewStorageWithClients(userStore UserStore, clients map[string]*Client) *Sto
 				accessTokenType: op.AccessTokenTypeBearer,
 			},
 		},
+		verifierURL: verifierUrl,
 	}
-}
-
-// CheckUsernamePassword implements the `authenticate` interface of the login
-func (s *Storage) CheckUsernamePassword(username, password, authRequestId string) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	request, ok := s.internalAuthRequests[authRequestId]
-	if !ok {
-		return fmt.Errorf("request not found")
-	}
-
-	// for demonstration purposes we'll check we'll have a simple user store and
-	// a plain text password.  For real world scenarios, be sure to have the password
-	// hashed and salted (e.g. using bcrypt)
-	user := s.userStore.GetUserByUsername(username)
-	if user != nil && user.Password == password {
-		// be sure to set user id into the auth request after the user was checked,
-		// so that you'll be able to get more information about the user after the login
-		request.UserID = user.ID
-
-		// you will have to change some state on the request to guide the user through possible multiple steps of the login process
-		// in this example we'll simply check the username / password and set a boolean to true
-		// therefore we will also just check this boolean if the request / login has been finished
-		request.done = true
-		return nil
-	}
-	return fmt.Errorf("username or password wrong")
-}
-
-func (s *Storage) CheckUsernamePasswordSimple(username, password string) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	user := s.userStore.GetUserByUsername(username)
-	if user != nil && user.Password == password {
-		return nil
-	}
-	return fmt.Errorf("username or password wrong")
 }
 
 // CreateAuthRequest implements the op.Storage interface
@@ -190,13 +154,13 @@ func (s *Storage) CreateAuthRequest(ctx context.Context, authReq *oidc.AuthReque
 
 	// Now, we should request from the Wallet the LEARCredential. We use the OID4VP protocol for that.
 	// We create another related but different AuthRequest for sending the request to the Wallet.
-	// It is important to note that the Verifier is action as a standard OpenID Provider for the Application/Client,
-	// but the Verifier actas as a Relaying Party (OID4VP) when talking to the Wallet, which acts as a
+	// It is important to note that the Verifier is acting as a standard OpenID Provider for the Application/Client,
+	// but the Verifier acts as a Relaying Party (OID4VP) when talking to the Wallet, which acts as an
 	// OpenID Provider (OID4VP).
 	// This is because the Wallet will send us identity information about the user, in the form of a LEARCredential.
 
 	// This is the endpoint inside the QR that the wallet will use to send the VC/VP
-	response_uri := "https://verifier.mycredential.eu/login/authenticationresponse"
+	response_uri := s.verifierURL + "/login/authenticationresponse"
 
 	// The new AuthRequest for the Wallet contains the ID of the AuthRequest received from the Application.
 	// When the Wallet sends the AuthReponse, we will be able to match the Wallet response with the Application request.
@@ -519,7 +483,7 @@ func (s *Storage) SetUserinfoFromScopes(ctx context.Context, userinfo *oidc.User
 	return nil
 }
 
-// SetUserinfoFromRequests implements the op.CanSetUserinfoFromRequest interface.  In the
+// SetUserinfoFromRequest implements the op.CanSetUserinfoFromRequest interface.  In the
 // next major release, it will be required for op.Storage.
 // It will be called for the creation of an id_token, so we'll just pass it to the private function without any further check
 func (s *Storage) SetUserinfoFromRequest(ctx context.Context, userinfo *oidc.UserInfo, token op.IDTokenRequest, scopes []string) error {
@@ -737,6 +701,7 @@ func (s *Storage) setUserinfo(ctx context.Context, userInfo *oidc.UserInfo, user
 			userInfo.PhoneNumberVerified = user.PhoneVerified
 		case LEARCredentialScope:
 			// Add the LEARCredential as a claim if the Client specified the scope
+			// TODO: set the custom claim to the same used in the DOME access tokens
 			userInfo.AppendClaims(CustomClaim, user.Credential.Data())
 
 		}
@@ -850,14 +815,6 @@ func getInfoFromRequest(req op.TokenRequest) (clientID string, authTime time.Tim
 		return refreshReq.ApplicationID, refreshReq.AuthTime, refreshReq.AMR
 	}
 	return "", time.Time{}, nil
-}
-
-// customClaim demonstrates how to return custom claims based on provided information
-func customClaim(clientID string) map[string]any {
-	return map[string]any{
-		"client": clientID,
-		"other":  "pepepep",
-	}
 }
 
 func appendClaim(claims map[string]any, claim string, value any) map[string]any {

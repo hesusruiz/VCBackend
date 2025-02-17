@@ -1,5 +1,5 @@
-import "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-U2D4LOFI.js";
+import "../chunks/chunk-BFXLU5VG.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
 // front/src/pages/LogsPage.js

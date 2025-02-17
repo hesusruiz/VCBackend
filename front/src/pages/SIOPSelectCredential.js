@@ -4,14 +4,14 @@ import { decodeJWT } from '../components/jwt'
 import { renderAnyCredentialCard } from '../components/renderAnyCredential';
 
 // @ts-ignore
-const MHR = window.MHR
+const MHR = globalThis.MHR
 
 // Copy some globals to make code less verbose
 let gotoPage = MHR.gotoPage
 let goHome = MHR.goHome
 let storage = MHR.storage
-let myerror = window.MHR.storage.myerror
-let mylog = window.MHR.storage.mylog
+let myerror = globalThis.MHR.storage.myerror
+let mylog = globalThis.MHR.storage.mylog
 let html = MHR.html
 let debug = MHR.debug
 
@@ -25,10 +25,9 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
     }
 
     /**
-     * @param {string} openIdUrl
+     * @param {string} openIdUrl The url for an OID4VP Authentication Request
      */
     async enter(openIdUrl) {
-        // openIdUrl is the url for a SIOP/OpenID4VP Authentication Request
         let html = this.html
 
         if (debug) {
@@ -42,8 +41,8 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             return
         }
 
-        // check whether current browser supports WebAuthn
-        if (window.PublicKeyCredential) {
+        // Check whether current browser supports WebAuthn
+        if (globalThis.PublicKeyCredential) {
             console.log("WebAuthn is supported")
             this.WebAuthnSupported = true
 
@@ -56,8 +55,10 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
             console.log("WebAuthn NOT supported")
         }
 
-        // Derive from the received URL a simple one ready for parsing
-        openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.mycredential.eu/?")
+        // Derive from the received URL a simple one ready for parsing.
+        // We do not use the host name for anything, except to make happy the url parser.
+        // The "interesting" part is in the query parameters.
+        openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.myhost.eu/?")
 
 
         // Convert the input string to a URL object
@@ -73,7 +74,7 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         // We detect which one is it by looking at the query parameters:
         // 1. If 'request_uri' is in the url, then the AR is by reference, and the object can be retrieved
         //    by fetching the object.
-        // 2. Otherwise, the AR object is in the url. We do not support this.
+        // 2. Otherwise, the AR object is in the url. We do not yet support this.
 
         // Get the relevant parameters from the query string
         const params = new URLSearchParams(inputURL.search)
@@ -96,7 +97,6 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
         }
 
         // Retrieve the AR from the Verifier
-        // const authRequestJWT = await getAuthRequestDelegated(request_uri)
         const authRequestJWT = await getAuthRequest(request_uri)
         if (!authRequestJWT) {
             mylog("authRequest is null, aborting")
@@ -118,9 +118,15 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
 
     }
 
+
+    /**
+     * Displays the Authentication Request (AR) details on the UI, for debugging purposes
+     *
+     * @param {string} authRequestJWT - The JWT containing the Authentication Request.
+     * @returns {Promise<void>} A promise that resolves when the AR details are rendered.
+     */
     async displayAR(authRequestJWT) {
 
-        // openIdUrl is the url for a SIOP/OpenID4VP Authentication Request
         let html = this.html
 
         // The AR is in the payload of the received JWT
@@ -150,7 +156,17 @@ MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
 
     }
 
+    /**
+     * Displays the credentials that the user has in the Wallet and that match the requested type in the AR.
+     * The user must select the one he wants to send to the Verifier, or cancel the operation
+     * 
+     * @param {string} authRequestJWT - The JWT containing the Authentication Request.
+     * @returns {Promise<void>} A promise that resolves when the list of credentials are rendered.
+     */
     async displayCredentials(authRequestJWT) {
+
+        // TODO: verify the signature and that the signer is the expected one and that it is in the
+        // corresponding trusted list.
 
         // The AR is in the payload of the received JWT
         const authRequest = decodeJWT(authRequestJWT)
@@ -311,6 +327,7 @@ var in2Credential = {
 function vcToHtml(vc, response_uri, state, webAuthnSupported) {
 
     // TODO: retrieve the holder and its private key from DB
+
     // Get the holder that will present the credential
     // We get this from the credential subject
     mylog("in VCToHTML")
@@ -331,7 +348,7 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
                 ${T("Cancel")}
             </ion-button>
 
-            <ion-button @click=${(e) => sendAuthenticationResponseOld(e, holder, response_uri, credentials, state, webAuthnSupported)}>
+            <ion-button @click=${(e) => sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported)}>
                 <ion-icon slot="start" name="paper-plane"></ion-icon>
                 ${T("Send Credential")}
             </ion-button>
@@ -345,15 +362,16 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
 
 
 // sendAuthenticationResponse prepares an Authentication Response and sends it to the server as specified in the endpoint
-async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, state, authSupported) {
+async function sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported) {
     e.preventDefault();
+    debugger
 
-    const endpointURL = new URL(backEndpoint)
+    const endpointURL = new URL(response_uri)
     const origin = endpointURL.origin
 
-    mylog("sending AuthenticationResponse to:", backEndpoint + "?state=" + state)
+    mylog("sending AuthenticationResponse to:", response_uri + "?state=" + state)
 
-    const uuid = self.crypto.randomUUID()
+    const uuid = globalThis.crypto.randomUUID()
 
     // Create the vp_token structure
     var vpToken = {
@@ -368,118 +386,8 @@ async function sendAuthenticationResponse(e, holder, backEndpoint, credentials, 
     // Create the top-level structure for the Authentication Response
     var formAttributes = {
         'vp_token': Base64.encodeURI(JSON.stringify(vpToken)),
-        'presentation_submission': Base64.encodeURI(JSON.stringify(presentationSubmissionJWT()))
+        'presentation_submission': Base64.encodeURI(JSON.stringify(presentationSubmissionJSON()))
     }
-
-    // Encode as a form to send in the post
-    var formBody = [];
-    for (var property in formAttributes) {
-        var encodedKey = encodeURIComponent(property);
-        var encodedValue = encodeURIComponent(formAttributes[property]);
-        formBody.push(encodedKey + "=" + encodedValue);
-    }
-
-    formBody = formBody.join("&");
-    mylog("The body: " + formBody)
-
-    postDelegatedRequest(backEndpoint + "?state=" + state, formBody)
-
-    // // Send the Authentication Response
-    // try {
-    //     let response = await fetch(backEndpoint + "?state=" + state, {
-    //         method: "POST",
-    //         mode: "cors",
-    //         cache: "no-cache",
-    //         headers: {
-    //             'Content-Type': 'application/x-www-form-urlencoded',
-    //         },
-    //         body: formBody,
-    //     })
-
-    //     if (response.status == 200) {
-    //         const res = await response.json()
-    //         mylog(res)
-
-    //         // Check if the server requires the authenticator to be used
-    //         if (res.authenticatorRequired == "yes") {
-
-    //             if (!authSupported) {
-    //                 gotoPage("ErrorPage", {
-    //                     title: "Error",
-    //                     msg: "Authenticator not supported in this device"
-    //                 });
-    //                 return
-    //             }
-
-    //             res["origin"] = origin
-    //             res["state"] = state
-
-    //             mylog("Authenticator required")
-    //             // The credential has been sent
-    //             gotoPage("AuthenticatorPage", res);
-    //             return
-    //         } else {
-    //             gotoPage("AuthenticatorSuccessPage")
-    //             return
-    //         }
-    //     }
-
-    //     // There was an error, present it
-    //     myerror("error sending credential", response.status)
-    //     const res = await response.text()
-    //     mylog("response:", res)
-
-    //     gotoPage("ErrorPage", {
-    //         title: "Error",
-    //         msg: "Error sending the credential"
-    //     });
-    //     return
-
-    // } catch (error) {
-    //     // There was an error, present it
-    //     myerror(error)
-    //     gotoPage("ErrorPage", {
-    //         title: "Error",
-    //         msg: "Error sending the credential"
-    //     });
-    //     return
-    // }
-}
-
-// sendAuthenticationResponse prepares an Authentication Response and sends it to the server as specified in the endpoint
-async function sendAuthenticationResponseOld(e, holder, backEndpoint, credentials, state, authSupported) {
-    e.preventDefault();
-
-    const endpointURL = new URL(backEndpoint)
-    const origin = endpointURL.origin
-
-    mylog("sending AuthenticationResponse to:", backEndpoint + "?state=" + state)
-
-    const uuid = self.crypto.randomUUID()
-
-    // Create the vp_token structure
-    var vpToken = {
-        context: ["https://www.w3.org/ns/credentials/v2"],
-        type: ["VerifiablePresentation"],
-        id: uuid,
-        verifiableCredential: credentials,
-        holder: holder
-    }
-    mylog("The encoded vpToken ", Base64.encodeURI(JSON.stringify(vpToken)))
-
-    // Create the top-level structure for the Authentication Response
-    var formAttributes = {
-        'vp_token': Base64.encodeURI(JSON.stringify(vpToken)),
-        'presentation_submission': Base64.encodeURI(JSON.stringify(presentationSubmissionJWT()))
-    }
-    // var formBody = [];
-    // for (var property in formAttributes) {
-    //     var encodedKey = encodeURIComponent(property);
-    //     var encodedValue = encodeURIComponent(formAttributes[property]);
-    //     formBody.push(encodedKey + "=" + encodedValue);
-    // }
-
-    // var formBody = formBody.join("&");
 
     // Encode in JSON to put it in the body of the POST
     var formBody = JSON.stringify(formAttributes)
@@ -487,7 +395,7 @@ async function sendAuthenticationResponseOld(e, holder, backEndpoint, credential
 
     // Send the Authentication Response
     try {
-        let response = await fetch(backEndpoint + "?state=" + state, {
+        let response = await fetch(response_uri + "?state=" + state, {
             method: "POST",
             mode: "cors",
             cache: "no-cache",
@@ -499,12 +407,13 @@ async function sendAuthenticationResponseOld(e, holder, backEndpoint, credential
 
         if (response.status == 200) {
             const res = await response.json()
+            debugger
             mylog(res)
 
             // Check if the server requires the authenticator to be used
             if (res.authenticatorRequired == "yes") {
 
-                if (!authSupported) {
+                if (!webAuthnSupported) {
                     gotoPage("ErrorPage", {
                         title: "Error",
                         msg: "Authenticator not supported in this device"
@@ -523,18 +432,21 @@ async function sendAuthenticationResponseOld(e, holder, backEndpoint, credential
                 gotoPage("AuthenticatorSuccessPage")
                 return
             }
+        } else {
+
+            // There was an error, present it
+            myerror("error sending credential", response.status)
+            const res = await response.text()
+            myerror("error response:", res)
+
+            gotoPage("ErrorPage", {
+                title: "Error",
+                msg: "Error sending the credential"
+            });
+            return
+
         }
 
-        // There was an error, present it
-        myerror("error sending credential", response.status)
-        const res = await response.text()
-        mylog("response:", res)
-
-        gotoPage("ErrorPage", {
-            title: "Error",
-            msg: "Error sending the credential"
-        });
-        return
 
     } catch (error) {
         // There was an error, present it
@@ -760,23 +672,8 @@ async function loginUser(origin, username, state) {
 
 }
 
-function presentationSubmission() {
-    return {
-        "definition_id": "SingleCredentialPresentation",
-        "id": "SingleCredentialSubmission",
-        "descriptor_map": [{
-            "id": "single_credential",
-            "path": "$",
-            "format": "ldp_vp",
-            "path_nested": {
-                "format": "ldp_vc",
-                "path": "$.verifiableCredential[0]"
-            }
-        }]
-    }
-}
-
-function presentationSubmissionJWT() {
+// This is the predefined PresentationSubmission in DOME
+function presentationSubmissionJSON() {
     return {
         "definition_id": "SingleCredentialPresentation",
         "id": "SingleCredentialSubmission",
@@ -806,91 +703,29 @@ function bufferEncode(value) {
         .replace(/=/g, "");;
 }
 
+/**
+ * Retrieves the Authorization Request from the Verifier at the uri specified
+ * https://www.rfc-editor.org/rfc/rfc9101.html#section-5.2.3
+ * 
+ * @param {string} uri - The uri of the server
+ * @returns {Promise<string>} The Authorization Request as a JWT
+ */
 async function getAuthRequest(uri) {
 
-    try {
-        if (debug) {
-            alert("fetching " + uri)
-        }
-        var response = await fetch(uri,
-            {
-                // mode: "cors"
-            })
-        if (!response.ok) {
-            var errorText = await response.text()
-            alert(errorText)
-            mylog(errorText)
-            return "error"
-        }
-        var responseText = await response.text()
-        return responseText
+    mylog("Fetching AuthReq from", uri)
 
-    } catch (error) {
-        // There was an error, present it
-        alert(error)
-        gotoPage("ErrorPage", {
-            title: "Error",
-            msg: error
-        });
-        return
-    }
-}
+    var response = await fetch(uri)
 
-async function getAuthRequestDelegated(uri) {
-
-    var theBody = {
-        method: "GET",
-        url: uri
-    }
-    theBody = JSON.stringify(theBody)
-    mylog(theBody)
-
-    let response = await fetch("https://verifier.mycredential.eu/reqonbehalf", {
-        method: "POST",
-        mode: "cors",
-        cache: "no-cache",
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: theBody,
-    })
-
-    if (response.status != 200) {
-        // There was an error, present it
-        throw Error("Arrojado error sending request on behalf (" + response.status + ")")
+    if (!response.ok) {
+        var errorText = await response.text()
+        myerror(errorText)
+        throw Error("Error fetching Authorization Request: " + errorText)
     }
 
-    const res = await response.text()
-    mylog(res)
-    return res
+    // The response is plain text (actually, 'application/oauth-authz-req+jwt')
+    var responseText = await response.text()
+    return responseText
 
 }
 
-async function postDelegatedRequest(uri, body) {
 
-    var theBody = {
-        method: "POST",
-        url: uri,
-        body: body
-    }
-
-    let response = await fetch("https://verifier.mycredential.eu/reqonbehalf", {
-        method: "POST",
-        mode: "cors",
-        cache: "no-cache",
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: body,
-    })
-
-    if (response.status != 200) {
-        // There was an error, present it
-        throw Error("Arrojado error sending request on behalf (" + response.status + ")")
-    }
-
-    const res = await response.text()
-    mylog(res)
-    return res
-
-}

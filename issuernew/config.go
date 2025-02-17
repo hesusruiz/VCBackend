@@ -10,6 +10,7 @@ type Config struct {
 	ListenAddress          string     `json:"listenAddress,omitempty"`
 	AppName                string     `json:"appName,omitempty"`
 	IssuerURL              string     `json:"issuerURL,omitempty"`
+	IssuerCertificateURL   string     `json:"issuerCertificateURL,omitempty"`
 	SenderName             string     `json:"senderName,omitempty"`
 	SenderAddress          string     `json:"senderAddress,omitempty"`
 	VerifierURL            string     `json:"verifierURL,omitempty"`

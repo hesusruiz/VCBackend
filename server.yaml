@@ -12,6 +12,7 @@ issuer:
   listenAddress: ":8090"
   appName: "DOME Issuer"
   issuerURL: https://issuer.mycredential.eu
+  issuerCertificateURL: https://issuersec.mycredential.eu
   clientID: https://issuer.mycredential.eu
   senderName: Support
   senderAddress: "admin@mycredential.eu"
@@ -27,7 +28,6 @@ issuer:
     username: "admin@mycredential.eu"
   samedeviceWallet: https://wallet.mycredential.eu
   credentialTemplatesDir: "data/credential_templates"
-
 
 verifier:
   listenAddress: ":9998"
@@ -54,4 +54,3 @@ relyingParty:
   verifierURL: https://verifier.mycredential.eu
   callbackPath: "/auth/callback"
   scopes: "openid learcred profile email"
-

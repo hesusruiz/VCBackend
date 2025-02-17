@@ -4744,7 +4744,7 @@ db.version(0.7).stores({
   dids: "did",
   logs: "++id, timestamp"
 });
-async function credentialsSave(_credential, replace) {
+async function credentialsSave(_credential, replace = false) {
   log.log("CredentialSave", _credential);
   if (_credential.id) {
     var hashHex = _credential.id;
@@ -4825,7 +4825,7 @@ async function credentialsGet(key) {
   return credential;
 }
 async function credentialsGetAllRecent(days) {
-  if (days == void 0) {
+  if (days == void 0 || days <= 0) {
     days = 365;
   }
   const dateInThePast = Date.now() - 60 * 60 * 24 * 1e3 * days;

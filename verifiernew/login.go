@@ -111,6 +111,7 @@ func (l *login) createRouter() {
 		// Get the auth request that was sent to the Wallet
 		walletAuthRequest := authReq.WalletAuthRequest
 
+		w.Header().Add("Content-Type", "application/oauth-authz-req+jwt")
 		w.Write([]byte(walletAuthRequest))
 
 	})
@@ -220,7 +221,6 @@ func (l *login) createRouter() {
 }
 
 type authenticate interface {
-	CheckUsernamePassword(username, password, id string) error
 	GetWalletAuthRequestByID(id string) (*storage.InternalAuthRequest, error)
 	SaveWalletAuthenticationResponse(id string, cred *yaml.YAML) error
 	CheckLoginDone(id string) bool

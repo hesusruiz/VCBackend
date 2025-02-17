@@ -5,16 +5,26 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "eIDAS",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "main.go",
+            "args": [
+                "eidas",
+                "createca"
+            ]
+        },
+        {
             "name": "VCDemo",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            
             "program": "main.go",
             "cwd": ".",
-            "args": ["serve"]
+            "args": [
+                "serve"
+            ]
         }
-
-
     ]
 }

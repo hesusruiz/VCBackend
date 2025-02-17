@@ -139,10 +139,6 @@ window.MHR.register("LoadAndSaveQRVC", class extends window.MHR.AbstractPage {
             this.OriginServer = theurl.origin
             console.log("Origin:", this.OriginServer)
 
-            // var myDid = await getOrCreateDidKey()
-            // const theProof = await generateDIDKeyProof(myDid, "https://issuer.mycredential.eu", "1234567890")
-            // var result = await this.updateCredentialPOST(theProof, qrData)
-
             var result = await doGETJSON(qrData)
 
             // Store some values to facilitate later retrieval
@@ -677,37 +673,6 @@ async function performAuthCodeFlow(credentialOffer, issuerMetaData, authServerMe
     }
 
     var redirectedURL = resp.url
-
-    // The redirected URL contains the authorization type in the response_type. The URL can be of two types:
-    //
-    // Type 1: with response_type=vp_token, the AuthServer expects that the wallet sends a VP. The credentials required are specified
-    // in the presentation_definition parameter. This URL looks like:
-    //
-    // https://wallet.mycredential.eu/?
-    // state=66685746-05f4-4d3d-896d-877ad0043115&
-    // client_id=https://api-conformance.ebsi.eu/conformance/v3/auth-mock&
-    // redirect_uri=https://api-conformance.ebsi.eu/conformance/v3/auth-mock/direct_post&
-    // response_type=vp_token&
-    // response_mode=direct_post&
-    // scope=openid&
-    // nonce=560bc48c-e597-41d5-ab10-066a25a3758d&
-    // presentation_definition={....}&
-    // request=eyJ0eXAiOiJKV1QiLCJhbGciOi
-    //
-    // Type 2: with response_type=id_token, the AuthServer is expects that the wallet sends an ID Token. No credentials are needed.
-    // The URL looks like:
-    //
-    // https://wallet.mycredential.eu/?
-    // state=e6379c7f-1919-41aa-8194-9767295e1896&
-    // client_id=https%3A%2F%2Fapi-conformance.ebsi.eu%2Fconformance%2Fv3%2Fauth-mock&
-    // redirect_uri=https%3A%2F%2Fapi-conformance.ebsi.eu%2Fconformance%2Fv3%2Fauth-mock%2Fdirect_post&
-    // response_type=id_token&
-    // response_mode=direct_post&
-    // scope=openid&
-    // nonce=a8612b8a-8e8b-461c-a21e-e4b09988fc87&
-    // request_uri=https%3A%2F%2Fapi-conformance.ebsi.eu%2Fconformance%2Fv3%2Fauth-mock%2Frequest_uri%2F3e3a4bb3-3b22-4b14-92bb-3e198658fbf5
-
-
     mylog(redirectedURL)
     var urlParams = new URL(redirectedURL).searchParams;
 

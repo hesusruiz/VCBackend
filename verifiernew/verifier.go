@@ -37,15 +37,23 @@ type VerifierServer struct {
 
 func Start(cfg *yaml.YAML) error {
 
-	ver := New(cfg)
+	ver := NewVerifier(cfg)
 
 	// Register the configured clients
 	for _, cfgClient := range ver.Config.RegisteredClients {
 		switch cfgClient.Type {
 		case "web":
-			storage.RegisterClients(storage.WebClient(cfgClient.Id, cfgClient.Secret, cfgClient.RedirectURIs...))
+			cl, err := storage.WebClient(cfgClient.Id, cfgClient.Secret, cfgClient.RedirectURIs...)
+			if err != nil {
+				return err
+			}
+			storage.RegisterClients(cl)
 		case "native":
-			storage.RegisterClients(storage.WebClient(cfgClient.Id, cfgClient.Secret, cfgClient.RedirectURIs...))
+			cl, err := storage.WebClient(cfgClient.Id, cfgClient.Secret, cfgClient.RedirectURIs...)
+			if err != nil {
+				return err
+			}
+			storage.RegisterClients(cl)
 		default:
 			return fmt.Errorf("invalid Client specified: %s", cfgClient.Id)
 		}
@@ -54,7 +62,7 @@ func Start(cfg *yaml.YAML) error {
 	// The OpenIDProvider interface needs a Storage interface handling various checks and state manipulations.
 	// This is normally used as the layer for accessing a database, but we do not need permanent verifierStorage for users
 	// and it will be handled in-memory because the user data is coming from the Verifiable Credential presented.
-	verifierStorage := storage.NewStorage(storage.NewUserStore(ver.Config.VerifierURL))
+	verifierStorage := storage.NewStorage(ver.Config.VerifierURL, storage.NewUserStore(ver.Config.VerifierURL))
 
 	logger := slog.New(
 		slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
@@ -134,7 +142,7 @@ func RequestOnBehalf(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func New(cfg *yaml.YAML) *VerifierServer {
+func NewVerifier(cfg *yaml.YAML) *VerifierServer {
 	ver := &VerifierServer{}
 
 	c, err := ConfigFromMap(cfg)

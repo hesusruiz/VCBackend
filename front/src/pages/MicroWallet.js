@@ -1,5 +1,12 @@
 // @ts-check
 
+/**
+ * MicroWallet is the main page of the wallet application.
+ * It shows the list of credentials stored in the wallet,
+ * and allows the user to scan a QR code to add a new credential or authenticate
+ * to a RelyingParty
+ */
+
 import { renderAnyCredentialCard } from '../components/renderAnyCredential'
 import { getOrCreateDidKey, generateEd25519KeyPair } from '../components/crypto'
 import { decodeJWT } from '../components/jwt'
@@ -30,9 +37,8 @@ MHR.register("MicroWallet", class extends MHR.AbstractPage {
         // If URL is clean (initially or after reloading)
         //     retrieve the QR from local storage and display it
 
-        // @ts-ignore
-        let params = new URL(document.location).searchParams
-        console.log("MicroWallet", document.location)
+        let params = new URL(globalThis.document.location.href).searchParams
+        console.log("MicroWallet", globalThis.document.location)
 
         // Check for redirect during the authentication flow
         if (document.URL.includes("state=") && document.URL.includes("auth-mock")) {
@@ -90,7 +96,7 @@ MHR.register("MicroWallet", class extends MHR.AbstractPage {
         }
 
         // Retrieve all recent credentials from storage
-        var credentials = await MHR.storage.credentialsGetAllRecent()
+        var credentials = await MHR.storage.credentialsGetAllRecent(-1)
 
         if (!credentials) {
             MHR.gotoPage("ErrorPage", { "title": "Error", "msg": "Error getting recent credentials" })
@@ -354,6 +360,7 @@ MHR.register("SaveIN2Credential", class extends MHR.AbstractPage {
         var encodedCredential = rawIN2Header + "." + encodedBody + rawIN2Signature
 
         var credStruct = {
+            id: null,
             type: "jwt_vc",
             status: "signed",
             encoded: encodedCredential,

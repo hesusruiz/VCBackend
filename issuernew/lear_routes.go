@@ -274,7 +274,7 @@ func (is *IssuerServer) retrieveLEARUserFromRequest(next echo.HandlerFunc) echo.
 
 func (is *IssuerServer) GeneralLoginScreen(c echo.Context) error {
 
-	return Render(c, http.StatusOK, usertpl.GeneralLogin())
+	return Render(c, http.StatusOK, usertpl.GeneralLogin(is.config.IssuerCertificateURL))
 }
 
 func (is *IssuerServer) LEARHomeHandler(c echo.Context) error {

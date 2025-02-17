@@ -151,7 +151,7 @@ func (is *IssuerServer) Start() error {
 		// Serves static files from the provided public dir (if exists)
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./www"), false))
 
-		// Add routes for Signers
+		// Add routes for Signers (those with digital certificates)
 		is.addSignerRoutes(e)
 
 		// Add routes for Holders
@@ -183,7 +183,7 @@ func (is *IssuerServer) Start() error {
 			return fmt.Errorf("invalid certificate, Subject CommonName does not exist")
 		}
 
-		// Enrich the incoming Record with the subject info in the certificate
+		// Enrich the PocketBase Record with the subject info in the certificate
 		e.Record.Set("ski", hex.EncodeToString(receivedCert.SubjectKeyId))
 		e.Record.Set("commonName", subject.CommonName)
 		e.Record.Set("serialNumber", subject.SerialNumber)
@@ -433,7 +433,7 @@ func RequireAdminOrX509Auth() echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			admin, _ := c.Get(apis.ContextAdminKey).(*models.Admin)
 			if admin != nil {
-				log.Printf("Request received and looged as ADMIN")
+				log.Printf("Request received and loged as ADMIN")
 				return next(c)
 			}
 			_, _, _, err := getX509UserFromHeader(c.Request())

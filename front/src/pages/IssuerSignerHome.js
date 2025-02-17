@@ -1,4 +1,12 @@
 // @ts-check
+
+/**
+ * IssuerSignerHome is the home page for the Issuer
+ * It needs to be served under a reverse proxy that requests TLS client authentication,
+ * so the browser requests to the user to select one of the certificates installed in
+ * the user machine.
+ */
+
 import PocketBase from '../components/pocketbase.es.mjs'
 
 const pb = new PocketBase(window.location.origin)
@@ -11,10 +19,6 @@ let mylog = window.MHR.storage.mylog
 let html = window.MHR.html
 let cleanReload = window.MHR.cleanReload
 
-// This is the home page for the Issuer.
-// It needs to be served under a reverse proxy that requests TLS client authentication,
-// so the browser requests to the user to select one of the certificates installed in
-// the user machine.
 window.MHR.register("IssuerSignerHome", class extends window.MHR.AbstractPage {
 
     /**
@@ -36,7 +40,7 @@ window.MHR.register("IssuerSignerHome", class extends window.MHR.AbstractPage {
             debugger
 
             if (authData.token) {
-                // We receive the token if the user was already registered, including its email
+                // We receive the token if the user was already registered, including a verified email
 
                 // Store the token and user in the auth store and go to display the available certs
                 pb.authStore.save(authData.token, authData.record)
@@ -89,42 +93,83 @@ async function registerScreen(authData) {
     const serial_number = authData.serial_number
     const common_name = authData.common_name
 
-
+    // A certificate without an organization identifier is a personal certificate.
+    // A certificate with both organizationIdentifier and serialNumber is a legal representative certificate.
+    // A certificate with organizationIdentifier and without serialNumber is a seal certificate.
+    var certificate_type = "personal"
     if (organization_identifier) {
-        var introMessage = html`
-        <ion-card>
-        <ion-card-header>
-            <ion-card-subtitle>Organisation</ion-card-subtitle>
-        </ion-card-header>
-        <ion-card-content>
+        if (serial_number) {
+            certificate_type = "legalRepresentative"
+        } else {
+            certificate_type = "seal"
+        }
+    }
 
-            <p>You have authenticated with a certificate with the following information:</p>
-            <ul>
-                <li>Organization: <b>${organization}</b></li>
-                <li>Organization identifier: <b>${organization_identifier}</b></li>
-            </ul>
-        </ion-card-content>
-        </ion-card>
-        `
+    var introMessage
 
-    } else {
-        introMessage = html`
+    switch (certificate_type) {
+        case "personal":
 
-        <ion-card color="warning">
-        <ion-card-header>
-            <ion-card-subtitle>Warning</ion-card-subtitle>
-        </ion-card-header>
-        <ion-card-content>
+            introMessage = html`
+            <ion-card color="warning">
+                <ion-card-header>
+                    <ion-card-subtitle>Warning</ion-card-subtitle>
+                </ion-card-header>
 
-            <p>It seems that you have authenticated with a <b>personal certificate</b>. DOME requires LEARCredentials to be signed with an organisational certificate
-                (either a certificate for a legal representative or a certificate for seals).
-            </p>
-            <p>However, for testing purposes we allow you to use your personal certificate to generate test LEARCredentials (which will not be usable in production in DOME)</p>
-            <p>In this case, we will simulate a "fictitious" organisation with an identifier equal to your serial number (which is <b>${serial_number}</b>).</p>
+                <ion-card-content>
 
-        </ion-card-content>
-        </ion-card>
-        `
+                    <p>It seems that you have authenticated with a <b>personal certificate</b>. DOME requires LEARCredentials to be signed with an organisational certificate
+                        (either a certificate for a legal representative or a certificate for seals).
+                    </p>
+                    <p>However, for testing purposes we allow you to use your personal certificate to generate test LEARCredentials (which will not be usable in production in DOME)</p>
+                    <p>In this case, we will simulate a "fictitious" organisation with an identifier equal to your serial number (which is <b>${serial_number}</b>).</p>
+
+                </ion-card-content>
+            </ion-card>
+            `
+
+            break;
+
+        case "legalRepresentative":
+
+            introMessage = html`
+            <ion-card>
+                <ion-card-header>
+                    <ion-card-subtitle>Organisation</ion-card-subtitle>
+                </ion-card-header>
+                <ion-card-content>
+
+                    <p>You have authenticated with a certificate with the following information:</p>
+                    <ul>
+                        <li>Organization: <b>${organization}</b></li>
+                        <li>Organization identifier: <b>${organization_identifier}</b></li>
+                    </ul>
+                </ion-card-content>
+            </ion-card>
+            `
+
+            break;
+
+        case "seal":
+
+            introMessage = html`
+            <ion-card>
+                <ion-card-header>
+                    <ion-card-subtitle>Organisation</ion-card-subtitle>
+                </ion-card-header>
+                <ion-card-content>
+
+                    <p>You have authenticated with a certificate with the following information:</p>
+                    <ul>
+                        <li>Organization: <b>${organization}</b></li>
+                        <li>Organization identifier: <b>${organization_identifier}</b></li>
+                    </ul>
+                </ion-card-content>
+            </ion-card>
+            `
+
+            break;
+
     }
 
     // Create and present the registration    
