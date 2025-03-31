@@ -13035,11 +13035,7 @@ async function generateECDSAKeyPair() {
     namedCurve: "P-256"
   };
   const keyUsages = ["sign", "verify"];
-  let keyPair = await crypto.subtle.generateKey(
-    algorithm,
-    extractable,
-    keyUsages
-  );
+  let keyPair = await crypto.subtle.generateKey(algorithm, extractable, keyUsages);
   return keyPair;
 }
 async function exportToJWK(key) {
@@ -13065,13 +13061,7 @@ async function importFromJWK(jwk) {
     throw new Error(`Invalid key type specified: ${jwk["kty"]}`);
   }
   let keyUsages = jwk["d"] ? ["sign"] : ["verify"];
-  let key = await crypto.subtle.importKey(
-    format2,
-    jwk,
-    algorithm,
-    extractable,
-    keyUsages
-  );
+  let key = await crypto.subtle.importKey(format2, jwk, algorithm, extractable, keyUsages);
   return key;
 }
 var aCode = "a".charCodeAt(0);
@@ -13081,10 +13071,7 @@ var FCode = "F".charCodeAt(0);
 var zeroCode = "0".charCodeAt(0);
 var nineCode = "9".charCodeAt(0);
 function bytesToBase64(bytes) {
-  const binString = Array.from(
-    bytes,
-    (byte) => String.fromCodePoint(byte)
-  ).join("");
+  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
   return btoa(binString);
 }
 function UTF8StringToBase64Url(string) {

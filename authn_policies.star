@@ -41,8 +41,8 @@ def authenticate(request, rawcred, protected_resource):
     ## Get the MANDATEE information from the credential
     mandatee = credential["credentialSubject"]["mandate"]["mandatee"]
     email = mandatee["email"]
-    first_name = mandatee["first_name"]
-    last_name = mandatee["last_name"]
+    first_name = mandatee["firstName"]
+    last_name = mandatee["lastName"]
     print(first_name, last_name, email)
 
     # Get the MANDATOR information from the credential
@@ -57,7 +57,7 @@ def authenticate(request, rawcred, protected_resource):
     # This is where the real action comes. You can specify the rules that you need
     ###############################################################################
 
-    if credentialIncludesPower(credential, "Execute", "Onboarding", "DOME"):
+    if credentialIncludesPower(credential, "execute", "Onboarding", "DOME"):
         return True
 
     # If we reached here, deny the request
@@ -94,7 +94,7 @@ def credentialIncludesPower(credential, action, function, domain):
     # Check all possible powers in the mandate
     for power in powers:
         # Approve if the power includes the required one
-        if (power["tmf_function"] == function) and (domain in power["tmf_domain"]) and (action in power["tmf_action"]):
+        if (power["function"] == function) and (domain in power["domain"]) and (action in power["action"]):
             return True
 
     # We did not find any complying power, so Deny

@@ -32,14 +32,21 @@ function renderAnyCredentialCard(vc, status = "signed") {
   return credCard;
 }
 function renderLEARCredentialCard(vc, status) {
+  debugger;
   console.log("renderLEARCredentialCard with:", status, vc);
   const vctypes = vc.type;
   if (vctypes.indexOf("LEARCredentialEmployee") == -1) {
     throw new Error("renderLEARCredentialCard: credential is not of type LEARCredentialEmployee");
   }
   const vcs = vc.credentialSubject;
-  const first_name = vcs.mandate.mandatee.first_name;
-  const last_name = vcs.mandate.mandatee.last_name;
+  var first_name = vcs.mandate.mandatee.first_name;
+  if (!first_name) {
+    first_name = vcs.mandate.mandatee.firstName;
+  }
+  var last_name = vcs.mandate.mandatee.last_name;
+  if (!last_name) {
+    last_name = vcs.mandate.mandatee.lastName;
+  }
   var avatar = photo_man_default;
   const gender = vcs.mandate.mandatee.gender;
   if (gender && gender.toUpperCase() == "F") {
@@ -47,59 +54,65 @@ function renderLEARCredentialCard(vc, status) {
   }
   const powers = vcs.mandate.power;
   const learCard = html`
-        <ion-card-header>
-            <ion-card-title>${first_name} ${last_name}</ion-card-title>
-            <ion-card-subtitle>Employee</ion-card-subtitle>
-        </ion-card-header>
+      <ion-card-header>
+         <ion-card-title>${first_name} ${last_name}</ion-card-title>
+         <ion-card-subtitle>Employee</ion-card-subtitle>
+      </ion-card-header>
 
-        <ion-card-content class="ion-padding-bottom">
-
-            <div>
+      <ion-card-content class="ion-padding-bottom">
+         <div>
             <ion-list>
-            
-                <ion-item>
-                    <ion-thumbnail slot="start">
-                        <img alt="Avatar" src=${avatar} />
-                    </ion-thumbnail>
-                    ${status != "signed" ? html`<ion-label color="danger"><b>Status: signature pending</b></ion-label>` : null}
-                </ion-item>
-            
-                ${powers.map((pow) => {
-    return html`<ion-item><ion-label>${typeof pow.tmf_domain == "string" ? pow.tmf_domain : pow.tmf_domain[0]}: ${pow.tmf_function} [${pow.tmf_action}]</ion-label></ion-item>`;
+               <ion-item>
+                  <ion-thumbnail slot="start">
+                     <img alt="Avatar" src=${avatar} />
+                  </ion-thumbnail>
+                  ${status != "signed" ? html`<ion-label color="danger"><b>Status: signature pending</b></ion-label>` : null}
+               </ion-item>
+
+               ${powers.map((pow) => {
+    return html` <ion-item>
+                     ${pow.tmf_domain ? html`
+                             <ion-label>
+                                ${typeof pow.tmf_domain == "string" ? pow.tmf_domain : pow.tmf_domain[0]}
+                                ${pow.tmf_function} [${pow.tmf_action}]
+                             </ion-label>
+                          ` : null}
+                     ${pow.domain ? html`
+                             <ion-label>
+                                ${typeof pow.domain == "string" ? pow.domain : pow.domain[0]}
+                                ${pow.function} [${pow.action}]
+                             </ion-label>
+                          ` : null}
+                  </ion-item>`;
   })}
             </ion-list>
-            </div>
-
-        </ion-card-content>
-        `;
+         </div>
+      </ion-card-content>
+   `;
   return learCard;
 }
 function renderYAMKETCertificationCard(vc, status) {
   console.log("renderYAMKETCertificationCard with:", status, vc);
   const serviceName = "TheServiceName";
   const theCard = html`
-        <ion-card-header>
-            <ion-card-title>${serviceName}</ion-card-title>
-            <ion-card-subtitle>Service certification</ion-card-subtitle>
-        </ion-card-header>
+      <ion-card-header>
+         <ion-card-title>${serviceName}</ion-card-title>
+         <ion-card-subtitle>Service certification</ion-card-subtitle>
+      </ion-card-header>
 
-        <ion-card-content class="ion-padding-bottom">
-
-            <div>
+      <ion-card-content class="ion-padding-bottom">
+         <div>
             <ion-list>
-            
-                <ion-item>
-                    <ion-thumbnail slot="start">
-                        <img alt="Avatar" src=${logo_default} />
-                    </ion-thumbnail>
-                    ${status != "signed" ? html`<ion-label color="danger"><b>Status: signature pending</b></ion-label>` : null}
-                </ion-item>
-            
+               <ion-item>
+                  <ion-thumbnail slot="start">
+                     <img alt="Avatar" src=${logo_default} />
+                  </ion-thumbnail>
+                  ${status != "signed" ? html`<ion-label color="danger"><b>Status: signature pending</b></ion-label>` : null}
+               </ion-item>
             </ion-list>
-            </div>
-
-        </ion-card-content>
-        `;
+         </div>
+      </ion-card-content>
+   `;
   return theCard;
 }
 

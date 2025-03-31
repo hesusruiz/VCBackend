@@ -1,6 +1,6 @@
 import {
   renderAnyCredentialCard
-} from "../chunks/chunk-32NCLNVQ.js";
+} from "../chunks/chunk-KGRHEIRG.js";
 import {
   decodeJWT
 } from "../chunks/chunk-25UXO2KX.js";
@@ -173,191 +173,210 @@ var myerror = globalThis.MHR.storage.myerror;
 var mylog = globalThis.MHR.storage.mylog;
 var html = MHR.html;
 var debug = MHR.debug;
-MHR.register("SIOPSelectCredential", class extends MHR.AbstractPage {
-  WebAuthnSupported = false;
-  PlatformAuthenticatorSupported = false;
-  constructor(id) {
-    super(id);
-  }
-  /**
-   * @param {string} openIdUrl The url for an OID4VP Authentication Request
-   */
-  async enter(openIdUrl) {
-    let html2 = this.html;
-    if (debug) {
-      alert("SelectCredential");
+MHR.register(
+  "SIOPSelectCredential",
+  class extends MHR.AbstractPage {
+    WebAuthnSupported = false;
+    PlatformAuthenticatorSupported = false;
+    constructor(id) {
+      super(id);
     }
-    mylog("Inside SIOPSelectCredential:", openIdUrl);
-    if (openIdUrl == null) {
-      myerror("No URL has been specified");
-      this.showError("Error", "No URL has been specified");
-      return;
-    }
-    if (globalThis.PublicKeyCredential) {
-      console.log("WebAuthn is supported");
-      this.WebAuthnSupported = true;
-      let available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (available) {
-        this.PlatformAuthenticatorSupported = true;
+    /**
+     * @param {string} openIdUrl The url for an OID4VP Authentication Request
+     */
+    async enter(openIdUrl) {
+      let html2 = this.html;
+      if (debug) {
+        alert(`SelectCredential: ${openIdUrl}`);
       }
-    } else {
-      console.log("WebAuthn NOT supported");
-    }
-    openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.myhost.eu/?");
-    const inputURL = new URL(openIdUrl);
-    if (debug) {
-      alert(inputURL);
-    }
-    const params = new URLSearchParams(inputURL.search);
-    var request_uri = params.get("request_uri");
-    if (!request_uri) {
-      gotoPage("ErrorPage", {
-        title: "Error",
-        msg: "'request_uri' parameter not found in URL"
-      });
+      mylog("Inside SIOPSelectCredential:", openIdUrl);
+      if (openIdUrl == null) {
+        myerror("No URL has been specified");
+        this.showError("Error", "No URL has been specified");
+        return;
+      }
+      if (globalThis.PublicKeyCredential) {
+        console.log("WebAuthn is supported");
+        this.WebAuthnSupported = true;
+        let available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        if (available) {
+          this.PlatformAuthenticatorSupported = true;
+        }
+      } else {
+        console.log("WebAuthn NOT supported");
+      }
+      openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.myhost.eu/?");
+      const inputURL = new URL(openIdUrl);
+      if (debug) {
+        alert(inputURL);
+      }
+      const params = new URLSearchParams(inputURL.search);
+      var request_uri = params.get("request_uri");
+      if (!request_uri) {
+        gotoPage("ErrorPage", {
+          title: "Error",
+          msg: "'request_uri' parameter not found in URL"
+        });
+        return;
+      }
+      request_uri = decodeURIComponent(request_uri);
+      if (debug) {
+        alert(request_uri);
+      }
+      const authRequestJWT = await getAuthRequest(request_uri);
+      if (!authRequestJWT) {
+        mylog("authRequest is null, aborting");
+        return;
+      }
+      if (authRequestJWT == "error") {
+        alert("checking error after getAuthRequestDelegated");
+        this.showError("Error", "Error fetching Authorization Request");
+        return;
+      }
+      console.log(authRequestJWT);
+      if (debug) {
+        await this.displayAR(authRequestJWT);
+      } else {
+        await this.displayCredentials(authRequestJWT);
+      }
       return;
     }
-    request_uri = decodeURIComponent(request_uri);
-    if (debug) {
-      alert(request_uri);
-    }
-    const authRequestJWT = await getAuthRequest(request_uri);
-    if (!authRequestJWT) {
-      mylog("authRequest is null, aborting");
-      return;
-    }
-    if (authRequestJWT == "error") {
-      alert("checking error after getAuthRequestDelegated");
-      this.showError("Error", "Error fetching Authorization Request");
-      return;
-    }
-    console.log(authRequestJWT);
-    if (debug) {
-      await this.displayAR(authRequestJWT);
-    } else {
-      await this.displayCredentials(authRequestJWT);
-    }
-    return;
-  }
-  /**
-   * Displays the Authentication Request (AR) details on the UI, for debugging purposes
-   *
-   * @param {string} authRequestJWT - The JWT containing the Authentication Request.
-   * @returns {Promise<void>} A promise that resolves when the AR details are rendered.
-   */
-  async displayAR(authRequestJWT) {
-    let html2 = this.html;
-    const authRequest = decodeJWT(authRequestJWT);
-    mylog("Decoded authRequest", authRequest);
-    var ar = authRequest.body;
-    let theHtml = html2`
-        <div class="margin-small text-small">
-            <p><b>client_id: </b>${ar.client_id}</p>
-            <p><b>client_id_scheme: </b>${ar.client_id_schemne}</p>
-            <p><b>response_uri: </b>${ar.response_uri}</p>
-            <p><b>response_type: </b>${ar.response_type}</p>
-            <p><b>response_mode: </b>${ar.response_mode}</p>
-            <p><b>nonce: </b>${ar.nonce}</p>
-            <p><b>state: </b>${ar.state}</p>
-            <p><b>scope: </b>${ar.scope}</p>
+    /**
+     * Displays the Authentication Request (AR) details on the UI, for debugging purposes
+     *
+     * @param {string} authRequestJWT - The JWT containing the Authentication Request.
+     * @returns {Promise<void>} A promise that resolves when the AR details are rendered.
+     */
+    async displayAR(authRequestJWT) {
+      let html2 = this.html;
+      const authRequest = decodeJWT(authRequestJWT);
+      mylog("Decoded authRequest", authRequest);
+      var ar = authRequest.body;
+      let theHtml = html2`
+            <div class="margin-small text-small">
+               <p><b>client_id: </b>${ar.client_id}</p>
+               <p><b>client_id_scheme: </b>${ar.client_id_schemne}</p>
+               <p><b>response_uri: </b>${ar.response_uri}</p>
+               <p><b>response_type: </b>${ar.response_type}</p>
+               <p><b>response_mode: </b>${ar.response_mode}</p>
+               <p><b>nonce: </b>${ar.nonce}</p>
+               <p><b>state: </b>${ar.state}</p>
+               <p><b>scope: </b>${ar.scope}</p>
 
-            <div class="ion-margin-start ion-margin-bottom">
-                <ion-button @click=${() => this.displayCredentials(authRequestJWT)}>Continue
-                </ion-button>
+               <div class="ion-margin-start ion-margin-bottom">
+                  <ion-button @click=${() => this.displayCredentials(authRequestJWT)}
+                     >Continue
+                  </ion-button>
+               </div>
             </div>
-
-        </div>
-        `;
-    this.render(theHtml);
-  }
-  /**
-   * Displays the credentials that the user has in the Wallet and that match the requested type in the AR.
-   * The user must select the one he wants to send to the Verifier, or cancel the operation
-   * 
-   * @param {string} authRequestJWT - The JWT containing the Authentication Request.
-   * @returns {Promise<void>} A promise that resolves when the list of credentials are rendered.
-   */
-  async displayCredentials(authRequestJWT) {
-    const authRequest = decodeJWT(authRequestJWT);
-    mylog("Decoded authRequest", authRequest);
-    var ar = authRequest.body;
-    var rpURL = new URL(ar.response_uri);
-    mylog("rpURL", rpURL);
-    var rpDomain = rpURL.hostname;
-    var credStructs = await storage.credentialsGetAllRecent();
-    if (!credStructs) {
-      let theHtml2 = html`
-                <div class="w3-panel w3-margin w3-card w3-center w3-round color-error">
-                <p>You do not have a Verifiable Credential.</p>
-                <p>Please go to an Issuer to obtain one.</p>
-                </div>
+         `;
+      this.render(theHtml);
+    }
+    /**
+     * Displays the credentials that the user has in the Wallet and that match the requested type in the AR.
+     * The user must select the one he wants to send to the Verifier, or cancel the operation
+     *
+     * @param {string} authRequestJWT - The JWT containing the Authentication Request.
+     * @returns {Promise<void>} A promise that resolves when the list of credentials are rendered.
+     */
+    async displayCredentials(authRequestJWT) {
+      const authRequest = decodeJWT(authRequestJWT);
+      mylog("Decoded authRequest", authRequest);
+      var ar = authRequest.body;
+      var rpURL = new URL(ar.response_uri);
+      mylog("rpURL", rpURL);
+      var rpDomain = rpURL.hostname;
+      var credStructs = await storage.credentialsGetAllRecent();
+      if (!credStructs) {
+        let theHtml2 = html`
+               <div class="w3-panel w3-margin w3-card w3-center w3-round color-error">
+                  <p>You do not have a Verifiable Credential.</p>
+                  <p>Please go to an Issuer to obtain one.</p>
+               </div>
             `;
-      this.render(theHtml2);
-      return;
-    }
-    const scopeParts = ar.scope.split(".");
-    if (scopeParts.length == 0) {
-      myerror("Invalid scope specified");
-      this.showError("Error", "Invalid scope specified");
-      return;
-    }
-    const displayCredType = scopeParts[scopeParts.length - 1];
-    var credentials = [];
-    for (const cc of credStructs) {
-      const vc = cc.decoded;
-      mylog(vc);
-      const vctype = vc.type;
-      mylog("vctype:", vctype);
-      if (vctype.includes(displayCredType)) {
-        mylog("adding credential");
-        credentials.push(vc);
+        this.render(theHtml2);
+        return;
       }
-    }
-    if (credentials.length == 0) {
-      var msg = html`
-                <p><b>${rpDomain}</b> has requested a Verifiable Credential of type ${displayCredType},
-                but you do not have any credential of that type.</p>
-                <p>Please go to an Issuer to obtain one.</p>
+      const scopeParts = ar.scope.split(".");
+      if (scopeParts.length == 0) {
+        myerror("Invalid scope specified");
+        this.showError("Error", "Invalid scope specified");
+        return;
+      }
+      const displayCredType = scopeParts[scopeParts.length - 1];
+      var credentials = [];
+      for (const cc of credStructs) {
+        const vc = cc.decoded;
+        mylog(vc);
+        const vctype = vc.type;
+        mylog("vctype:", vctype);
+        if (vctype.includes(displayCredType)) {
+          mylog("adding credential");
+          credentials.push(vc);
+        }
+      }
+      if (credentials.length == 0) {
+        var msg = html`
+               <p>
+                  <b>${rpDomain}</b> has requested a Verifiable Credential of type
+                  ${displayCredType}, but you do not have any credential of that type.
+               </p>
+               <p>Please go to an Issuer to obtain one.</p>
             `;
-      this.showError("Error", msg);
-      return;
-    }
-    let theHtml = html`
+        this.showError("Error", msg);
+        return;
+      }
+      let theHtml = html`
             <ion-card color="warning">
-                    
-                <ion-card-content>
-                <div style="line-height:1.2"><b>${rpDomain}</b> <span class="text-small">has requested a Verifiable Credential of type ${displayCredType}.</span></div>
-                </ion-card-content>
-                
+               <ion-card-content>
+                  <div style="line-height:1.2">
+                     <b>${rpDomain}</b>
+                     <span class="text-small"
+                        >has requested a Verifiable Credential of type ${displayCredType}.</span
+                     >
+                  </div>
+               </ion-card-content>
             </ion-card>
 
-            ${credentials.map((cred) => html`${vcToHtml(cred, ar.response_uri, ar.state, this.WebAuthnSupported)}`)}
-        `;
-    this.render(theHtml);
+            ${credentials.map(
+        (cred) => html`${vcToHtml(cred, ar.response_uri, ar.state, this.WebAuthnSupported)}`
+      )}
+         `;
+      this.render(theHtml);
+    }
   }
-});
+);
 function vcToHtml(vc, response_uri, state, webAuthnSupported) {
   mylog("in VCToHTML");
   mylog(vc);
   const holder = vc.credentialSubject.id;
   var credentials = [vc];
   const div = html`
-    <ion-card>
-        ${renderAnyCredentialCard(vc)}
+      <ion-card>
+         ${renderAnyCredentialCard(vc)}
 
-        <div class="ion-margin-start ion-margin-bottom">
+         <div class="ion-margin-start ion-margin-bottom">
             <ion-button @click=${() => MHR.cleanReload()}>
-                <ion-icon slot="start" name="chevron-back"></ion-icon>
-                ${T("Cancel")}
+               <ion-icon slot="start" name="chevron-back"></ion-icon>
+               ${T("Cancel")}
             </ion-button>
 
-            <ion-button @click=${(e) => sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported)}>
-                <ion-icon slot="start" name="paper-plane"></ion-icon>
-                ${T("Send Credential")}
+            <ion-button
+               @click=${(e) => sendAuthenticationResponse(
+    e,
+    holder,
+    response_uri,
+    credentials,
+    state,
+    webAuthnSupported
+  )}
+            >
+               <ion-icon slot="start" name="paper-plane"></ion-icon>
+               ${T("Send Credential")}
             </ion-button>
-        </div>
-    </ion-card>
-    `;
+         </div>
+      </ion-card>
+   `;
   return div;
 }
 async function sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported) {
@@ -376,8 +395,8 @@ async function sendAuthenticationResponse(e, holder, response_uri, credentials, 
   };
   mylog("The encoded vpToken ", gBase64.encodeURI(JSON.stringify(vpToken)));
   var formAttributes = {
-    "vp_token": gBase64.encodeURI(JSON.stringify(vpToken)),
-    "presentation_submission": gBase64.encodeURI(JSON.stringify(presentationSubmissionJSON()))
+    vp_token: gBase64.encodeURI(JSON.stringify(vpToken)),
+    presentation_submission: gBase64.encodeURI(JSON.stringify(presentationSubmissionJSON()))
   };
   var formBody = JSON.stringify(formAttributes);
   mylog("The body: " + formBody);
@@ -433,17 +452,19 @@ async function sendAuthenticationResponse(e, holder, response_uri, credentials, 
 }
 function presentationSubmissionJSON() {
   return {
-    "definition_id": "SingleCredentialPresentation",
-    "id": "SingleCredentialSubmission",
-    "descriptor_map": [{
-      "id": "single_credential",
-      "path": "$",
-      "format": "jwt_vp_json",
-      "path_nested": {
-        "format": "jwt_vc_json",
-        "path": "$.verifiableCredential[0]"
+    definition_id: "SingleCredentialPresentation",
+    id: "SingleCredentialSubmission",
+    descriptor_map: [
+      {
+        id: "single_credential",
+        path: "$",
+        format: "jwt_vp_json",
+        path_nested: {
+          format: "jwt_vc_json",
+          path: "$.verifiableCredential[0]"
+        }
       }
-    }]
+    ]
   };
 }
 async function getAuthRequest(uri) {

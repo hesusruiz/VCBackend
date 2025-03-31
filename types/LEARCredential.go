@@ -23,18 +23,18 @@ type Mandate struct {
 	} `json:"mandator,omitempty"`
 	Mandatee struct {
 		Id           string `json:"id,omitempty"`
-		First_name   string `json:"first_name,omitempty"`
-		Last_name    string `json:"last_name,omitempty"`
+		FirstName   string `json:"firstName,omitempty"`
+		LastName    string `json:"lastName,omitempty"`
 		Gender       string `json:"gender,omitempty"`
 		Email        string `json:"email,omitempty"`
 		Mobile_phone string `json:"mobile_phone,omitempty"`
 	} `json:"mandatee,omitempty"`
 	Power []struct {
 		Id           string   `json:"id,omitempty"`
-		Tmf_type     string   `json:"tmf_type,omitempty"`
-		Tmf_domain   []string `json:"tmf_domain,omitempty"`
-		Tmf_function string   `json:"tmf_function,omitempty"`
-		Tmf_action   []string `json:"tmf_action,omitempty"`
+		Tmf_type     string   `json:"type,omitempty"`
+		Tmf_domain   []string `json:"domain,omitempty"`
+		Tmf_function string   `json:"function,omitempty"`
+		Tmf_action   []string `json:"action,omitempty"`
 	} `json:"power,omitempty"`
 	LifeSpan struct {
 		StartDateTime string `json:"start_date_time,omitempty"`

@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -119,7 +123,7 @@ func eIDASCommand(rootCfg *yaml.YAML) *cobra.Command {
 			// Do the work
 			return createCACert(capassword, casubject, caoutput)
 		},
-	}
+	}	
 	createCAcmd.LocalFlags().StringVarP(&capassword, "password", "p", "", "Password for the certificate")
 	createCAcmd.LocalFlags().StringVarP(&casubject, "subject", "s", "eidascert_ca.yaml", "Path to the input data file in YAML format")
 	createCAcmd.LocalFlags().StringVarP(&caoutput, "output", "o", "", "Path to the directory where certificate files will be created")
@@ -392,6 +396,106 @@ func StartServices(rootCfg *yaml.YAML) error {
 				fmt.Println("Me han llamado al POST")
 
 				return nil
+			})
+
+			type forwardRequest struct {
+				Method        string `json:"method"`
+				URL           string `json:"url"`
+				Mimetype      string `json:"mimetype"`
+				Authorization string `json:"authorization"`
+			}
+
+			staticServer.POST("/serverhandler", func(c echo.Context) error {
+				fmt.Println("ServerHandler called")
+
+				received := new(forwardRequest)
+
+				reqbody, err := io.ReadAll(c.Request().Body)
+				if err != nil {
+					fmt.Println("error reading body of request: ", err)
+					return c.String(http.StatusBadRequest, "bad request")
+				}
+				fmt.Println("Body: ", string(reqbody))
+
+				err = json.Unmarshal(reqbody, received)
+				if err != nil {
+					fmt.Println("error unmarshalling body into struct: ", err)
+					return c.String(http.StatusBadRequest, "bad request")
+				}
+
+				// Forward the received request to the target server
+				if received.Method == "GET" {
+					fmt.Println("Received GET request to: ", received.URL)
+					resp, err := http.Get(received.URL)
+					if err != nil {
+						fmt.Printf("error: %v\n", err)
+						return c.String(http.StatusBadRequest, "bad request")
+					}
+					defer resp.Body.Close()
+					fmt.Println("Response Status:", resp.Status)
+					fmt.Println("Response Headers:", resp.Header)
+					body, _ := io.ReadAll(resp.Body)
+					fmt.Println("Response Body:", string(body))
+					return c.String(resp.StatusCode, string(body))
+
+				} else if received.Method == "POST" {
+					fmt.Println("Received POST request to: ", received.URL)
+
+					receivedBodyMap := make(map[string]any)
+					err = json.Unmarshal(reqbody, &receivedBodyMap)
+					if err != nil {
+						fmt.Println("error unmarshalling body into struct: ", err)
+						return c.String(http.StatusBadRequest, "bad request")
+					}
+					fmt.Printf("MapBody: %+v\n", receivedBodyMap)
+
+					var req *http.Request
+					switch receivedBodyMap["body"].(type) {
+					case string:
+
+						req, err = http.NewRequest("POST", received.URL, strings.NewReader(receivedBodyMap["body"].(string)))
+						if err != nil {
+							fmt.Printf("error: %v\n", err)
+							return c.String(http.StatusBadRequest, "bad request")
+						}
+
+					default:
+
+						bodyserialized, err := json.Marshal(receivedBodyMap["body"])
+						if err != nil {
+							fmt.Println("error marshalling body: ", err)
+							return c.String(http.StatusBadRequest, "bad request")
+						}
+
+						req, err = http.NewRequest("POST", received.URL, bytes.NewReader(bodyserialized))
+						if err != nil {
+							fmt.Printf("error: %v\n", err)
+							return c.String(http.StatusBadRequest, "bad request")
+						}
+
+					}
+
+					req.Header.Set("Content-Type", received.Mimetype)
+					if len(received.Authorization) > 0 {
+						req.Header.Set("Authorization", "Bearer "+received.Authorization)
+					}
+
+					resp, err := http.DefaultClient.Do(req)
+					if err != nil {
+						fmt.Printf("error sending request: %v\n", err)
+						return c.String(http.StatusBadRequest, "bad request")
+					}
+					defer resp.Body.Close()
+					fmt.Println("Response Status:", resp.Status)
+					fmt.Println("Response Headers:", resp.Header)
+					body, _ := io.ReadAll(resp.Body)
+					fmt.Println("Response Body:", string(body))
+					return c.String(resp.StatusCode, string(body))
+				} else {
+					fmt.Println("Received BAD request to: ", received.URL)
+					return c.String(http.StatusBadRequest, "bad request")
+				}
+
 			})
 
 		}
