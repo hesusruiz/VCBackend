@@ -1,7 +1,8 @@
 import { Base64 } from "js-base64";
 
-import { decodeJWT } from "../components/jwt";
+import { decodeUnsafeJWT } from "../components/jwt";
 import { renderAnyCredentialCard } from "../components/renderAnyCredential";
+import { importFromJWK, verify, verifyJWT, signJWT } from "../components/crypto";
 
 // @ts-ignore
 const MHR = globalThis.MHR;
@@ -13,11 +14,15 @@ let storage = MHR.storage;
 let myerror = globalThis.MHR.storage.myerror;
 let mylog = globalThis.MHR.storage.mylog;
 let html = MHR.html;
-let debug = MHR.debug;
+
+var debug = localStorage.getItem("MHRdebug") == "true";
+
+// Make all requests via the server instead of from the JavaScript client
+const viaServer = true;
 
 // We will perform SIOP/OpenID4VP Authentication flow
 MHR.register(
-   "SIOPSelectCredential",
+   "AuthenticationRequestPage",
    class extends MHR.AbstractPage {
       WebAuthnSupported = false;
       PlatformAuthenticatorSupported = false;
@@ -36,7 +41,7 @@ MHR.register(
             alert(`SelectCredential: ${openIdUrl}`);
          }
 
-         mylog("Inside SIOPSelectCredential:", openIdUrl);
+         mylog("Inside AuthenticationRequestPage:", openIdUrl);
          if (openIdUrl == null) {
             myerror("No URL has been specified");
             this.showError("Error", "No URL has been specified");
@@ -61,7 +66,7 @@ MHR.register(
          // Derive from the received URL a simple one ready for parsing.
          // We do not use the host name for anything, except to make happy the url parser.
          // The "interesting" part is in the query parameters.
-         openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.myhost.eu/?");
+         openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.example.com/?");
 
          // Convert the input string to a URL object
          const inputURL = new URL(openIdUrl);
@@ -112,7 +117,7 @@ MHR.register(
          console.log(authRequestJWT);
 
          if (debug) {
-            await this.displayAR(authRequestJWT);
+            this.displayAR(authRequestJWT);
          } else {
             await this.displayCredentials(authRequestJWT);
          }
@@ -123,13 +128,13 @@ MHR.register(
        * Displays the Authentication Request (AR) details on the UI, for debugging purposes
        *
        * @param {string} authRequestJWT - The JWT containing the Authentication Request.
-       * @returns {Promise<void>} A promise that resolves when the AR details are rendered.
+       * @returns {<void>}
        */
-      async displayAR(authRequestJWT) {
+      displayAR(authRequestJWT) {
          let html = this.html;
 
          // The AR is in the payload of the received JWT
-         const authRequest = decodeJWT(authRequestJWT);
+         const authRequest = decodeUnsafeJWT(authRequestJWT);
          mylog("Decoded authRequest", authRequest);
          var ar = authRequest.body;
 
@@ -166,7 +171,7 @@ MHR.register(
          // corresponding trusted list.
 
          // The AR is in the payload of the received JWT
-         const authRequest = decodeJWT(authRequestJWT);
+         const authRequest = decodeUnsafeJWT(authRequestJWT);
          mylog("Decoded authRequest", authRequest);
          var ar = authRequest.body;
 
@@ -202,10 +207,7 @@ MHR.register(
          // Select all credentials of the requested type
          var credentials = [];
          for (const cc of credStructs) {
-            // The credential is of type vc_jwt. The actual credential is in the vc object.
-            // TODO: change generation of the JWT format to use the 'vc' claim for the credential
-            // For the moment we are assuming the VC is the main payload of the JWT
-            // const vc = cc.decoded.vc
+            // The credential is of type 'vc_jwt_json'. The 'vc' claim was stored in the 'decoded' field in storage.
             const vc = cc.decoded;
             mylog(vc);
 
@@ -216,7 +218,7 @@ MHR.register(
             // The credential type requested by the Verifier must be in the type array of the VC
             if (vctype.includes(displayCredType)) {
                mylog("adding credential");
-               credentials.push(vc);
+               credentials.push(cc);
             }
          }
 
@@ -235,18 +237,24 @@ MHR.register(
 
          let theHtml = html`
             <ion-card color="warning">
+               <ion-card-header>
+                  <ion-card-title>Authentication Request</ion-card-title>
+               </ion-card-header>
                <ion-card-content>
-                  <div style="line-height:1.2">
-                     <b>${rpDomain}</b>
-                     <span class="text-small"
-                        >has requested a Verifiable Credential of type ${displayCredType}.</span
-                     >
-                  </div>
+                  <b>${rpDomain}</b> has requested a Verifiable Credential of type
+                  ${displayCredType}. Use one of the credentials below to authenticate.
                </ion-card-content>
             </ion-card>
 
             ${credentials.map(
-               (cred) => html`${vcToHtml(cred, ar.response_uri, ar.state, this.WebAuthnSupported)}`
+               (cred) =>
+                  html`${vcToHtml(
+                     cred,
+                     ar.nonce,
+                     ar.response_uri,
+                     ar.state,
+                     this.WebAuthnSupported
+                  )}`
             )}
          `;
          this.render(theHtml);
@@ -255,17 +263,19 @@ MHR.register(
 );
 
 // Render the credential with buttons so the user can select it for authentication
-function vcToHtml(vc, response_uri, state, webAuthnSupported) {
+function vcToHtml(cc, nonce, response_uri, state, webAuthnSupported) {
    // TODO: retrieve the holder and its private key from DB
 
    // Get the holder that will present the credential
    // We get this from the credential subject
    mylog("in VCToHTML");
+   const vc = cc.decoded;
    mylog(vc);
-   const holder = vc.credentialSubject.id;
+   const holder = vc.credentialSubject?.mandate?.mandatee?.id;
+   mylog("holder:", holder);
 
    // A Verifiable Presentation can send more than one credential. We only send one.
-   var credentials = [vc];
+   var credentials = [cc.encoded];
 
    // Each credential has a button to allow the user to send it to the Verifier
    const div = html`
@@ -286,6 +296,7 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
                      response_uri,
                      credentials,
                      state,
+                     nonce,
                      webAuthnSupported
                   )}
             >
@@ -306,98 +317,105 @@ async function sendAuthenticationResponse(
    response_uri,
    credentials,
    state,
+   nonce,
    webAuthnSupported
 ) {
    e.preventDefault();
-   debugger;
+
+   var domedid = localStorage.getItem("domedid");
+   domedid = JSON.parse(domedid);
 
    const endpointURL = new URL(response_uri);
    const origin = endpointURL.origin;
 
-   mylog("sending AuthenticationResponse to:", response_uri + "?state=" + state);
+   mylog("sending AuthenticationResponse to:", response_uri);
 
    const uuid = globalThis.crypto.randomUUID();
+   const now = Math.floor(Date.now() / 1000);
+
+   const didIdentifier = holder.substring("did:key:".length);
+
+   var jwtHeaders = {
+      kid: holder + "#" + didIdentifier,
+      typ: "JWT",
+      alg: "ES256",
+   };
 
    // Create the vp_token structure
-   var vpToken = {
+   var vpClaim = {
       context: ["https://www.w3.org/ns/credentials/v2"],
       type: ["VerifiablePresentation"],
       id: uuid,
       verifiableCredential: credentials,
       holder: holder,
    };
-   mylog("The encoded vpToken ", Base64.encodeURI(JSON.stringify(vpToken)));
 
-   // Create the top-level structure for the Authentication Response
-   var formAttributes = {
-      vp_token: Base64.encodeURI(JSON.stringify(vpToken)),
-      presentation_submission: Base64.encodeURI(JSON.stringify(presentationSubmissionJSON())),
+   var vp_token_payload = {
+      jti: uuid,
+      sub: holder,
+      aud: "https://self-issued.me/v2",
+      iat: now,
+      nbf: now,
+      exp: now + 480,
+      iss: holder,
+      nonce: nonce,
+      vp: vpClaim,
    };
 
-   // Encode in JSON to put it in the body of the POST
-   var formBody = JSON.stringify(formAttributes);
-   mylog("The body: " + formBody);
+   const jwt = await signJWT(jwtHeaders, vp_token_payload, domedid.privateKey);
+   const vp_token = Base64.encodeURI(jwt);
+   mylog("The encoded vpToken ", vp_token);
 
-   // Send the Authentication Response
-   try {
-      let response = await fetch(response_uri + "?state=" + state, {
-         method: "POST",
-         mode: "cors",
-         cache: "no-cache",
-         headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-         },
-         body: formBody,
-      });
+   var formBody =
+      "vp_token=" +
+      vp_token +
+      "&state=" +
+      state +
+      "&presentation_submission=" +
+      Base64.encodeURI(JSON.stringify(presentationSubmissionJSON()));
 
-      if (response.status == 200) {
-         const res = await response.json();
-         debugger;
-         mylog(res);
+   mylog(formBody);
 
-         // Check if the server requires the authenticator to be used
-         if (res.authenticatorRequired == "yes") {
-            if (!webAuthnSupported) {
-               gotoPage("ErrorPage", {
-                  title: "Error",
-                  msg: "Authenticator not supported in this device",
-               });
-               return;
-            }
-
-            res["origin"] = origin;
-            res["state"] = state;
-
-            mylog("Authenticator required");
-            // The credential has been sent
-            gotoPage("AuthenticatorPage", res);
-            return;
-         } else {
-            gotoPage("AuthenticatorSuccessPage");
-            return;
-         }
-      } else {
-         // There was an error, present it
-         myerror("error sending credential", response.status);
-         const res = await response.text();
-         myerror("error response:", res);
-
-         gotoPage("ErrorPage", {
-            title: "Error",
-            msg: "Error sending the credential",
-         });
-         return;
-      }
-   } catch (error) {
-      // There was an error, present it
-      myerror(error);
-      gotoPage("ErrorPage", {
-         title: "Error",
-         msg: "Error sending the credential",
-      });
-      return;
-   }
+   debugger;
+   const response = await doPOST(response_uri, formBody, "application/x-www-form-urlencoded");
+   await gotoPage("AuthenticationResponseSuccess");
+   return;
 }
+
+window.MHR.register(
+   "AuthenticationResponseSuccess",
+   class extends window.MHR.AbstractPage {
+      constructor(id) {
+         super(id);
+      }
+
+      enter(pageData) {
+         let html = this.html;
+
+         // Display the title and message, with a button that goes to the home page
+         let theHtml = html`
+            <ion-card>
+               <ion-card-header>
+                  <ion-card-title>Authentication success</ion-card-title>
+               </ion-card-header>
+
+               <ion-card-content class="ion-padding-bottom">
+                  <div class="text-larger">The authentication process has been completed</div>
+               </ion-card-content>
+
+               <div class="ion-margin-start ion-margin-bottom">
+                  <ion-button @click=${() => window.MHR.cleanReload()}>
+                     <ion-icon slot="start" name="home"></ion-icon>
+                     ${T("Home")}
+                  </ion-button>
+               </div>
+            </ion-card>
+         `;
+
+         this.render(theHtml);
+      }
+   }
+);
 
 var apiPrefix = "/webauthn";
 
@@ -665,7 +683,72 @@ async function getAuthRequest(uri) {
       throw Error("Error fetching Authorization Request: " + errorText);
    }
 
-   // The response is plain text (actually, 'application/oauth-authz-req+jwt')
+   // The response is plain text (actually, 'application/oauth-authz-req+jwt') but we do not check
    var responseText = await response.text();
    return responseText;
+}
+
+/**
+ * Performs a POST request to the specified server URL either directly or via a server.
+ * This is intended to support APIs which do not yet have enabled CORS. In that case,
+ * we use an intermediate server to send the request.
+ *
+ * @param {string} serverURL - The URL of the server to send the POST request to.
+ * @param {any} body - The body of the POST request. Can be a string or an object.
+ * @param {string} mimetype - The MIME type of the request body. Defaults to "application/json".
+ * @param {string} authorization - The authorization header value.
+ * @returns {Promise<any>} The JSON response from the server, or undefined if the response is not JSON.
+ * @throws {Error} If the server URL is not provided or if the request fails.
+ */
+async function doPOST(serverURL, body, mimetype = "application/json", authorization) {
+   debugger;
+   if (!serverURL) {
+      throw new Error("No serverURL");
+   }
+
+   var response;
+   if (viaServer) {
+      let forwardBody = {
+         method: "POST",
+         url: serverURL,
+         mimetype: mimetype,
+         body: body,
+      };
+      if (authorization) {
+         forwardBody["authorization"] = authorization;
+      }
+      response = await fetch("/serverhandler", {
+         method: "POST",
+         body: JSON.stringify(forwardBody),
+         headers: {
+            "Content-Type": "application/json",
+         },
+         cache: "no-cache",
+      });
+   } else {
+      response = await fetch(serverURL, {
+         method: "POST",
+         body: JSON.stringify(body),
+         headers: {
+            "Content-Type": mimetype,
+         },
+         cache: "no-cache",
+      });
+   }
+   console.log(response);
+
+   if (response.ok) {
+      try {
+         var responseJSON = await response.json();
+         console.log(responseJSON);
+         mylog(`doPOST ${serverURL}:`, responseJSON);
+         return responseJSON;
+      } catch (error) {
+         return;
+      }
+   } else {
+      const errormsg = `doPOST ${serverURL}: ${response.status}`;
+      myerror(errormsg, body);
+      throw new Error(errormsg);
+   }
 }

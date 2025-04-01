@@ -1,6 +1,5 @@
-import "../chunks/chunk-HOWI2X34.js";
-import "../chunks/chunk-KGRHEIRG.js";
-import "../chunks/chunk-25UXO2KX.js";
+import "../chunks/chunk-G6DM32LG.js";
+import "../chunks/chunk-3475HZHE.js";
 import "../chunks/chunk-CJ4ZD2TO.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
@@ -43,12 +42,5 @@ var mainPage = html`
             >Set debug mode
          </ion-toggle>
       </ion-item>
-
-      <div class="ion-margin-start ion-margin-bottom">
-         <ion-button @click=${() => MHR.gotoPage("ScanQrPage")}>
-            <ion-icon slot="start" name="camera"></ion-icon>
-            ${T("Scan QR")}
-         </ion-button>
-      </div>
    </ion-card>
 `;

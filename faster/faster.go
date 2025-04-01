@@ -17,20 +17,17 @@ import (
 	"github.com/hesusruiz/vcutils/yaml"
 	"github.com/valyala/fasttemplate"
 
-	"errors"
-
 	"github.com/evanw/esbuild/pkg/api"
 
-	"flag"
 	"log"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/proxy"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/otiai10/copy"
-	zlog "github.com/rs/zerolog/log"
 )
+
+
+
+
+
 
 const (
 	defaultConfigFile              = "./data/config/devserver.yaml"
@@ -46,10 +43,6 @@ const (
 	defaultdevserver_autobuild     = true
 )
 
-var (
-	autobuild = flag.Bool("auto", true, "Perform build on every request to the root path")
-)
-
 func LookupEnvOrString(key string, defaultVal string) string {
 	if val, ok := os.LookupEnv(key); ok {
 		return val
@@ -63,10 +56,11 @@ func BuildFront(configFile string) {
 	Build(cfg)
 }
 
-func WatchAndBuild(configFile string) {
+func WatchAndBuild(configFile string) error {
 	// Read configuration file
 	cfg := readConfiguration(configFile)
 	watchAndBuild(cfg)
+	return nil
 }
 
 // Build performs a standard Build
@@ -96,6 +90,10 @@ func preprocess(cfg *yaml.YAML) {
 // Clean the target directory from all build artifacts
 func deleteTargetDir(cfg *yaml.YAML) {
 	targetDir := cfg.String("targetdir", defaulttargetdir)
+    if targetDir == "" {
+        log.Println("Warning: targetdir is empty, skipping deletion.")
+        return
+    }
 	if len(targetDir) > 0 {
 		os.RemoveAll(targetDir)
 	}
@@ -120,6 +118,34 @@ func buildAndBundle(cfg *yaml.YAML) api.BuildResult {
 
 }
 
+var riteOnLoadPlugin = api.Plugin{
+	Name: "example",
+	Setup: func(build api.PluginBuild) {
+		// Load ".js" files and process any Rite text in the html tags
+		build.OnLoad(api.OnLoadOptions{Filter: `\.js$`},
+			func(args api.OnLoadArgs) (api.OnLoadResult, error) {
+				if !strings.Contains(args.Path, "src/pages") {
+					return api.OnLoadResult{}, nil
+				}
+
+				// text, err := os.ReadFile(args.Path)
+				// if err != nil {
+				// 	return api.OnLoadResult{}, err
+				// }
+
+				fmt.Println("--plugin-- ", args.Path)
+				return api.OnLoadResult{}, nil
+
+				// contents := string(text)
+
+				// return api.OnLoadResult{
+				// 	Contents: &contents,
+				// 	Loader:   api.LoaderJS,
+				// }, nil
+			})
+	},
+}
+
 // Generate the build options struct for ESBUILD
 func buildOptions(cfg *yaml.YAML) api.BuildOptions {
 
@@ -141,6 +167,7 @@ func buildOptions(cfg *yaml.YAML) api.BuildOptions {
 	options := api.BuildOptions{
 		EntryPoints: entryPoints,
 		Format:      api.FormatESModule,
+		Plugins:     []api.Plugin{riteOnLoadPlugin},
 		Outdir:      cfg.String("targetdir"),
 		Write:       true,
 		Bundle:      true,
@@ -301,10 +328,6 @@ func buildDeps(cfg *yaml.YAML) api.BuildResult {
 
 	return result
 
-}
-
-func performExperiments(cfg *yaml.YAML) api.BuildResult {
-	return api.BuildResult{}
 }
 
 // pageEntryPointsAsMap returns a map with all source page file names (path relative to sourcedir) in the application,
@@ -474,108 +497,6 @@ func processTemplates(cfg *yaml.YAML) {
 		// fmt.Println(string(out.Bytes()))
 	}
 
-}
-
-// The Server struct handles the server state
-type Server struct {
-	*fiber.App
-}
-
-// DevServer is a simple development server to help develop PWAs in a
-// tool-less fashion.
-// It supports serving static files locally for the user interface, and
-// proxying other API requests to another server.
-func DevServer(cfg *yaml.YAML) {
-
-	// Define the configuration for Fiber
-	fiberCfg := fiber.Config{
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			code := fiber.StatusInternalServerError
-			var e *fiber.Error
-			if errors.As(err, &e) {
-				code = e.Code
-			}
-			zlog.Err(err).Msg("Error handler")
-			c.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
-			return c.Status(code).SendString(err.Error())
-		},
-	}
-
-	// Create the fiber web server
-	server := Server{
-		App: fiber.New(fiberCfg),
-	}
-
-	// Middleware to recover from panics
-	server.Use(recover.New(recover.Config{EnableStackTrace: true}))
-
-	// Configure logging
-	server.Use(logger.New(logger.Config{
-		// TimeFormat: "02-Jan-1985",
-		TimeZone: "Europe/Brussels",
-	}))
-
-	// Proxy all requests (GET, POST, PUT, etc) for the given prefix
-	proxyList := cfg.List("devserver.proxy")
-	for _, p := range proxyList {
-		proxy := yaml.New(p)
-		server.All(proxy.String("route"), proxyHandler(proxy.String("target")))
-		fmt.Println("Forwarding", proxy.String("route"), "to", proxy.String("target"))
-	}
-
-	// Serve locally from disk all requests not matching the routes above
-	server.Get("/*", func(c *fiber.Ctx) error {
-
-		// Get the name of the requested file (or path)
-		fileName := c.Path()
-
-		// If the request is for the root, perform a standard build if configured
-		if fileName == "/" {
-			// Set the filename to index.html
-			fileName = "/index.html"
-			// Build if configured
-			if *autobuild || cfg.Bool("devserver.autobuild", defaultdevserver_autobuild) {
-				fmt.Println("<<<<<<<<<<<< Building >>>>>>>>>>>>>")
-				Build(cfg)
-			}
-
-		}
-
-		// Get the full path name for the directory serving the files
-		filePath := filepath.Join(cfg.String("targetdir"), fileName)
-
-		// Read the file in memory
-		buf, err := os.ReadFile(filePath)
-		if err != nil {
-			return err
-		}
-
-		// Disable the cache in the browser, so it is always the last version
-		c.Set("Cache-Control", "no-store")
-
-		// Set the MIME-type in the response acceording to the file extension
-		c.Type(filepath.Ext(fileName))
-
-		// Send the file to the browser
-		fmt.Println("Sending:", filePath)
-		return c.Send(buf)
-
-	})
-
-	// Listen on configured port
-	log.Fatal(server.Listen(cfg.String("devserver.listenAddress", defaultdevserver_listenAddress)))
-}
-
-// proxyHandler is a general proxy forwarder with no logic to modify
-// request or reply
-func proxyHandler(targetHost string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		targetURL := targetHost + c.OriginalURL()
-		if err := proxy.Do(c, targetURL); err != nil {
-			return err
-		}
-		return nil
-	}
 }
 
 // Depending on the system, a single "write" can generate many Write events; for

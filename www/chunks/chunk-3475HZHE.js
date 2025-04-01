@@ -2,7 +2,7 @@
 var log = window.MHR.log;
 var myerror = window.MHR.storage.myerror;
 var mylog = window.MHR.storage.mylog;
-function decodeJWT(jwt) {
+function decodeUnsafeJWT(jwt) {
   mylog("in decodeJWT");
   mylog(jwt);
   let decoded = {
@@ -49,5 +49,5 @@ function atobUrl(input) {
 }
 
 export {
-  decodeJWT
+  decodeUnsafeJWT
 };

@@ -1,14 +1,13 @@
-import "../chunks/chunk-HOWI2X34.js";
-import {
-  renderAnyCredentialCard
-} from "../chunks/chunk-KGRHEIRG.js";
-import {
-  decodeJWT
-} from "../chunks/chunk-25UXO2KX.js";
 import {
   credentialsSave
 } from "../chunks/chunk-XVNNYFGL.js";
 import "../chunks/chunk-BFXLU5VG.js";
+import {
+  renderAnyCredentialCard
+} from "../chunks/chunk-G6DM32LG.js";
+import {
+  decodeUnsafeJWT
+} from "../chunks/chunk-3475HZHE.js";
 import "../chunks/chunk-CJ4ZD2TO.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
@@ -86,6 +85,7 @@ function base58encode(B, A) {
 }
 
 // front/src/pages/MicroWallet.js
+var debug = false;
 MHR.register(
   "MicroWallet",
   class extends MHR.AbstractPage {
@@ -96,51 +96,51 @@ MHR.register(
       super(id);
     }
     async enter() {
+      mylog("MicroWallet", globalThis.document.location);
+      debug = localStorage.getItem("MHRdebug") == "true";
       var domedid;
       domedid = localStorage.getItem("domedid");
       if (domedid == null) {
-        debugger;
         domedid = await generateP256did();
         localStorage.setItem("domedid", JSON.stringify(domedid));
       } else {
         domedid = JSON.parse(domedid);
       }
-      console.log("My DID", domedid);
+      mylog("My DID", domedid.did);
       let html = this.html;
       let params = new URL(globalThis.document.location.href).searchParams;
-      console.log("MicroWallet", globalThis.document.location);
       if (document.URL.includes("state=") && document.URL.includes("auth-mock")) {
-        console.log("MicroWallet ************Redirected with state**************");
+        mylog("Redirected with state:", document.URL);
         MHR.gotoPage("LoadAndSaveQRVC", document.URL);
         return;
       }
       if (document.URL.includes("code=")) {
-        console.log("MicroWallet ************Redirected with code**************");
+        mylog("Redirected with code:", document.URL);
         MHR.gotoPage("LoadAndSaveQRVC", document.URL);
         return;
       }
       let scope = params.get("scope");
       if (scope !== null) {
-        console.log("detected scope");
-        MHR.gotoPage("SIOPSelectCredential", document.URL);
+        mylog("detected scope:", scope);
+        MHR.gotoPage("AuthenticationRequestPage", document.URL);
         return;
       }
       let request_uri = params.get("request_uri");
-      if (request_uri !== null) {
+      if (request_uri) {
         request_uri = decodeURIComponent(request_uri);
-        console.log("MicroWallet request_uri", request_uri);
-        console.log("Going to SIOPSelectCredential with", document.URL);
-        MHR.gotoPage("SIOPSelectCredential", document.URL);
+        mylog("MicroWallet request_uri", request_uri);
+        MHR.gotoPage("AuthenticationRequestPage", document.URL);
         return;
       }
       let credential_offer_uri = params.get("credential_offer_uri");
       if (credential_offer_uri) {
-        console.log("MicroWallet", credential_offer_uri);
-        await MHR.gotoPage("LoadAndSaveQRVC", document.location.href);
+        mylog("MicroWallet credential_offer_uri", credential_offer_uri);
+        MHR.gotoPage("LoadAndSaveQRVC", document.location.href);
         return;
       }
       let command = params.get("command");
-      if (command !== null) {
+      if (command) {
+        mylog("MicroWallet command", command);
         switch (command) {
           case "getvc":
             var vc_id = params.get("vcid");
@@ -152,13 +152,16 @@ MHR.register(
       }
       var credentials = await MHR.storage.credentialsGetAllRecent(-1);
       if (!credentials) {
+        myerror("Error getting recent credentials");
         MHR.gotoPage("ErrorPage", {
           title: "Error",
           msg: "Error getting recent credentials"
         });
         return;
       }
-      console.log(credentials);
+      if (debug) {
+        mylog(credentials);
+      }
       const theDivs = [];
       for (const vcraw of credentials) {
         if (vcraw.type == "jwt_vc" || vcraw.type == "jwt_vc_json") {
@@ -318,7 +321,7 @@ MHR.register(
     }
     async enter() {
       var decodedBody;
-      const decoded = decodeJWT(in2Credential);
+      const decoded = decodeUnsafeJWT(in2Credential);
       var credStruct = {
         type: "jwt_vc_json",
         status: "signed",
@@ -361,7 +364,7 @@ function detectQRtype(qrData) {
   }
   if (qrData.startsWith("openid4vp:")) {
     mylog("Authentication Request");
-    window.MHR.gotoPage("SIOPSelectCredential", qrData);
+    window.MHR.gotoPage("AuthenticationRequestPage", qrData);
     return;
   } else if (qrData.startsWith("openid-credential-offer://")) {
     mylog("Credential Issuance");
@@ -377,8 +380,8 @@ function detectQRtype(qrData) {
     let params = new URL(qrData).searchParams;
     let jar = params.get("jar");
     if (jar == "yes") {
-      mylog("Going to ", "SIOPSelectCredential", qrData);
-      window.MHR.gotoPage("SIOPSelectCredential", qrData);
+      mylog("Going to ", "AuthenticationRequestPage", qrData);
+      window.MHR.gotoPage("AuthenticationRequestPage", qrData);
       return;
     }
     mylog("Going to ", this.displayPage);

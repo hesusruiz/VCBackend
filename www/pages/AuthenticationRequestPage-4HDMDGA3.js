@@ -1,9 +1,10 @@
 import {
-  renderAnyCredentialCard
-} from "../chunks/chunk-KGRHEIRG.js";
+  renderAnyCredentialCard,
+  signJWT
+} from "../chunks/chunk-G6DM32LG.js";
 import {
-  decodeJWT
-} from "../chunks/chunk-25UXO2KX.js";
+  decodeUnsafeJWT
+} from "../chunks/chunk-3475HZHE.js";
 import "../chunks/chunk-CJ4ZD2TO.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
@@ -164,7 +165,7 @@ var gBase64 = {
   extendBuiltins
 };
 
-// front/src/pages/SIOPSelectCredential.js
+// front/src/pages/AuthenticationRequestPage.js
 var MHR = globalThis.MHR;
 var gotoPage = MHR.gotoPage;
 var goHome = MHR.goHome;
@@ -172,9 +173,10 @@ var storage = MHR.storage;
 var myerror = globalThis.MHR.storage.myerror;
 var mylog = globalThis.MHR.storage.mylog;
 var html = MHR.html;
-var debug = MHR.debug;
+var debug = localStorage.getItem("MHRdebug") == "true";
+var viaServer = true;
 MHR.register(
-  "SIOPSelectCredential",
+  "AuthenticationRequestPage",
   class extends MHR.AbstractPage {
     WebAuthnSupported = false;
     PlatformAuthenticatorSupported = false;
@@ -189,7 +191,7 @@ MHR.register(
       if (debug) {
         alert(`SelectCredential: ${openIdUrl}`);
       }
-      mylog("Inside SIOPSelectCredential:", openIdUrl);
+      mylog("Inside AuthenticationRequestPage:", openIdUrl);
       if (openIdUrl == null) {
         myerror("No URL has been specified");
         this.showError("Error", "No URL has been specified");
@@ -205,7 +207,7 @@ MHR.register(
       } else {
         console.log("WebAuthn NOT supported");
       }
-      openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.myhost.eu/?");
+      openIdUrl = openIdUrl.replace("openid4vp://?", "https://wallet.example.com/?");
       const inputURL = new URL(openIdUrl);
       if (debug) {
         alert(inputURL);
@@ -235,7 +237,7 @@ MHR.register(
       }
       console.log(authRequestJWT);
       if (debug) {
-        await this.displayAR(authRequestJWT);
+        this.displayAR(authRequestJWT);
       } else {
         await this.displayCredentials(authRequestJWT);
       }
@@ -245,11 +247,11 @@ MHR.register(
      * Displays the Authentication Request (AR) details on the UI, for debugging purposes
      *
      * @param {string} authRequestJWT - The JWT containing the Authentication Request.
-     * @returns {Promise<void>} A promise that resolves when the AR details are rendered.
+     * @returns {<void>}
      */
-    async displayAR(authRequestJWT) {
+    displayAR(authRequestJWT) {
       let html2 = this.html;
-      const authRequest = decodeJWT(authRequestJWT);
+      const authRequest = decodeUnsafeJWT(authRequestJWT);
       mylog("Decoded authRequest", authRequest);
       var ar = authRequest.body;
       let theHtml = html2`
@@ -280,7 +282,7 @@ MHR.register(
      * @returns {Promise<void>} A promise that resolves when the list of credentials are rendered.
      */
     async displayCredentials(authRequestJWT) {
-      const authRequest = decodeJWT(authRequestJWT);
+      const authRequest = decodeUnsafeJWT(authRequestJWT);
       mylog("Decoded authRequest", authRequest);
       var ar = authRequest.body;
       var rpURL = new URL(ar.response_uri);
@@ -312,7 +314,7 @@ MHR.register(
         mylog("vctype:", vctype);
         if (vctype.includes(displayCredType)) {
           mylog("adding credential");
-          credentials.push(vc);
+          credentials.push(cc);
         }
       }
       if (credentials.length == 0) {
@@ -328,29 +330,36 @@ MHR.register(
       }
       let theHtml = html`
             <ion-card color="warning">
+               <ion-card-header>
+                  <ion-card-title>Authentication Request</ion-card-title>
+               </ion-card-header>
                <ion-card-content>
-                  <div style="line-height:1.2">
-                     <b>${rpDomain}</b>
-                     <span class="text-small"
-                        >has requested a Verifiable Credential of type ${displayCredType}.</span
-                     >
-                  </div>
+                  <b>${rpDomain}</b> has requested a Verifiable Credential of type
+                  ${displayCredType}. Use one of the credentials below to authenticate.
                </ion-card-content>
             </ion-card>
 
             ${credentials.map(
-        (cred) => html`${vcToHtml(cred, ar.response_uri, ar.state, this.WebAuthnSupported)}`
+        (cred) => html`${vcToHtml(
+          cred,
+          ar.nonce,
+          ar.response_uri,
+          ar.state,
+          this.WebAuthnSupported
+        )}`
       )}
          `;
       this.render(theHtml);
     }
   }
 );
-function vcToHtml(vc, response_uri, state, webAuthnSupported) {
+function vcToHtml(cc, nonce, response_uri, state, webAuthnSupported) {
   mylog("in VCToHTML");
+  const vc = cc.decoded;
   mylog(vc);
-  const holder = vc.credentialSubject.id;
-  var credentials = [vc];
+  const holder = vc.credentialSubject?.mandate?.mandatee?.id;
+  mylog("holder:", holder);
+  var credentials = [cc.encoded];
   const div = html`
       <ion-card>
          ${renderAnyCredentialCard(vc)}
@@ -368,6 +377,7 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
     response_uri,
     credentials,
     state,
+    nonce,
     webAuthnSupported
   )}
             >
@@ -379,77 +389,79 @@ function vcToHtml(vc, response_uri, state, webAuthnSupported) {
    `;
   return div;
 }
-async function sendAuthenticationResponse(e, holder, response_uri, credentials, state, webAuthnSupported) {
+async function sendAuthenticationResponse(e, holder, response_uri, credentials, state, nonce, webAuthnSupported) {
   e.preventDefault();
-  debugger;
+  var domedid = localStorage.getItem("domedid");
+  domedid = JSON.parse(domedid);
   const endpointURL = new URL(response_uri);
   const origin = endpointURL.origin;
-  mylog("sending AuthenticationResponse to:", response_uri + "?state=" + state);
+  mylog("sending AuthenticationResponse to:", response_uri);
   const uuid = globalThis.crypto.randomUUID();
-  var vpToken = {
+  const now = Math.floor(Date.now() / 1e3);
+  const didIdentifier = holder.substring("did:key:".length);
+  var jwtHeaders = {
+    kid: holder + "#" + didIdentifier,
+    typ: "JWT",
+    alg: "ES256"
+  };
+  var vpClaim = {
     context: ["https://www.w3.org/ns/credentials/v2"],
     type: ["VerifiablePresentation"],
     id: uuid,
     verifiableCredential: credentials,
     holder
   };
-  mylog("The encoded vpToken ", gBase64.encodeURI(JSON.stringify(vpToken)));
-  var formAttributes = {
-    vp_token: gBase64.encodeURI(JSON.stringify(vpToken)),
-    presentation_submission: gBase64.encodeURI(JSON.stringify(presentationSubmissionJSON()))
+  var vp_token_payload = {
+    jti: uuid,
+    sub: holder,
+    aud: "https://self-issued.me/v2",
+    iat: now,
+    nbf: now,
+    exp: now + 480,
+    iss: holder,
+    nonce,
+    vp: vpClaim
   };
-  var formBody = JSON.stringify(formAttributes);
-  mylog("The body: " + formBody);
-  try {
-    let response = await fetch(response_uri + "?state=" + state, {
-      method: "POST",
-      mode: "cors",
-      cache: "no-cache",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: formBody
-    });
-    if (response.status == 200) {
-      const res = await response.json();
-      debugger;
-      mylog(res);
-      if (res.authenticatorRequired == "yes") {
-        if (!webAuthnSupported) {
-          gotoPage("ErrorPage", {
-            title: "Error",
-            msg: "Authenticator not supported in this device"
-          });
-          return;
-        }
-        res["origin"] = origin;
-        res["state"] = state;
-        mylog("Authenticator required");
-        gotoPage("AuthenticatorPage", res);
-        return;
-      } else {
-        gotoPage("AuthenticatorSuccessPage");
-        return;
-      }
-    } else {
-      myerror("error sending credential", response.status);
-      const res = await response.text();
-      myerror("error response:", res);
-      gotoPage("ErrorPage", {
-        title: "Error",
-        msg: "Error sending the credential"
-      });
-      return;
-    }
-  } catch (error) {
-    myerror(error);
-    gotoPage("ErrorPage", {
-      title: "Error",
-      msg: "Error sending the credential"
-    });
-    return;
-  }
+  const jwt = await signJWT(jwtHeaders, vp_token_payload, domedid.privateKey);
+  const vp_token = gBase64.encodeURI(jwt);
+  mylog("The encoded vpToken ", vp_token);
+  var formBody = "vp_token=" + vp_token + "&state=" + state + "&presentation_submission=" + gBase64.encodeURI(JSON.stringify(presentationSubmissionJSON()));
+  mylog(formBody);
+  debugger;
+  const response = await doPOST(response_uri, formBody, "application/x-www-form-urlencoded");
+  await gotoPage("AuthenticationResponseSuccess");
+  return;
 }
+window.MHR.register(
+  "AuthenticationResponseSuccess",
+  class extends window.MHR.AbstractPage {
+    constructor(id) {
+      super(id);
+    }
+    enter(pageData) {
+      let html2 = this.html;
+      let theHtml = html2`
+            <ion-card>
+               <ion-card-header>
+                  <ion-card-title>Authentication success</ion-card-title>
+               </ion-card-header>
+
+               <ion-card-content class="ion-padding-bottom">
+                  <div class="text-larger">The authentication process has been completed</div>
+               </ion-card-content>
+
+               <div class="ion-margin-start ion-margin-bottom">
+                  <ion-button @click=${() => window.MHR.cleanReload()}>
+                     <ion-icon slot="start" name="home"></ion-icon>
+                     ${T("Home")}
+                  </ion-button>
+               </div>
+            </ion-card>
+         `;
+      this.render(theHtml);
+    }
+  }
+);
 function presentationSubmissionJSON() {
   return {
     definition_id: "SingleCredentialPresentation",
@@ -477,4 +489,54 @@ async function getAuthRequest(uri) {
   }
   var responseText = await response.text();
   return responseText;
+}
+async function doPOST(serverURL, body, mimetype = "application/json", authorization) {
+  debugger;
+  if (!serverURL) {
+    throw new Error("No serverURL");
+  }
+  var response;
+  if (viaServer) {
+    let forwardBody = {
+      method: "POST",
+      url: serverURL,
+      mimetype,
+      body
+    };
+    if (authorization) {
+      forwardBody["authorization"] = authorization;
+    }
+    response = await fetch("/serverhandler", {
+      method: "POST",
+      body: JSON.stringify(forwardBody),
+      headers: {
+        "Content-Type": "application/json"
+      },
+      cache: "no-cache"
+    });
+  } else {
+    response = await fetch(serverURL, {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: {
+        "Content-Type": mimetype
+      },
+      cache: "no-cache"
+    });
+  }
+  console.log(response);
+  if (response.ok) {
+    try {
+      var responseJSON = await response.json();
+      console.log(responseJSON);
+      mylog(`doPOST ${serverURL}:`, responseJSON);
+      return responseJSON;
+    } catch (error) {
+      return;
+    }
+  } else {
+    const errormsg = `doPOST ${serverURL}: ${response.status}`;
+    myerror(errormsg, body);
+    throw new Error(errormsg);
+  }
 }

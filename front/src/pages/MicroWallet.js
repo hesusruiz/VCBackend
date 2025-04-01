@@ -11,8 +11,11 @@ import { renderAnyCredentialCard } from "../components/renderAnyCredential";
 import { getOrCreateDidKey, generateEd25519KeyPair } from "../components/crypto";
 import { generateP256did as generateDidKeyDOME } from "../components/crypto_ec";
 import { importFromJWK, verify, verifyJWT, signJWT } from "../components/crypto";
-import { decodeJWT } from "../components/jwt";
+import { decodeUnsafeJWT } from "../components/jwt";
 import { credentialsSave } from "../components/db";
+
+// Enable to debug the application
+var debug = false;
 
 MHR.register(
    "MicroWallet",
@@ -25,75 +28,88 @@ MHR.register(
       }
 
       async enter() {
-         // Generate a did:key if it did not exist
+         mylog("MicroWallet", globalThis.document.location);
+
+         // Check if we are debugging the application
+         debug = localStorage.getItem("MHRdebug") == "true";
+
+         // TODO: generate a default did:key the first time the wallet is used,
+         // and give the user the possibility to create a new one when issuing
+         // a new credential which has to be bound to the user.
+         // And move the code to a component.
+
+         // Generate a did:key if it does not exist yet
          var domedid;
          domedid = localStorage.getItem("domedid");
          if (domedid == null) {
-            debugger;
             domedid = await generateDidKeyDOME();
             localStorage.setItem("domedid", JSON.stringify(domedid));
          } else {
             domedid = JSON.parse(domedid);
          }
 
-         console.log("My DID", domedid);
+         mylog("My DID", domedid.did);
 
          let html = this.html;
 
-         // We can receive QRs via the URL or scanning with the camera
-
-         // If URL specifies a QR then
-         //     check it and store in local storage
-         //     clean the URL and reload the app
-         // If URL is clean (initially or after reloading)
-         //     retrieve the QR from local storage and display it
+         // The wallet supports several ways to receive a QR code:
+         // 1. Scanning with the camera. The QR is decoded with an image decoding
+         //    engine, the type of QR is detected (issuance, authentication, other, ...)
+         //    and the appropriate logic in the wallet is invoked.
+         // 2. Pasting from the clipboard an image, which the user has captured somehow.
+         //    The process of the image is virtually identical to the previous one, with the exception
+         //    that the QR code engine is applied to a static image instead of a video stream.
+         // 3. As part of the URL used to invoke the wallet. This is a special mechanism which is
+         //    tied to the particular URL of the wallet and should be used only in special circumstances.
+         //    If the URL specifies a QR then the wallet checks it and stores in local storage. Afterwards
+         //    it cleans the URL and reloads the app.
 
          let params = new URL(globalThis.document.location.href).searchParams;
-         console.log("MicroWallet", globalThis.document.location);
 
-         // Check for redirect during the authentication flow
+         // Some verifiers (eg. EBSI), for some authentication flows, use redirections during the flow.
+         // We detect that this is the case by checking the URL
          if (document.URL.includes("state=") && document.URL.includes("auth-mock")) {
-            console.log("MicroWallet ************Redirected with state**************");
+            mylog("Redirected with state:", document.URL);
             MHR.gotoPage("LoadAndSaveQRVC", document.URL);
             return;
          }
 
          if (document.URL.includes("code=")) {
-            console.log("MicroWallet ************Redirected with code**************");
+            mylog("Redirected with code:", document.URL);
             MHR.gotoPage("LoadAndSaveQRVC", document.URL);
             return;
          }
 
-         // QR code found in URL. Process and display it
+         // This is an authentication request in the URL. Process and display it
          let scope = params.get("scope");
          if (scope !== null) {
-            console.log("detected scope");
-            MHR.gotoPage("SIOPSelectCredential", document.URL);
+            mylog("detected scope:", scope);
+            MHR.gotoPage("AuthenticationRequestPage", document.URL);
             return;
          }
 
          // Check if we are authenticating
          let request_uri = params.get("request_uri");
-         if (request_uri !== null) {
+         if (request_uri) {
             // Unescape the query parameter
             request_uri = decodeURIComponent(request_uri);
-            console.log("MicroWallet request_uri", request_uri);
-            console.log("Going to SIOPSelectCredential with", document.URL);
-            MHR.gotoPage("SIOPSelectCredential", document.URL);
+            mylog("MicroWallet request_uri", request_uri);
+            MHR.gotoPage("AuthenticationRequestPage", document.URL);
             return;
          }
 
          // Check if we are in a credential issuance scenario
          let credential_offer_uri = params.get("credential_offer_uri");
          if (credential_offer_uri) {
-            console.log("MicroWallet", credential_offer_uri);
-            await MHR.gotoPage("LoadAndSaveQRVC", document.location.href);
+            mylog("MicroWallet credential_offer_uri", credential_offer_uri);
+            MHR.gotoPage("LoadAndSaveQRVC", document.location.href);
             return;
          }
 
          // The URL specifies a command
          let command = params.get("command");
-         if (command !== null) {
+         if (command) {
+            mylog("MicroWallet command", command);
             switch (command) {
                case "getvc":
                   var vc_id = params.get("vcid");
@@ -105,10 +121,13 @@ MHR.register(
             }
          }
 
-         // Retrieve all recent credentials from storage
+         // Retrieve all recent credentials from storage (all for the moment)
          var credentials = await MHR.storage.credentialsGetAllRecent(-1);
 
+         // We should get a result even if it is an empty array (no credentials match)
+         // Otherwise, it is an error
          if (!credentials) {
+            myerror("Error getting recent credentials");
             MHR.gotoPage("ErrorPage", {
                title: "Error",
                msg: "Error getting recent credentials",
@@ -116,7 +135,10 @@ MHR.register(
             return;
          }
 
-         console.log(credentials);
+         if (debug) {
+            mylog(credentials);
+         }
+
          // Pre-render each of the known credentials
          const theDivs = [];
 
@@ -354,7 +376,7 @@ MHR.register(
       async enter() {
          var decodedBody;
 
-         const decoded = decodeJWT(in2Credential);
+         const decoded = decodeUnsafeJWT(in2Credential);
 
          // Prepare for saving the credential in the local storage
          var credStruct = {
@@ -430,7 +452,7 @@ function detectQRtype(qrData) {
    if (qrData.startsWith("openid4vp:")) {
       // An Authentication Request, for Verifiable Presentation
       mylog("Authentication Request");
-      window.MHR.gotoPage("SIOPSelectCredential", qrData);
+      window.MHR.gotoPage("AuthenticationRequestPage", qrData);
       return;
    } else if (qrData.startsWith("openid-credential-offer://")) {
       // An OpenID Credential Issuance
@@ -449,8 +471,8 @@ function detectQRtype(qrData) {
       let params = new URL(qrData).searchParams;
       let jar = params.get("jar");
       if (jar == "yes") {
-         mylog("Going to ", "SIOPSelectCredential", qrData);
-         window.MHR.gotoPage("SIOPSelectCredential", qrData);
+         mylog("Going to ", "AuthenticationRequestPage", qrData);
+         window.MHR.gotoPage("AuthenticationRequestPage", qrData);
          return;
       }
 

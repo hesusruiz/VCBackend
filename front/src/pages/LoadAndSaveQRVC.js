@@ -1,5 +1,5 @@
 import { credentialsSave } from "../components/db";
-import { decodeJWT } from "../components/jwt";
+import { decodeUnsafeJWT } from "../components/jwt";
 import {
    getOrCreateDidKey,
    importFromJWK,
@@ -360,7 +360,7 @@ window.MHR.register(
             this.VCStatus = "signed";
 
             // Decode and render the credencial
-            const decoded = decodeJWT(jwtCredential);
+            const decoded = decodeUnsafeJWT(jwtCredential);
 
             // Get the HTML for the credential
             try {
@@ -415,7 +415,7 @@ window.MHR.register(
          this.VCType = "EBSI";
 
          // Decode and render the credencial
-         const decoded = decodeJWT(jwtCredential);
+         const decoded = decodeUnsafeJWT(jwtCredential);
          this.renderedVC = this.renderEBSICredential(decoded);
 
          // Ask the user if we should store the VC
@@ -473,7 +473,7 @@ window.MHR.register(
          if (this.VCType == "jwt_vc_json") {
             debugger;
             // The credential is in JWT format, lets decode it
-            const decoded = decodeJWT(this.VC);
+            const decoded = decodeUnsafeJWT(this.VC);
 
             // Prepare for saving the credential in the local storage
             var credStruct = {
@@ -494,7 +494,7 @@ window.MHR.register(
             // Reload the application with a clean URL
             location = window.location.origin + window.location.pathname;
          } else if (this.VCType == "EBSI") {
-            const decodedJWT = decodeJWT(this.VC);
+            const decodedJWT = decodeUnsafeJWT(this.VC);
             const decoded = decodedJWT.body.vc;
 
             var credStruct = {
@@ -536,7 +536,7 @@ window.MHR.register(
             }
 
             // The credential is in JWT format, lets decode it
-            const decoded = decodeJWT(this.VC);
+            const decoded = decodeUnsafeJWT(this.VC);
 
             // Prepare for saving the credential in the local storage
             var credStruct = {
@@ -640,7 +640,7 @@ window.MHR.register(
        */
       prerenderCredential(vcencoded, vctype, vcstatus) {
          if (vctype == "jwt_vc" || vctype == "jwt_vc_json") {
-            var decoded = decodeJWT(vcencoded);
+            var decoded = decodeUnsafeJWT(vcencoded);
          } else {
             decoded = vcencoded;
          }

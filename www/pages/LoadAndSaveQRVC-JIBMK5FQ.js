@@ -1,17 +1,15 @@
 import {
-  getOrCreateDidKey,
-  signJWT
-} from "../chunks/chunk-HOWI2X34.js";
-import {
-  renderAnyCredentialCard
-} from "../chunks/chunk-KGRHEIRG.js";
-import {
-  decodeJWT
-} from "../chunks/chunk-25UXO2KX.js";
-import {
   credentialsSave
 } from "../chunks/chunk-XVNNYFGL.js";
 import "../chunks/chunk-BFXLU5VG.js";
+import {
+  getOrCreateDidKey,
+  renderAnyCredentialCard,
+  signJWT
+} from "../chunks/chunk-G6DM32LG.js";
+import {
+  decodeUnsafeJWT
+} from "../chunks/chunk-3475HZHE.js";
 import "../chunks/chunk-CJ4ZD2TO.js";
 import "../chunks/chunk-U5RRZUYZ.js";
 
@@ -303,7 +301,7 @@ window.MHR.register(
         this.VC = jwtCredential;
         this.VCType = "jwt_vc_json";
         this.VCStatus = "signed";
-        const decoded = decodeJWT(jwtCredential);
+        const decoded = decodeUnsafeJWT(jwtCredential);
         try {
           this.renderedVC = this.prerenderCredential(this.VC, this.VCType, this.VCStatus);
         } catch (error) {
@@ -349,7 +347,7 @@ window.MHR.register(
       );
       this.VC = jwtCredential;
       this.VCType = "EBSI";
-      const decoded = decodeJWT(jwtCredential);
+      const decoded = decodeUnsafeJWT(jwtCredential);
       this.renderedVC = this.renderEBSICredential(decoded);
       let theHtml = this.html`
         <ion-card color="warning">
@@ -396,7 +394,7 @@ window.MHR.register(
       console.log("Save VC " + this.VC);
       if (this.VCType == "jwt_vc_json") {
         debugger;
-        const decoded = decodeJWT(this.VC);
+        const decoded = decodeUnsafeJWT(this.VC);
         var credStruct = {
           type: this.VCType,
           status: "signed",
@@ -411,7 +409,7 @@ window.MHR.register(
         alert("Credential succesfully saved");
         location = window.location.origin + window.location.pathname;
       } else if (this.VCType == "EBSI") {
-        const decodedJWT = decodeJWT(this.VC);
+        const decodedJWT = decodeUnsafeJWT(this.VC);
         const decoded = decodedJWT.body.vc;
         var credStruct = {
           type: "EBSI",
@@ -441,7 +439,7 @@ window.MHR.register(
           this.VCType = result["type"];
           this.VCStatus = result["status"];
         }
-        const decoded = decodeJWT(this.VC);
+        const decoded = decodeUnsafeJWT(this.VC);
         var credStruct = {
           type: this.VCType,
           status: this.VCStatus,
@@ -530,7 +528,7 @@ window.MHR.register(
      */
     prerenderCredential(vcencoded, vctype, vcstatus) {
       if (vctype == "jwt_vc" || vctype == "jwt_vc_json") {
-        var decoded = decodeJWT(vcencoded);
+        var decoded = decodeUnsafeJWT(vcencoded);
       } else {
         decoded = vcencoded;
       }

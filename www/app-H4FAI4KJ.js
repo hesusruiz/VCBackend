@@ -98,14 +98,16 @@ async function gotoPage(pageName, pageData) {
         pageName = name404;
       }
     }
-    window.history.pushState(
-      { pageName, pageData },
-      `${pageName}`
-    );
+    window.history.pushState({ pageName, pageData }, `${pageName}`);
     await processPageEntered(pageNameToClass, pageName, pageData, false);
   } catch (error) {
     myerror(error);
-    await processPageEntered(pageNameToClass, "ErrorPage", { title: error.name, msg: error.message }, false);
+    await processPageEntered(
+      pageNameToClass,
+      "ErrorPage",
+      { title: error.name, msg: error.message },
+      false
+    );
   }
 }
 async function processPageEntered(pageNameToClass2, pageName, pageData, historyData) {
@@ -148,7 +150,12 @@ window.addEventListener("popstate", async function(event) {
     await processPageEntered(pageNameToClass, pageName, pageData, true);
   } catch (error) {
     myerror(error);
-    await processPageEntered(pageNameToClass, "ErrorPage", { title: error.name, msg: error.message }, false);
+    await processPageEntered(
+      pageNameToClass,
+      "ErrorPage",
+      { title: error.name, msg: error.message },
+      false
+    );
   }
 });
 async function getAndUpdateVersion() {
@@ -214,56 +221,51 @@ function T2(e) {
 function HeaderBar(backButton = true, loginData) {
   var backButtonHTML;
   if (backButton) {
-    backButtonHTML = html`
-        <ion-buttons slot="start">
-            <ion-button @click=${() => history.back()}>
-                <ion-icon slot="start" name="chevron-back"></ion-icon>
-                Back
-            </ion-button>
-        </ion-buttons>`;
+    backButtonHTML = html` <ion-buttons slot="start">
+         <ion-button @click=${() => history.back()}>
+            <ion-icon slot="start" name="chevron-back"></ion-icon>
+            Back
+         </ion-button>
+      </ion-buttons>`;
   }
-  var menuButton = html`
-        <ion-buttons slot="end">
-            <ion-button @click=${() => gotoPage("MenuPage", "")}>
-                <ion-icon name="menu"></ion-icon>
-            </ion-button>
-        </ion-buttons>`;
+  var menuButton = html` <ion-buttons slot="end">
+      <ion-button @click=${() => gotoPage("MenuPage", "")}>
+         <ion-icon name="menu"></ion-icon>
+      </ion-button>
+   </ion-buttons>`;
   return html`
-        <ion-toolbar color="primary">
-        ${backButtonHTML}
-        <ion-title>${loginData ? loginData : myAppTitle}</ion-title>
-        ${menuButton}
-        </ion-toolbar>
-        `;
+      <ion-toolbar color="primary">
+         ${backButtonHTML}
+         <ion-title>${loginData ? loginData : myAppTitle}</ion-title>
+         ${menuButton}
+      </ion-toolbar>
+   `;
 }
 function ErrorPanel(title, message, details) {
   let theHtml = html`
-
-    <ion-card>
-        <ion-card-header>
+      <ion-card>
+         <ion-card-header>
             <ion-card-title>${title}</ion-card-title>
-        </ion-card-header>
+         </ion-card-header>
 
-        <ion-card-content class="ion-padding-bottom">
+         <ion-card-content class="ion-padding-bottom">
             <div class="text-larger">${message}</div>
-        </ion-card-content>
+         </ion-card-content>
 
-        ${details ? html`
-        <ion-card-content class="ion-padding-bottom">
-            <div class="text-medium">${details}</div>
-        </ion-card-content>            
-        ` : null}
+         ${details ? html`
+                 <ion-card-content class="ion-padding-bottom">
+                    <div class="text-medium">${details}</div>
+                 </ion-card-content>
+              ` : null}
 
-        <div class="ion-margin-start ion-margin-bottom">
-
+         <div class="ion-margin-start ion-margin-bottom">
             <ion-button color="danger" @click=${() => cleanReload()}>
-                <ion-icon slot="start" name="home"></ion-icon>
-                ${T2("Home")}
+               <ion-icon slot="start" name="home"></ion-icon>
+               ${T2("Home")}
             </ion-button>
-
-        </div>
-    </ion-card>
-    `;
+         </div>
+      </ion-card>
+   `;
   return theHtml;
 }
 var AbstractPage = class {
@@ -296,7 +298,7 @@ var AbstractPage = class {
   }
   /**
    * @param {import("uhtml").Renderable} theHtml
-   * @param {boolean} [backButton=true] 
+   * @param {boolean} [backButton=true]
    */
   render(theHtml, backButton = true) {
     let elem = document.getElementById("SplashScreen");
@@ -326,93 +328,91 @@ function cleanReload() {
   window.location = window.location.origin + window.location.pathname;
   return;
 }
-register("Page404", class extends AbstractPage {
-  /**
-   * @param {string} id
-   */
-  constructor(id) {
-    super(id);
-  }
-  /**
-   * @param {string} pageData
-   */
-  enter(pageData) {
-    this.showError("Page not found", `The requested page does not exist: ${pageData}`, "");
-  }
-});
-register("ErrorPage", class extends AbstractPage {
-  /**
-   * @param {string} id
-   */
-  constructor(id) {
-    super(id);
-  }
-  /**
-   * @param {{title:string; msg:string; details:string; back:boolean; level:string}} pageData
-   */
-  enter(pageData) {
-    let html2 = this.html;
-    if (!pageData) {
-      pageData = {
-        title: "Error",
-        msg: "An error has happened",
-        details: "",
-        back: false,
-        level: "error"
-      };
+register(
+  "Page404",
+  class extends AbstractPage {
+    /**
+     * @param {string} id
+     */
+    constructor(id) {
+      super(id);
     }
-    let title = T2("Error");
-    if (pageData.title) {
-      title = T2(pageData.title);
+    /**
+     * @param {string} pageData
+     */
+    enter(pageData) {
+      this.showError("Page not found", `The requested page does not exist: ${pageData}`, "");
     }
-    let msg = T2("An error has happened.");
-    if (pageData.msg) {
-      msg = T2(pageData.msg);
-    }
-    let color = "danger";
-    if (pageData.level == "info") {
-      color = "primary";
-    } else if (pageData.level == "warning") {
-      color = "warning";
-    }
-    let theHtml = html2`
-
-        <ion-card>
-
-            <ion-card-header>
-                <ion-card-title>${title}</ion-card-title>
-            </ion-card-header>
-
-            <ion-card-content class="ion-padding-bottom">
-                <div class="text-larger">${msg}</div>
-
-                ${pageData.details ? html2`
-                    <div class="text-medium">${pageData.details}</div>
-                ` : null}
-
-            </ion-card-content>
-
-            ${pageData.back == true ? null : html2`
-                <ion-card-content class="ion-padding-bottom">
-                <div>${T2("Please click Accept to refresh the page.")}</div>
-                </ion-card-content>
-            `}
-
-            <div class="ion-margin-start ion-margin-bottom">
-
-                ${pageData.back == true ? html2`
-                <ion-button .color=${color} @click=${() => history.back()}>
-                    <ion-icon slot="start" name="chevron-back"></ion-icon>${T2("Back")}
-                </ion-button>` : html2`
-                <ion-button .color=${color} @click=${() => cleanReload()}>${T2("Accept")}
-                </ion-button>`}
-
-            </div>
-        </ion-card>
-        `;
-    this.render(theHtml, pageData.back);
   }
-});
+);
+register(
+  "ErrorPage",
+  class extends AbstractPage {
+    /**
+     * @param {string} id
+     */
+    constructor(id) {
+      super(id);
+    }
+    /**
+     * @param {{title:string; msg:string; details:string; back:boolean; level:string}} pageData
+     */
+    enter(pageData) {
+      let html2 = this.html;
+      if (!pageData) {
+        pageData = {
+          title: "Error",
+          msg: "An error has happened",
+          details: "",
+          back: false,
+          level: "error"
+        };
+      }
+      let title = T2("Error");
+      if (pageData.title) {
+        title = T2(pageData.title);
+      }
+      let msg = T2("An error has happened.");
+      if (pageData.msg) {
+        msg = T2(pageData.msg);
+      }
+      let color = "danger";
+      if (pageData.level == "info") {
+        color = "primary";
+      } else if (pageData.level == "warning") {
+        color = "warning";
+      }
+      let theHtml = html2`
+            <ion-card>
+               <ion-card-header>
+                  <ion-card-title>${title}</ion-card-title>
+               </ion-card-header>
+
+               <ion-card-content class="ion-padding-bottom">
+                  <div class="text-larger">${msg}</div>
+
+                  ${pageData.details ? html2` <div class="text-medium">${pageData.details}</div> ` : null}
+               </ion-card-content>
+
+               ${pageData.back == true ? null : html2`
+                       <ion-card-content class="ion-padding-bottom">
+                          <div>${T2("Please click Accept to refresh the page.")}</div>
+                       </ion-card-content>
+                    `}
+
+               <div class="ion-margin-start ion-margin-bottom">
+                  ${pageData.back == true ? html2` <ion-button .color=${color} @click=${() => history.back()}>
+                          <ion-icon slot="start" name="chevron-back"></ion-icon>${T2("Back")}
+                       </ion-button>` : html2` <ion-button .color=${color} @click=${() => cleanReload()}
+                          >${T2("Accept")}
+                       </ion-button>`}
+               </div>
+            </ion-card>
+         `;
+      this.render(theHtml, pageData.back);
+    }
+  }
+);
 function btoaUrl(input) {
   let astr = btoa(input);
   astr = astr.replace(/\+/g, "-").replace(/\//g, "_");

@@ -1,5 +1,5 @@
 import PocketBase from "../components/pocketbase.es.mjs";
-import { decodeJWT } from "../components/jwt";
+import { decodeUnsafeJWT } from "../components/jwt";
 
 const pb = new PocketBase(window.location.origin);
 
@@ -123,7 +123,7 @@ window.MHR.register(
 function renderMandateReadOnly(cred) {
    console.log("Status", cred.status);
 
-   var decoded = decodeJWT(cred.raw);
+   var decoded = decodeUnsafeJWT(cred.raw);
    const mandate = decoded.body.credentialSubject.mandate;
    const mandator = mandate.mandator;
    console.log(mandator);
@@ -337,7 +337,7 @@ async function signCredentialOfferingLocal(record) {
    window.location = "elsigner:";
    return;
 
-   var learcred = decodeJWT(record.raw).body;
+   var learcred = decodeUnsafeJWT(record.raw).body;
 
    if (!learcred.credentialSubject) {
       gotoPage("ErrorPage", {
@@ -387,7 +387,7 @@ async function signCredentialOfferingInServer(record) {
    const serverURL =
       "https://dts-sign-engine-demo.pre-api.digitelts.com/api/v1/services/signworker/signjades";
 
-   var learcred = decodeJWT(record.raw).body;
+   var learcred = decodeUnsafeJWT(record.raw).body;
 
    if (!learcred.credentialSubject) {
       gotoPage("ErrorPage", {

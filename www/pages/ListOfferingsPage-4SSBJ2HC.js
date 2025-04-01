@@ -1,6 +1,6 @@
 import {
-  decodeJWT
-} from "../chunks/chunk-25UXO2KX.js";
+  decodeUnsafeJWT
+} from "../chunks/chunk-3475HZHE.js";
 import {
   Client
 } from "../chunks/chunk-J6D2DG7T.js";
@@ -111,7 +111,7 @@ window.MHR.register(
 );
 function renderMandateReadOnly(cred) {
   console.log("Status", cred.status);
-  var decoded = decodeJWT(cred.raw);
+  var decoded = decodeUnsafeJWT(cred.raw);
   const mandate = decoded.body.credentialSubject.mandate;
   const mandator = mandate.mandator;
   console.log(mandator);
@@ -317,7 +317,7 @@ async function sendReminder(id) {
 async function signCredentialOfferingLocal(record) {
   window.location = "elsigner:";
   return;
-  var learcred = decodeJWT(record.raw).body;
+  var learcred = decodeUnsafeJWT(record.raw).body;
   if (!learcred.credentialSubject) {
     gotoPage("ErrorPage", {
       title: "Invalid credential",

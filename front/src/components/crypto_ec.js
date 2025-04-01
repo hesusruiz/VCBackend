@@ -1,17 +1,6 @@
 // @ts-check
 
 /**
- * Copies the inner text of an HTML element to the clipboard.
- *
- * @param {string} elementId - The ID of the HTML element to copy text from.
- */
-function copyToClipboard(elementId) {
-   const text = document.getElementById(elementId)?.innerText;
-   if (!text) return;
-   navigator.clipboard.writeText(text);
-}
-
-/**
  * Generates a P-256 key pair, extracts the private and public keys in hexadecimal format,
  * and generates a DID key from the public key.
  *

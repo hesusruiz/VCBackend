@@ -2,7 +2,7 @@
 
 import { renderAnyCredentialCard } from "../components/renderAnyCredential";
 import { getOrCreateDidKey } from "../components/crypto";
-import { decodeJWT } from "../components/jwt";
+import { decodeUnsafeJWT } from "../components/jwt";
 
 // @ts-ignore
 const MHR = window.MHR;
@@ -48,12 +48,5 @@ var mainPage = html`
             >Set debug mode
          </ion-toggle>
       </ion-item>
-
-      <div class="ion-margin-start ion-margin-bottom">
-         <ion-button @click=${() => MHR.gotoPage("ScanQrPage")}>
-            <ion-icon slot="start" name="camera"></ion-icon>
-            ${T("Scan QR")}
-         </ion-button>
-      </div>
    </ion-card>
 `;
