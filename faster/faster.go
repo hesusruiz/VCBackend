@@ -24,11 +24,6 @@ import (
 	"github.com/otiai10/copy"
 )
 
-
-
-
-
-
 const (
 	defaultConfigFile              = "./data/config/devserver.yaml"
 	defaultsourcedir               = "front/src"
@@ -90,10 +85,10 @@ func preprocess(cfg *yaml.YAML) {
 // Clean the target directory from all build artifacts
 func deleteTargetDir(cfg *yaml.YAML) {
 	targetDir := cfg.String("targetdir", defaulttargetdir)
-    if targetDir == "" {
-        log.Println("Warning: targetdir is empty, skipping deletion.")
-        return
-    }
+	if targetDir == "" {
+		log.Println("Warning: targetdir is empty, skipping deletion.")
+		return
+	}
 	if len(targetDir) > 0 {
 		os.RemoveAll(targetDir)
 	}
@@ -194,11 +189,20 @@ func buildOptions(cfg *yaml.YAML) api.BuildOptions {
 // postprocess is executed after the build for example to modify the resulting files
 func postprocess(r api.BuildResult, cfg *yaml.YAML) error {
 
+	for _, ofile := range r.OutputFiles {
+		fmt.Println(ofile.Path)
+	}
+
 	// Get the metafile data and parse it as a string representing a JSON file
 	meta, err := yaml.ParseJson(r.Metafile)
 	if err != nil {
 		return err
 	}
+
+	var m map[string]any
+	json.Unmarshal([]byte(r.Metafile), &m)
+	metaOut, _ := json.MarshalIndent(m, "", "  ")
+	fmt.Println(string(metaOut))
 
 	// Get the outputs field, which is a map with the key as each output file name
 	outputs := meta.Map("outputs")

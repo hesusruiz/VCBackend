@@ -1,4 +1,4 @@
-import "./chunk-U5RRZUYZ.js";
+import "./chunk-NZLE2WMY.js";
 
 // front/node_modules/ts-custom-error/dist/custom-error.mjs
 function fixProto(target, prototype) {
@@ -12,7 +12,7 @@ function fixStack(target, fn) {
   var captureStackTrace = Error.captureStackTrace;
   captureStackTrace && captureStackTrace(target, fn);
 }
-var __extends = function() {
+var __extends = /* @__PURE__ */ function() {
   var _extendStatics = function extendStatics(d, b) {
     _extendStatics = Object.setPrototypeOf || {
       __proto__: []
@@ -20,15 +20,13 @@ var __extends = function() {
       d2.__proto__ = b2;
     } || function(d2, b2) {
       for (var p in b2) {
-        if (Object.prototype.hasOwnProperty.call(b2, p))
-          d2[p] = b2[p];
+        if (Object.prototype.hasOwnProperty.call(b2, p)) d2[p] = b2[p];
       }
     };
     return _extendStatics(d, b);
   };
   return function(d, b) {
-    if (typeof b !== "function" && b !== null)
-      throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+    if (typeof b !== "function" && b !== null) throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
     _extendStatics(d, b);
     function __() {
       this.constructor = d;
@@ -54,14 +52,12 @@ var CustomError = function(_super) {
 }(Error);
 
 // front/node_modules/@zxing/library/esm/core/Exception.js
-var __extends2 = function() {
+var __extends2 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -96,14 +92,12 @@ var Exception = (
 var Exception_default = Exception;
 
 // front/node_modules/@zxing/library/esm/core/ArgumentException.js
-var __extends3 = function() {
+var __extends3 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -129,14 +123,12 @@ var ArgumentException = (
 var ArgumentException_default = ArgumentException;
 
 // front/node_modules/@zxing/library/esm/core/IllegalArgumentException.js
-var __extends4 = function() {
+var __extends4 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -217,14 +209,12 @@ var BinaryBitmap = (
 var BinaryBitmap_default = BinaryBitmap;
 
 // front/node_modules/@zxing/library/esm/core/ChecksumException.js
-var __extends5 = function() {
+var __extends5 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -293,14 +283,12 @@ var System = (
 var System_default = System;
 
 // front/node_modules/@zxing/library/esm/core/IndexOutOfBoundsException.js
-var __extends6 = function() {
+var __extends6 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -326,14 +314,12 @@ var IndexOutOfBoundsException = (
 var IndexOutOfBoundsException_default = IndexOutOfBoundsException;
 
 // front/node_modules/@zxing/library/esm/core/ArrayIndexOutOfBoundsException.js
-var __extends7 = function() {
+var __extends7 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -370,16 +356,13 @@ var ArrayIndexOutOfBoundsException_default = ArrayIndexOutOfBoundsException;
 // front/node_modules/@zxing/library/esm/core/util/Arrays.js
 var __values = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var Arrays = (
@@ -464,11 +447,9 @@ var Arrays = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (a_1_1 && !a_1_1.done && (_a = a_1.return))
-            _a.call(a_1);
+          if (a_1_1 && !a_1_1.done && (_a = a_1.return)) _a.call(a_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       return result;
@@ -860,14 +841,12 @@ var DecodeHintType;
 var DecodeHintType_default = DecodeHintType;
 
 // front/node_modules/@zxing/library/esm/core/FormatException.js
-var __extends8 = function() {
+var __extends8 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -898,16 +877,13 @@ var FormatException_default = FormatException;
 // front/node_modules/@zxing/library/esm/core/common/CharacterSetECI.js
 var __values2 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var CharacterSetValueIdentifiers;
@@ -973,11 +949,9 @@ var CharacterSetECI = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (otherEncodingNames_1_1 && !otherEncodingNames_1_1.done && (_a = otherEncodingNames_1.return))
-            _a.call(otherEncodingNames_1);
+          if (otherEncodingNames_1_1 && !otherEncodingNames_1_1.done && (_a = otherEncodingNames_1.return)) _a.call(otherEncodingNames_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
     }
@@ -1050,14 +1024,12 @@ var CharacterSetECI = (
 var CharacterSetECI_default = CharacterSetECI;
 
 // front/node_modules/@zxing/library/esm/core/UnsupportedOperationException.js
-var __extends9 = function() {
+var __extends9 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -1738,14 +1710,12 @@ var BitMatrix = (
 var BitMatrix_default = BitMatrix;
 
 // front/node_modules/@zxing/library/esm/core/NotFoundException.js
-var __extends10 = function() {
+var __extends10 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -1774,14 +1744,12 @@ var NotFoundException = (
 var NotFoundException_default = NotFoundException;
 
 // front/node_modules/@zxing/library/esm/core/common/GlobalHistogramBinarizer.js
-var __extends11 = function() {
+var __extends11 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -1933,14 +1901,12 @@ var GlobalHistogramBinarizer = (
 var GlobalHistogramBinarizer_default = GlobalHistogramBinarizer;
 
 // front/node_modules/@zxing/library/esm/core/common/HybridBinarizer.js
-var __extends12 = function() {
+var __extends12 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -2147,14 +2113,12 @@ var LuminanceSource = (
 var LuminanceSource_default = LuminanceSource;
 
 // front/node_modules/@zxing/library/esm/core/InvertedLuminanceSource.js
-var __extends13 = function() {
+var __extends13 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -2218,14 +2182,12 @@ var InvertedLuminanceSource = (
 var InvertedLuminanceSource_default = InvertedLuminanceSource;
 
 // front/node_modules/@zxing/library/esm/browser/HTMLCanvasElementLuminanceSource.js
-var __extends14 = function() {
+var __extends14 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -2391,8 +2353,7 @@ var __awaiter = function(thisArg, _arguments, P, generator) {
 };
 var __generator = function(thisArg, body) {
   var _ = { label: 0, sent: function() {
-    if (t[0] & 1)
-      throw t[1];
+    if (t[0] & 1) throw t[1];
     return t[1];
   }, trys: [], ops: [] }, f, y, t, g;
   return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() {
@@ -2404,79 +2365,70 @@ var __generator = function(thisArg, body) {
     };
   }
   function step(op) {
-    if (f)
-      throw new TypeError("Generator is already executing.");
-    while (_)
-      try {
-        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done)
-          return t;
-        if (y = 0, t)
-          op = [op[0] & 2, t.value];
-        switch (op[0]) {
-          case 0:
-          case 1:
+    if (f) throw new TypeError("Generator is already executing.");
+    while (_) try {
+      if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+      if (y = 0, t) op = [op[0] & 2, t.value];
+      switch (op[0]) {
+        case 0:
+        case 1:
+          t = op;
+          break;
+        case 4:
+          _.label++;
+          return { value: op[1], done: false };
+        case 5:
+          _.label++;
+          y = op[1];
+          op = [0];
+          continue;
+        case 7:
+          op = _.ops.pop();
+          _.trys.pop();
+          continue;
+        default:
+          if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+            _ = 0;
+            continue;
+          }
+          if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+            _.label = op[1];
+            break;
+          }
+          if (op[0] === 6 && _.label < t[1]) {
+            _.label = t[1];
             t = op;
             break;
-          case 4:
-            _.label++;
-            return { value: op[1], done: false };
-          case 5:
-            _.label++;
-            y = op[1];
-            op = [0];
-            continue;
-          case 7:
-            op = _.ops.pop();
-            _.trys.pop();
-            continue;
-          default:
-            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
-              _ = 0;
-              continue;
-            }
-            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
-              _.label = op[1];
-              break;
-            }
-            if (op[0] === 6 && _.label < t[1]) {
-              _.label = t[1];
-              t = op;
-              break;
-            }
-            if (t && _.label < t[2]) {
-              _.label = t[2];
-              _.ops.push(op);
-              break;
-            }
-            if (t[2])
-              _.ops.pop();
-            _.trys.pop();
-            continue;
-        }
-        op = body.call(thisArg, _);
-      } catch (e) {
-        op = [6, e];
-        y = 0;
-      } finally {
-        f = t = 0;
+          }
+          if (t && _.label < t[2]) {
+            _.label = t[2];
+            _.ops.push(op);
+            break;
+          }
+          if (t[2]) _.ops.pop();
+          _.trys.pop();
+          continue;
       }
-    if (op[0] & 5)
-      throw op[1];
+      op = body.call(thisArg, _);
+    } catch (e) {
+      op = [6, e];
+      y = 0;
+    } finally {
+      f = t = 0;
+    }
+    if (op[0] & 5) throw op[1];
     return { value: op[0] ? op[1] : void 0, done: true };
   }
 };
 var __values3 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var BrowserCodeReader = (
@@ -2589,11 +2541,9 @@ var BrowserCodeReader = (
                 e_1 = { error: e_1_1 };
               } finally {
                 try {
-                  if (devices_1_1 && !devices_1_1.done && (_a = devices_1.return))
-                    _a.call(devices_1);
+                  if (devices_1_1 && !devices_1_1.done && (_a = devices_1.return)) _a.call(devices_1);
                 } finally {
-                  if (e_1)
-                    throw e_1.error;
+                  if (e_1) throw e_1.error;
                 }
               }
               return [2, videoDevices];
@@ -3632,14 +3582,12 @@ var GenericGFPoly = (
 var GenericGFPoly_default = GenericGFPoly;
 
 // front/node_modules/@zxing/library/esm/core/ArithmeticException.js
-var __extends15 = function() {
+var __extends15 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -3665,14 +3613,12 @@ var ArithmeticException = (
 var ArithmeticException_default = ArithmeticException;
 
 // front/node_modules/@zxing/library/esm/core/common/reedsolomon/GenericGF.js
-var __extends16 = function() {
+var __extends16 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -3768,14 +3714,12 @@ var GenericGF = (
 var GenericGF_default = GenericGF;
 
 // front/node_modules/@zxing/library/esm/core/ReedSolomonException.js
-var __extends17 = function() {
+var __extends17 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -3801,14 +3745,12 @@ var ReedSolomonException = (
 var ReedSolomonException_default = ReedSolomonException;
 
 // front/node_modules/@zxing/library/esm/core/IllegalStateException.js
-var __extends18 = function() {
+var __extends18 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -4497,14 +4439,12 @@ var DetectorResult = (
 var DetectorResult_default = DetectorResult;
 
 // front/node_modules/@zxing/library/esm/core/aztec/AztecDetectorResult.js
-var __extends19 = function() {
+var __extends19 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -4896,14 +4836,12 @@ var PerspectiveTransform = (
 var PerspectiveTransform_default = PerspectiveTransform;
 
 // front/node_modules/@zxing/library/esm/core/common/DefaultGridSampler.js
-var __extends20 = function() {
+var __extends20 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -5389,14 +5327,12 @@ var AztecReader = (
 var AztecReader_default = AztecReader;
 
 // front/node_modules/@zxing/library/esm/browser/BrowserAztecCodeReader.js
-var __extends21 = function() {
+var __extends21 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -5590,14 +5526,12 @@ var OneDReader = (
 var OneDReader_default = OneDReader;
 
 // front/node_modules/@zxing/library/esm/core/oned/Code128Reader.js
-var __extends22 = function() {
+var __extends22 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -6039,14 +5973,12 @@ var Code128Reader = (
 var Code128Reader_default = Code128Reader;
 
 // front/node_modules/@zxing/library/esm/core/oned/Code39Reader.js
-var __extends23 = function() {
+var __extends23 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -6060,16 +5992,13 @@ var __extends23 = function() {
 }();
 var __values4 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var Code39Reader = (
@@ -6118,11 +6047,9 @@ var Code39Reader = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (theCounters_1_1 && !theCounters_1_1.done && (_a = theCounters_1.return))
-              _a.call(theCounters_1);
+            if (theCounters_1_1 && !theCounters_1_1.done && (_a = theCounters_1.return)) _a.call(theCounters_1);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
         nextStart = row.getNextSet(nextStart);
@@ -6138,11 +6065,9 @@ var Code39Reader = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (theCounters_2_1 && !theCounters_2_1.done && (_b = theCounters_2.return))
-            _b.call(theCounters_2);
+          if (theCounters_2_1 && !theCounters_2_1.done && (_b = theCounters_2.return)) _b.call(theCounters_2);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       var whiteSpaceAfterEnd = nextStart - lastStart - lastPatternSize;
@@ -6220,11 +6145,9 @@ var Code39Reader = (
           e_3 = { error: e_3_1 };
         } finally {
           try {
-            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return))
-              _a.call(counters_1);
+            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return)) _a.call(counters_1);
           } finally {
-            if (e_3)
-              throw e_3.error;
+            if (e_3) throw e_3.error;
           }
         }
         maxNarrowCounter = minCounter;
@@ -6381,14 +6304,12 @@ var Code39Reader = (
 var Code39Reader_default = Code39Reader;
 
 // front/node_modules/@zxing/library/esm/core/oned/ITFReader.js
-var __extends24 = function() {
+var __extends24 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -6402,16 +6323,13 @@ var __extends24 = function() {
 }();
 var __values5 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var ITFReader = (
@@ -6455,11 +6373,9 @@ var ITFReader = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (allowedLengths_1_1 && !allowedLengths_1_1.done && (_a = allowedLengths_1.return))
-            _a.call(allowedLengths_1);
+          if (allowedLengths_1_1 && !allowedLengths_1_1.done && (_a = allowedLengths_1.return)) _a.call(allowedLengths_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       if (!lengthOK && length > maxAllowedLength) {
@@ -6640,14 +6556,12 @@ var ITFReader = (
 var ITFReader_default = ITFReader;
 
 // front/node_modules/@zxing/library/esm/core/oned/AbstractUPCEANReader.js
-var __extends25 = function() {
+var __extends25 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -6797,16 +6711,13 @@ var AbstractUPCEANReader_default = AbstractUPCEANReader;
 // front/node_modules/@zxing/library/esm/core/oned/UPCEANExtension5Support.js
 var __values6 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var UPCEANExtension5Support = (
@@ -6854,11 +6765,9 @@ var UPCEANExtension5Support = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return))
-              _a.call(counters_1);
+            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return)) _a.call(counters_1);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
         if (bestMatch >= 10) {
@@ -6947,16 +6856,13 @@ var UPCEANExtension5Support_default = UPCEANExtension5Support;
 // front/node_modules/@zxing/library/esm/core/oned/UPCEANExtension2Support.js
 var __values7 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var UPCEANExtension2Support = (
@@ -7003,11 +6909,9 @@ var UPCEANExtension2Support = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return))
-              _a.call(counters_1);
+            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return)) _a.call(counters_1);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
         if (bestMatch >= 10) {
@@ -7060,14 +6964,12 @@ var UPCEANExtensionSupport = (
 var UPCEANExtensionSupport_default = UPCEANExtensionSupport;
 
 // front/node_modules/@zxing/library/esm/core/oned/UPCEANReader.js
-var __extends26 = function() {
+var __extends26 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -7200,14 +7102,12 @@ var UPCEANReader = (
 var UPCEANReader_default = UPCEANReader;
 
 // front/node_modules/@zxing/library/esm/core/oned/EAN13Reader.js
-var __extends27 = function() {
+var __extends27 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -7221,16 +7121,13 @@ var __extends27 = function() {
 }();
 var __values8 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var EAN13Reader = (
@@ -7264,11 +7161,9 @@ var EAN13Reader = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return))
-              _a.call(counters_1);
+            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return)) _a.call(counters_1);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
         if (bestMatch >= 10) {
@@ -7290,11 +7185,9 @@ var EAN13Reader = (
           e_2 = { error: e_2_1 };
         } finally {
           try {
-            if (counters_2_1 && !counters_2_1.done && (_b = counters_2.return))
-              _b.call(counters_2);
+            if (counters_2_1 && !counters_2_1.done && (_b = counters_2.return)) _b.call(counters_2);
           } finally {
-            if (e_2)
-              throw e_2.error;
+            if (e_2) throw e_2.error;
           }
         }
       }
@@ -7319,14 +7212,12 @@ var EAN13Reader = (
 var EAN13Reader_default = EAN13Reader;
 
 // front/node_modules/@zxing/library/esm/core/oned/EAN8Reader.js
-var __extends28 = function() {
+var __extends28 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -7340,16 +7231,13 @@ var __extends28 = function() {
 }();
 var __values9 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var EAN8Reader = (
@@ -7382,11 +7270,9 @@ var EAN8Reader = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return))
-              _a.call(counters_1);
+            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return)) _a.call(counters_1);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
       }
@@ -7404,11 +7290,9 @@ var EAN8Reader = (
           e_2 = { error: e_2_1 };
         } finally {
           try {
-            if (counters_2_1 && !counters_2_1.done && (_b = counters_2.return))
-              _b.call(counters_2);
+            if (counters_2_1 && !counters_2_1.done && (_b = counters_2.return)) _b.call(counters_2);
           } finally {
-            if (e_2)
-              throw e_2.error;
+            if (e_2) throw e_2.error;
           }
         }
       }
@@ -7423,14 +7307,12 @@ var EAN8Reader = (
 var EAN8Reader_default = EAN8Reader;
 
 // front/node_modules/@zxing/library/esm/core/oned/UPCAReader.js
-var __extends29 = function() {
+var __extends29 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -7484,14 +7366,12 @@ var UPCAReader = (
 var UPCAReader_default = UPCAReader;
 
 // front/node_modules/@zxing/library/esm/core/oned/UPCEReader.js
-var __extends30 = function() {
+var __extends30 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -7505,16 +7385,13 @@ var __extends30 = function() {
 }();
 var __values10 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var UPCEReader = (
@@ -7550,11 +7427,9 @@ var UPCEReader = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return))
-              _a.call(counters_1);
+            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return)) _a.call(counters_1);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
         if (bestMatch >= 10) {
@@ -7642,14 +7517,12 @@ var UPCEReader = (
 var UPCEReader_default = UPCEReader;
 
 // front/node_modules/@zxing/library/esm/core/oned/MultiFormatUPCEANReader.js
-var __extends31 = function() {
+var __extends31 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -7663,16 +7536,13 @@ var __extends31 = function() {
 }();
 var __values11 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var MultiFormatUPCEANReader = (
@@ -7728,11 +7598,9 @@ var MultiFormatUPCEANReader = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       throw new NotFoundException_default();
@@ -7748,11 +7616,9 @@ var MultiFormatUPCEANReader = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
     };
@@ -7762,14 +7628,12 @@ var MultiFormatUPCEANReader = (
 var MultiFormatUPCEANReader_default = MultiFormatUPCEANReader;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/AbstractRSSReader.js
-var __extends32 = function() {
+var __extends32 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -7783,16 +7647,13 @@ var __extends32 = function() {
 }();
 var __values12 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var AbstractRSSReader = (
@@ -7882,11 +7743,9 @@ var AbstractRSSReader = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return))
-              _a.call(counters_1);
+            if (counters_1_1 && !counters_1_1.done && (_a = counters_1.return)) _a.call(counters_1);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
         return maxCounter < 10 * minCounter;
@@ -7974,16 +7833,13 @@ var FinderPattern_default = FinderPattern;
 // front/node_modules/@zxing/library/esm/core/oned/rss/RSSUtils.js
 var __values13 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var RSSUtils = (
@@ -8003,11 +7859,9 @@ var RSSUtils = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (widths_1_1 && !widths_1_1.done && (_a = widths_1.return))
-            _a.call(widths_1);
+          if (widths_1_1 && !widths_1_1.done && (_a = widths_1.return)) _a.call(widths_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       var val = 0;
@@ -8152,14 +8006,12 @@ var DecodedObject = (
 var DecodedObject_default = DecodedObject;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/DecodedChar.js
-var __extends33 = function() {
+var __extends33 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -8193,14 +8045,12 @@ var DecodedChar = (
 var DecodedChar_default = DecodedChar;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/DecodedInformation.js
-var __extends34 = function() {
+var __extends34 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -8243,14 +8093,12 @@ var DecodedInformation = (
 var DecodedInformation_default = DecodedInformation;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/DecodedNumeric.js
-var __extends35 = function() {
+var __extends35 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -8302,16 +8150,13 @@ var DecodedNumeric_default = DecodedNumeric;
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/FieldParser.js
 var __values14 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var FieldParser = (
@@ -8342,11 +8187,9 @@ var FieldParser = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_f && !_f.done && (_a = _e.return))
-            _a.call(_e);
+          if (_f && !_f.done && (_a = _e.return)) _a.call(_e);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       if (rawInformation.length < 3) {
@@ -8367,11 +8210,9 @@ var FieldParser = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (_h && !_h.done && (_b = _g.return))
-            _b.call(_g);
+          if (_h && !_h.done && (_b = _g.return)) _b.call(_g);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       try {
@@ -8388,11 +8229,9 @@ var FieldParser = (
         e_3 = { error: e_3_1 };
       } finally {
         try {
-          if (_k && !_k.done && (_c = _j.return))
-            _c.call(_j);
+          if (_k && !_k.done && (_c = _j.return)) _c.call(_j);
         } finally {
-          if (e_3)
-            throw e_3.error;
+          if (e_3) throw e_3.error;
         }
       }
       if (rawInformation.length < 4) {
@@ -8413,11 +8252,9 @@ var FieldParser = (
         e_4 = { error: e_4_1 };
       } finally {
         try {
-          if (_m && !_m.done && (_d = _l.return))
-            _d.call(_l);
+          if (_m && !_m.done && (_d = _l.return)) _d.call(_l);
         } finally {
-          if (e_4)
-            throw e_4.error;
+          if (e_4) throw e_4.error;
         }
       }
       throw new NotFoundException_default();
@@ -8978,14 +8815,12 @@ var AbstractExpandedDecoder = (
 var AbstractExpandedDecoder_default = AbstractExpandedDecoder;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/AI01decoder.js
-var __extends36 = function() {
+var __extends36 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -9042,14 +8877,12 @@ var AI01decoder = (
 var AI01decoder_default = AI01decoder;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/AI01AndOtherAIs.js
-var __extends37 = function() {
+var __extends37 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -9084,14 +8917,12 @@ var AI01AndOtherAIs = (
 var AI01AndOtherAIs_default = AI01AndOtherAIs;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/AnyAIDecoder.js
-var __extends38 = function() {
+var __extends38 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -9121,14 +8952,12 @@ var AnyAIDecoder = (
 var AnyAIDecoder_default = AnyAIDecoder;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/AI01weightDecoder.js
-var __extends39 = function() {
+var __extends39 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -9166,14 +8995,12 @@ var AI01weightDecoder = (
 var AI01weightDecoder_default = AI01weightDecoder;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/AI013x0xDecoder.js
-var __extends40 = function() {
+var __extends40 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -9209,14 +9036,12 @@ var AI013x0xDecoder = (
 var AI013x0xDecoder_default = AI013x0xDecoder;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/AI013103decoder.js
-var __extends41 = function() {
+var __extends41 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -9247,14 +9072,12 @@ var AI013103decoder = (
 var AI013103decoder_default = AI013103decoder;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/AI01320xDecoder.js
-var __extends42 = function() {
+var __extends42 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -9292,14 +9115,12 @@ var AI01320xDecoder = (
 var AI01320xDecoder_default = AI01320xDecoder;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/AI01392xDecoder.js
-var __extends43 = function() {
+var __extends43 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -9340,14 +9161,12 @@ var AI01392xDecoder = (
 var AI01392xDecoder_default = AI01392xDecoder;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/AI01393xDecoder.js
-var __extends44 = function() {
+var __extends44 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -9397,14 +9216,12 @@ var AI01393xDecoder = (
 var AI01393xDecoder_default = AI01393xDecoder;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/decoders/AI013x0x1xDecoder.js
-var __extends45 = function() {
+var __extends45 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -9622,14 +9439,12 @@ var ExpandedRow = (
 var ExpandedRow_default = ExpandedRow;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/expanded/RSSExpandedReader.js
-var __extends46 = function() {
+var __extends46 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -9643,16 +9458,13 @@ var __extends46 = function() {
 }();
 var __values15 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var RSSExpandedReader = (
@@ -9751,11 +9563,9 @@ var RSSExpandedReader = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (collectedRows_1_1 && !collectedRows_1_1.done && (_a = collectedRows_1.return))
-              _a.call(collectedRows_1);
+            if (collectedRows_1_1 && !collectedRows_1_1.done && (_a = collectedRows_1.return)) _a.call(collectedRows_1);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
         this.pairs.push(row.getPairs());
@@ -9798,11 +9608,9 @@ var RSSExpandedReader = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       return false;
@@ -9854,11 +9662,9 @@ var RSSExpandedReader = (
                 e_5 = { error: e_5_1 };
               } finally {
                 try {
-                  if (pairs_1_1 && !pairs_1_1.done && (_c = pairs_1.return))
-                    _c.call(pairs_1);
+                  if (pairs_1_1 && !pairs_1_1.done && (_c = pairs_1.return)) _c.call(pairs_1);
                 } finally {
-                  if (e_5)
-                    throw e_5.error;
+                  if (e_5) throw e_5.error;
                 }
               }
               if (!found) {
@@ -9869,11 +9675,9 @@ var RSSExpandedReader = (
             e_4 = { error: e_4_1 };
           } finally {
             try {
-              if (_e && !_e.done && (_b = _d.return))
-                _b.call(_d);
+              if (_e && !_e.done && (_b = _d.return)) _b.call(_d);
             } finally {
-              if (e_4)
-                throw e_4.error;
+              if (e_4) throw e_4.error;
             }
           }
         }
@@ -9881,11 +9685,9 @@ var RSSExpandedReader = (
         e_3 = { error: e_3_1 };
       } finally {
         try {
-          if (rows_1_1 && !rows_1_1.done && (_a = rows_1.return))
-            _a.call(rows_1);
+          if (rows_1_1 && !rows_1_1.done && (_a = rows_1.return)) _a.call(rows_1);
         } finally {
-          if (e_3)
-            throw e_3.error;
+          if (e_3) throw e_3.error;
         }
       }
     };
@@ -9911,11 +9713,9 @@ var RSSExpandedReader = (
                 e_8 = { error: e_8_1 };
               } finally {
                 try {
-                  if (_e && !_e.done && (_c = _d.return))
-                    _c.call(_d);
+                  if (_e && !_e.done && (_c = _d.return)) _c.call(_d);
                 } finally {
-                  if (e_8)
-                    throw e_8.error;
+                  if (e_8) throw e_8.error;
                 }
               }
               if (!found) {
@@ -9927,11 +9727,9 @@ var RSSExpandedReader = (
             e_7 = { error: e_7_1 };
           } finally {
             try {
-              if (pairs_2_1 && !pairs_2_1.done && (_b = pairs_2.return))
-                _b.call(pairs_2);
+              if (pairs_2_1 && !pairs_2_1.done && (_b = pairs_2.return)) _b.call(pairs_2);
             } finally {
-              if (e_7)
-                throw e_7.error;
+              if (e_7) throw e_7.error;
             }
           }
           if (allFound) {
@@ -9942,11 +9740,9 @@ var RSSExpandedReader = (
         e_6 = { error: e_6_1 };
       } finally {
         try {
-          if (rows_2_1 && !rows_2_1.done && (_a = rows_2.return))
-            _a.call(rows_2);
+          if (rows_2_1 && !rows_2_1.done && (_a = rows_2.return)) _a.call(rows_2);
         } finally {
-          if (e_6)
-            throw e_6.error;
+          if (e_6) throw e_6.error;
         }
       }
       return false;
@@ -10360,14 +10156,12 @@ var RSSExpandedReader = (
 var RSSExpandedReader_default = RSSExpandedReader;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/Pair.js
-var __extends47 = function() {
+var __extends47 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -10404,14 +10198,12 @@ var Pair = (
 var Pair_default = Pair;
 
 // front/node_modules/@zxing/library/esm/core/oned/rss/RSS14Reader.js
-var __extends48 = function() {
+var __extends48 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -10425,16 +10217,13 @@ var __extends48 = function() {
 }();
 var __values16 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var RSS14Reader = (
@@ -10470,11 +10259,9 @@ var RSS14Reader = (
               e_2 = { error: e_2_1 };
             } finally {
               try {
-                if (_f && !_f.done && (_b = _e.return))
-                  _b.call(_e);
+                if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
               } finally {
-                if (e_2)
-                  throw e_2.error;
+                if (e_2) throw e_2.error;
               }
             }
           }
@@ -10483,11 +10270,9 @@ var RSS14Reader = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_d && !_d.done && (_a = _c.return))
-            _a.call(_c);
+          if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       throw new NotFoundException_default();
@@ -10511,11 +10296,9 @@ var RSS14Reader = (
         e_3 = { error: e_3_1 };
       } finally {
         try {
-          if (possiblePairs_1_1 && !possiblePairs_1_1.done && (_a = possiblePairs_1.return))
-            _a.call(possiblePairs_1);
+          if (possiblePairs_1_1 && !possiblePairs_1_1.done && (_a = possiblePairs_1.return)) _a.call(possiblePairs_1);
         } finally {
-          if (e_3)
-            throw e_3.error;
+          if (e_3) throw e_3.error;
         }
       }
       if (!found) {
@@ -10839,14 +10622,12 @@ var RSS14Reader = (
 var RSS14Reader_default = RSS14Reader;
 
 // front/node_modules/@zxing/library/esm/core/oned/MultiFormatOneDReader.js
-var __extends49 = function() {
+var __extends49 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -10918,14 +10699,12 @@ var MultiFormatOneDReader = (
 var MultiFormatOneDReader_default = MultiFormatOneDReader;
 
 // front/node_modules/@zxing/library/esm/browser/BrowserBarcodeReader.js
-var __extends50 = function() {
+var __extends50 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -10954,16 +10733,13 @@ var BrowserBarcodeReader = (
 // front/node_modules/@zxing/library/esm/core/datamatrix/decoder/Version.js
 var __values17 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var ECBlocks = (
@@ -11022,11 +10798,9 @@ var Version = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (ecbArray_1_1 && !ecbArray_1_1.done && (_a = ecbArray_1.return))
-            _a.call(ecbArray_1);
+          if (ecbArray_1_1 && !ecbArray_1_1.done && (_a = ecbArray_1.return)) _a.call(ecbArray_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       this.totalCodewords = total;
@@ -11068,11 +10842,9 @@ var Version = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       throw new FormatException_default();
@@ -11426,16 +11198,13 @@ var BitMatrixParser_default = BitMatrixParser;
 // front/node_modules/@zxing/library/esm/core/datamatrix/decoder/DataBlock.js
 var __values18 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var DataBlock = (
@@ -11459,11 +11228,9 @@ var DataBlock = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (ecBlockArray_1_1 && !ecBlockArray_1_1.done && (_a = ecBlockArray_1.return))
-            _a.call(ecBlockArray_1);
+          if (ecBlockArray_1_1 && !ecBlockArray_1_1.done && (_a = ecBlockArray_1.return)) _a.call(ecBlockArray_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       var result = new Array(totalBlocks);
@@ -11481,11 +11248,9 @@ var DataBlock = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (ecBlockArray_2_1 && !ecBlockArray_2_1.done && (_b = ecBlockArray_2.return))
-            _b.call(ecBlockArray_2);
+          if (ecBlockArray_2_1 && !ecBlockArray_2_1.done && (_b = ecBlockArray_2.return)) _b.call(ecBlockArray_2);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       var longerBlocksTotalCodewords = result[0].codewords.length;
@@ -11670,6 +11435,7 @@ var DecodedBitStreamParser = (
               result.append(String.fromCharCode(29));
               break;
             case 233:
+            // Structured Append
             case 234:
               break;
             case 235:
@@ -12120,16 +11886,13 @@ var DecodedBitStreamParser_default = DecodedBitStreamParser;
 // front/node_modules/@zxing/library/esm/core/datamatrix/decoder/Decoder.js
 var __values19 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var Decoder2 = (
@@ -12154,11 +11917,9 @@ var Decoder2 = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (dataBlocks_1_1 && !dataBlocks_1_1.done && (_a = dataBlocks_1.return))
-            _a.call(dataBlocks_1);
+          if (dataBlocks_1_1 && !dataBlocks_1_1.done && (_a = dataBlocks_1.return)) _a.call(dataBlocks_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       var resultBytes = new Uint8Array(totalBytes);
@@ -12505,14 +12266,12 @@ var DataMatrixReader = (
 var DataMatrixReader_default = DataMatrixReader;
 
 // front/node_modules/@zxing/library/esm/browser/BrowserDatamatrixCodeReader.js
-var __extends51 = function() {
+var __extends51 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -12606,16 +12365,13 @@ var ErrorCorrectionLevel_default = ErrorCorrectionLevel;
 // front/node_modules/@zxing/library/esm/core/qrcode/decoder/FormatInformation.js
 var __values20 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var FormatInformation = (
@@ -12664,11 +12420,9 @@ var FormatInformation = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       if (bestDifference <= 3) {
@@ -12735,16 +12489,13 @@ var FormatInformation_default = FormatInformation;
 // front/node_modules/@zxing/library/esm/core/qrcode/decoder/ECBlocks.js
 var __values21 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var ECBlocks2 = (
@@ -12774,11 +12525,9 @@ var ECBlocks2 = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (ecBlocks_1_1 && !ecBlocks_1_1.done && (_a = ecBlocks_1.return))
-            _a.call(ecBlocks_1);
+          if (ecBlocks_1_1 && !ecBlocks_1_1.done && (_a = ecBlocks_1.return)) _a.call(ecBlocks_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       return total;
@@ -12816,16 +12565,13 @@ var ECB_default = ECB2;
 // front/node_modules/@zxing/library/esm/core/qrcode/decoder/Version.js
 var __values22 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var Version2 = (
@@ -12852,11 +12598,9 @@ var Version2 = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (ecbArray_1_1 && !ecbArray_1_1.done && (_a = ecbArray_1.return))
-            _a.call(ecbArray_1);
+          if (ecbArray_1_1 && !ecbArray_1_1.done && (_a = ecbArray_1.return)) _a.call(ecbArray_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       this.totalCodewords = total;
@@ -13258,16 +13002,13 @@ var BitMatrixParser_default2 = BitMatrixParser2;
 // front/node_modules/@zxing/library/esm/core/qrcode/decoder/DataBlock.js
 var __values23 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var DataBlock2 = (
@@ -13294,11 +13035,9 @@ var DataBlock2 = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (ecBlockArray_1_1 && !ecBlockArray_1_1.done && (_a = ecBlockArray_1.return))
-            _a.call(ecBlockArray_1);
+          if (ecBlockArray_1_1 && !ecBlockArray_1_1.done && (_a = ecBlockArray_1.return)) _a.call(ecBlockArray_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       var result = new Array(totalBlocks);
@@ -13316,11 +13055,9 @@ var DataBlock2 = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (ecBlockArray_2_1 && !ecBlockArray_2_1.done && (_b = ecBlockArray_2.return))
-            _b.call(ecBlockArray_2);
+          if (ecBlockArray_2_1 && !ecBlockArray_2_1.done && (_b = ecBlockArray_2.return)) _b.call(ecBlockArray_2);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       var shorterBlocksTotalCodewords = result[0].codewords.length;
@@ -13711,16 +13448,13 @@ var QRCodeDecoderMetaData_default = QRCodeDecoderMetaData;
 // front/node_modules/@zxing/library/esm/core/qrcode/decoder/Decoder.js
 var __values24 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var Decoder3 = (
@@ -13772,11 +13506,9 @@ var Decoder3 = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (dataBlocks_1_1 && !dataBlocks_1_1.done && (_a = dataBlocks_1.return))
-            _a.call(dataBlocks_1);
+          if (dataBlocks_1_1 && !dataBlocks_1_1.done && (_a = dataBlocks_1.return)) _a.call(dataBlocks_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       var resultBytes = new Uint8Array(totalBytes);
@@ -13795,11 +13527,9 @@ var Decoder3 = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (dataBlocks_2_1 && !dataBlocks_2_1.done && (_b = dataBlocks_2.return))
-            _b.call(dataBlocks_2);
+          if (dataBlocks_2_1 && !dataBlocks_2_1.done && (_b = dataBlocks_2.return)) _b.call(dataBlocks_2);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       return DecodedBitStreamParser_default2.decode(resultBytes, version, ecLevel, hints);
@@ -13822,14 +13552,12 @@ var Decoder3 = (
 var Decoder_default3 = Decoder3;
 
 // front/node_modules/@zxing/library/esm/core/qrcode/detector/AlignmentPattern.js
-var __extends52 = function() {
+var __extends52 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -13871,16 +13599,13 @@ var AlignmentPattern_default = AlignmentPattern;
 // front/node_modules/@zxing/library/esm/core/qrcode/detector/AlignmentPatternFinder.js
 var __values25 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var AlignmentPatternFinder = (
@@ -14035,11 +13760,9 @@ var AlignmentPatternFinder = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (_c && !_c.done && (_a = _b.return))
-              _a.call(_b);
+            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
         var point = new AlignmentPattern_default(centerJ, centerI, estimatedModuleSize);
@@ -14056,14 +13779,12 @@ var AlignmentPatternFinder = (
 var AlignmentPatternFinder_default = AlignmentPatternFinder;
 
 // front/node_modules/@zxing/library/esm/core/qrcode/detector/FinderPattern.js
-var __extends53 = function() {
+var __extends53 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -14139,16 +13860,13 @@ var FinderPatternInfo_default = FinderPatternInfo;
 // front/node_modules/@zxing/library/esm/core/qrcode/detector/FinderPatternFinder.js
 var __values26 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var FinderPatternFinder = (
@@ -14517,11 +14235,9 @@ var FinderPatternFinder = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       return 0;
@@ -14543,11 +14259,9 @@ var FinderPatternFinder = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (_d && !_d.done && (_a = _c.return))
-            _a.call(_c);
+          if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       if (confirmedCount < 3) {
@@ -14564,11 +14278,9 @@ var FinderPatternFinder = (
         e_3 = { error: e_3_1 };
       } finally {
         try {
-          if (_f && !_f.done && (_b = _e.return))
-            _b.call(_e);
+          if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
         } finally {
-          if (e_3)
-            throw e_3.error;
+          if (e_3) throw e_3.error;
         }
       }
       return totalDeviation <= 0.05 * totalModuleSize;
@@ -14595,11 +14307,9 @@ var FinderPatternFinder = (
           e_4 = { error: e_4_1 };
         } finally {
           try {
-            if (_d && !_d.done && (_a = _c.return))
-              _a.call(_c);
+            if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
           } finally {
-            if (e_4)
-              throw e_4.error;
+            if (e_4) throw e_4.error;
           }
         }
         average = totalModuleSize / startSize;
@@ -14635,11 +14345,9 @@ var FinderPatternFinder = (
           e_5 = { error: e_5_1 };
         } finally {
           try {
-            if (possibleCenters_1_1 && !possibleCenters_1_1.done && (_b = possibleCenters_1.return))
-              _b.call(possibleCenters_1);
+            if (possibleCenters_1_1 && !possibleCenters_1_1.done && (_b = possibleCenters_1.return)) _b.call(possibleCenters_1);
           } finally {
-            if (e_5)
-              throw e_5.error;
+            if (e_5) throw e_5.error;
           }
         }
         average = totalModuleSize / possibleCenters.length;
@@ -14769,9 +14477,11 @@ var Detector3 = (
       var tlblCentersDimension = MathUtils_default.round(ResultPoint_default.distance(topLeft, bottomLeft) / moduleSize);
       var dimension = Math.floor((tltrCentersDimension + tlblCentersDimension) / 2) + 7;
       switch (dimension & 3) {
+        // mod 4
         case 0:
           dimension++;
           break;
+        // 1? do nothing
         case 2:
           dimension--;
           break;
@@ -15043,16 +14753,13 @@ var QRCodeReader_default = QRCodeReader;
 // front/node_modules/@zxing/library/esm/core/pdf417/PDF417Common.js
 var __values27 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var PDF417Common = (
@@ -15081,11 +14788,9 @@ var PDF417Common = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (list_1_1 && !list_1_1.done && (_a = list_1.return))
-            _a.call(list_1);
+          if (list_1_1 && !list_1_1.done && (_a = list_1.return)) _a.call(list_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       return result;
@@ -20710,16 +20415,13 @@ var PDF417DetectorResult_default = PDF417DetectorResult;
 // front/node_modules/@zxing/library/esm/core/pdf417/detector/Detector.js
 var __values28 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var Detector4 = (
@@ -20765,11 +20467,9 @@ var Detector4 = (
             e_1 = { error: e_1_1 };
           } finally {
             try {
-              if (barcodeCoordinates_1_1 && !barcodeCoordinates_1_1.done && (_a = barcodeCoordinates_1.return))
-                _a.call(barcodeCoordinates_1);
+              if (barcodeCoordinates_1_1 && !barcodeCoordinates_1_1.done && (_a = barcodeCoordinates_1.return)) _a.call(barcodeCoordinates_1);
             } finally {
-              if (e_1)
-                throw e_1.error;
+              if (e_1) throw e_1.error;
             }
           }
           row += Detector5.ROW_STEP;
@@ -20941,16 +20641,13 @@ var Detector_default4 = Detector4;
 // front/node_modules/@zxing/library/esm/core/pdf417/decoder/ec/ModulusPoly.js
 var __values29 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var ModulusPoly = (
@@ -21014,11 +20711,9 @@ var ModulusPoly = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (_c && !_c.done && (_a = _b.return))
-              _a.call(_b);
+            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
         return sum;
@@ -21236,14 +20931,12 @@ var ModulusBase = (
 var ModulusBase_default = ModulusBase;
 
 // front/node_modules/@zxing/library/esm/core/pdf417/decoder/ec/ModulusGF.js
-var __extends54 = function() {
+var __extends54 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -21305,16 +20998,13 @@ var ModulusGF_default = ModulusGF;
 // front/node_modules/@zxing/library/esm/core/pdf417/decoder/ec/ErrorCorrection.js
 var __values30 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var ErrorCorrection = (
@@ -21351,11 +21041,9 @@ var ErrorCorrection = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (erasures_1_1 && !erasures_1_1.done && (_a = erasures_1.return))
-              _a.call(erasures_1);
+            if (erasures_1_1 && !erasures_1_1.done && (_a = erasures_1.return)) _a.call(erasures_1);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
       }
@@ -21665,16 +21353,13 @@ var Formatter_default = Formatter;
 // front/node_modules/@zxing/library/esm/core/pdf417/decoder/DetectionResultColumn.js
 var __values31 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var DetectionResultColumn = (
@@ -21739,11 +21424,9 @@ var DetectionResultColumn = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       return formatter.toString();
@@ -21757,35 +21440,28 @@ var DetectionResultColumn_default = DetectionResultColumn;
 // front/node_modules/@zxing/library/esm/core/pdf417/decoder/BarcodeValue.js
 var __values32 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var __read = function(o, n) {
   var m = typeof Symbol === "function" && o[Symbol.iterator];
-  if (!m)
-    return o;
+  if (!m) return o;
   var i = m.call(o), r, ar = [], e;
   try {
-    while ((n === void 0 || n-- > 0) && !(r = i.next()).done)
-      ar.push(r.value);
+    while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
   } catch (error) {
     e = { error };
   } finally {
     try {
-      if (r && !r.done && (m = i["return"]))
-        m.call(i);
+      if (r && !r.done && (m = i["return"])) m.call(i);
     } finally {
-      if (e)
-        throw e.error;
+      if (e) throw e.error;
     }
   }
   return ar;
@@ -21835,11 +21511,9 @@ var BarcodeValue = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       return PDF417Common_default.toIntArray(result);
@@ -21853,14 +21527,12 @@ var BarcodeValue = (
 var BarcodeValue_default = BarcodeValue;
 
 // front/node_modules/@zxing/library/esm/core/pdf417/decoder/DetectionResultRowIndicatorColumn.js
-var __extends55 = function() {
+var __extends55 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -21874,16 +21546,13 @@ var __extends55 = function() {
 }();
 var __values33 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var DetectionResultRowIndicatorColumn = (
@@ -21908,11 +21577,9 @@ var DetectionResultRowIndicatorColumn = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
     };
@@ -21985,11 +21652,9 @@ var DetectionResultRowIndicatorColumn = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       return result;
@@ -22061,11 +21726,9 @@ var DetectionResultRowIndicatorColumn = (
         e_3 = { error: e_3_1 };
       } finally {
         try {
-          if (codewords_1_1 && !codewords_1_1.done && (_a = codewords_1.return))
-            _a.call(codewords_1);
+          if (codewords_1_1 && !codewords_1_1.done && (_a = codewords_1.return)) _a.call(codewords_1);
         } finally {
-          if (e_3)
-            throw e_3.error;
+          if (e_3) throw e_3.error;
         }
       }
       if (barcodeColumnCount.getValue().length === 0 || barcodeRowCountUpperPart.getValue().length === 0 || barcodeRowCountLowerPart.getValue().length === 0 || barcodeECLevel.getValue().length === 0 || barcodeColumnCount.getValue()[0] < 1 || barcodeRowCountUpperPart.getValue()[0] + barcodeRowCountLowerPart.getValue()[0] < PDF417Common_default.MIN_ROWS_IN_BARCODE || barcodeRowCountUpperPart.getValue()[0] + barcodeRowCountLowerPart.getValue()[0] > PDF417Common_default.MAX_ROWS_IN_BARCODE) {
@@ -22123,16 +21786,13 @@ var DetectionResultRowIndicatorColumn_default = DetectionResultRowIndicatorColum
 // front/node_modules/@zxing/library/esm/core/pdf417/decoder/DetectionResult.js
 var __values34 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var DetectionResult = (
@@ -22309,11 +21969,9 @@ var DetectionResult = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (otherCodewords_1_1 && !otherCodewords_1_1.done && (_a = otherCodewords_1.return))
-            _a.call(otherCodewords_1);
+          if (otherCodewords_1_1 && !otherCodewords_1_1.done && (_a = otherCodewords_1.return)) _a.call(otherCodewords_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
     };
@@ -22628,14 +22286,12 @@ var Long = (
 var Long_default = Long;
 
 // front/node_modules/@zxing/library/esm/core/NullPointerException.js
-var __extends56 = function() {
+var __extends56 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -22691,14 +22347,12 @@ var OutputStream = (
 var OutputStream_default = OutputStream;
 
 // front/node_modules/@zxing/library/esm/core/OutOfMemoryError.js
-var __extends57 = function() {
+var __extends57 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -22723,14 +22377,12 @@ var OutOfMemoryError = (
 var OutOfMemoryError_default = OutOfMemoryError;
 
 // front/node_modules/@zxing/library/esm/core/util/ByteArrayOutputStream.js
-var __extends58 = function() {
+var __extends58 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -23392,16 +23044,13 @@ var DecodedBitStreamParser_default3 = DecodedBitStreamParser3;
 // front/node_modules/@zxing/library/esm/core/pdf417/decoder/PDF417ScanningDecoder.js
 var __values35 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var PDF417ScanningDecoder = (
@@ -23505,11 +23154,9 @@ var PDF417ScanningDecoder = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (rowHeights_1_1 && !rowHeights_1_1.done && (_a = rowHeights_1.return))
-            _a.call(rowHeights_1);
+          if (rowHeights_1_1 && !rowHeights_1_1.done && (_a = rowHeights_1.return)) _a.call(rowHeights_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       var codewords = rowIndicatorColumn.getCodewords();
@@ -23540,11 +23187,9 @@ var PDF417ScanningDecoder = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (values_1_1 && !values_1_1.done && (_a = values_1.return))
-            _a.call(values_1);
+          if (values_1_1 && !values_1_1.done && (_a = values_1.return)) _a.call(values_1);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       return maxValue;
@@ -23692,11 +23337,9 @@ var PDF417ScanningDecoder = (
               e_4 = { error: e_4_1 };
             } finally {
               try {
-                if (_f && !_f.done && (_b = _e.return))
-                  _b.call(_e);
+                if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
               } finally {
-                if (e_4)
-                  throw e_4.error;
+                if (e_4) throw e_4.error;
               }
             }
           }
@@ -23706,11 +23349,9 @@ var PDF417ScanningDecoder = (
         e_3 = { error: e_3_1 };
       } finally {
         try {
-          if (_d && !_d.done && (_a = _c.return))
-            _a.call(_c);
+          if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
         } finally {
-          if (e_3)
-            throw e_3.error;
+          if (e_3) throw e_3.error;
         }
       }
       return barcodeMatrix;
@@ -23752,11 +23393,9 @@ var PDF417ScanningDecoder = (
           e_5 = { error: e_5_1 };
         } finally {
           try {
-            if (_c && !_c.done && (_a = _b.return))
-              _a.call(_b);
+            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
           } finally {
-            if (e_5)
-              throw e_5.error;
+            if (e_5) throw e_5.error;
           }
         }
         skippedColumns++;
@@ -23924,16 +23563,13 @@ var PDF417ScanningDecoder_default = PDF417ScanningDecoder;
 // front/node_modules/@zxing/library/esm/core/pdf417/PDF417Reader.js
 var __values36 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var PDF417Reader = (
@@ -23984,11 +23620,9 @@ var PDF417Reader = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       return results.map(function(x) {
@@ -24021,14 +23655,12 @@ var PDF417Reader = (
 var PDF417Reader_default = PDF417Reader;
 
 // front/node_modules/@zxing/library/esm/core/ReaderException.js
-var __extends59 = function() {
+var __extends59 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -24056,16 +23688,13 @@ var ReaderException_default = ReaderException;
 // front/node_modules/@zxing/library/esm/core/MultiFormatReader.js
 var __values37 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var MultiFormatReader = (
@@ -24137,11 +23766,9 @@ var MultiFormatReader = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (_c && !_c.done && (_a = _b.return))
-              _a.call(_b);
+            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
       }
@@ -24166,11 +23793,9 @@ var MultiFormatReader = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       throw new NotFoundException_default("No MultiFormat Readers were able to detect the code.");
@@ -24181,14 +23806,12 @@ var MultiFormatReader = (
 var MultiFormatReader_default = MultiFormatReader;
 
 // front/node_modules/@zxing/library/esm/browser/BrowserMultiFormatReader.js
-var __extends60 = function() {
+var __extends60 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -24225,14 +23848,12 @@ var BrowserMultiFormatReader = (
 );
 
 // front/node_modules/@zxing/library/esm/browser/BrowserPDF417Reader.js
-var __extends61 = function() {
+var __extends61 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -24259,14 +23880,12 @@ var BrowserPDF417Reader = (
 );
 
 // front/node_modules/@zxing/library/esm/browser/BrowserQRCodeReader.js
-var __extends62 = function() {
+var __extends62 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -24511,16 +24130,13 @@ var MaskUtil_default = MaskUtil;
 // front/node_modules/@zxing/library/esm/core/qrcode/encoder/ByteMatrix.js
 var __values38 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var ByteMatrix = (
@@ -24565,11 +24181,9 @@ var ByteMatrix = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
     };
@@ -24688,14 +24302,12 @@ var QRCode = (
 var QRCode_default = QRCode;
 
 // front/node_modules/@zxing/library/esm/core/WriterException.js
-var __extends63 = function() {
+var __extends63 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -25045,16 +24657,13 @@ var BlockPair_default = BlockPair;
 // front/node_modules/@zxing/library/esm/core/qrcode/encoder/Encoder.js
 var __values39 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var Encoder = (
@@ -25298,11 +24907,9 @@ var Encoder = (
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (blocks_1_1 && !blocks_1_1.done && (_a = blocks_1.return))
-              _a.call(blocks_1);
+            if (blocks_1_1 && !blocks_1_1.done && (_a = blocks_1.return)) _a.call(blocks_1);
           } finally {
-            if (e_1)
-              throw e_1.error;
+            if (e_1) throw e_1.error;
           }
         }
       }
@@ -25319,11 +24926,9 @@ var Encoder = (
           e_2 = { error: e_2_1 };
         } finally {
           try {
-            if (blocks_2_1 && !blocks_2_1.done && (_b = blocks_2.return))
-              _b.call(blocks_2);
+            if (blocks_2_1 && !blocks_2_1.done && (_b = blocks_2.return)) _b.call(blocks_2);
           } finally {
-            if (e_2)
-              throw e_2.error;
+            if (e_2) throw e_2.error;
           }
         }
       }
@@ -25721,9 +25326,45 @@ var MultiFormatWriter = (
     MultiFormatWriter2.prototype.encode = function(contents, format, width, height, hints) {
       var writer;
       switch (format) {
+        // case BarcodeFormat.EAN_8:
+        //   writer = new EAN8Writer()
+        //   break
+        // case BarcodeFormat.UPC_E:
+        //   writer = new UPCEWriter()
+        //   break
+        // case BarcodeFormat.EAN_13:
+        //   writer = new EAN13Writer()
+        //   break
+        // case BarcodeFormat.UPC_A:
+        //   writer = new UPCAWriter()
+        //   break
         case BarcodeFormat_default.QR_CODE:
           writer = new QRCodeWriter_default();
           break;
+        // case BarcodeFormat.CODE_39:
+        //   writer = new Code39Writer()
+        //   break
+        // case BarcodeFormat.CODE_93:
+        //   writer = new Code93Writer()
+        //   break
+        // case BarcodeFormat.CODE_128:
+        //   writer = new Code128Writer()
+        //   break
+        // case BarcodeFormat.ITF:
+        //   writer = new ITFWriter()
+        //   break
+        // case BarcodeFormat.PDF_417:
+        //   writer = new PDF417Writer()
+        //   break
+        // case BarcodeFormat.CODABAR:
+        //   writer = new CodaBarWriter()
+        //   break
+        // case BarcodeFormat.DATA_MATRIX:
+        //   writer = new DataMatrixWriter()
+        //   break
+        // case BarcodeFormat.AZTEC:
+        //   writer = new AztecWriter()
+        //   break
         default:
           throw new IllegalArgumentException_default("No encoder available for format " + format);
       }
@@ -25734,14 +25375,12 @@ var MultiFormatWriter = (
 );
 
 // front/node_modules/@zxing/library/esm/core/PlanarYUVLuminanceSource.js
-var __extends64 = function() {
+var __extends64 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -25852,14 +25491,12 @@ var PlanarYUVLuminanceSource = (
 );
 
 // front/node_modules/@zxing/library/esm/core/RGBLuminanceSource.js
-var __extends65 = function() {
+var __extends65 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -25959,14 +25596,12 @@ var RGBLuminanceSource = (
 );
 
 // front/node_modules/@zxing/library/esm/core/util/Charset.js
-var __extends66 = function() {
+var __extends66 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -26079,14 +25714,12 @@ var Token = (
 var Token_default = Token;
 
 // front/node_modules/@zxing/library/esm/core/aztec/encoder/SimpleToken.js
-var __extends67 = function() {
+var __extends67 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -26129,14 +25762,12 @@ var SimpleToken = (
 var SimpleToken_default = SimpleToken;
 
 // front/node_modules/@zxing/library/esm/core/aztec/encoder/BinaryShiftToken.js
-var __extends68 = function() {
+var __extends68 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -26253,16 +25884,13 @@ var LATCH_TABLE = [
 // front/node_modules/@zxing/library/esm/core/aztec/encoder/ShiftTable.js
 var __values40 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 function static_SHIFT_TABLE(SHIFT_TABLE2) {
@@ -26276,11 +25904,9 @@ function static_SHIFT_TABLE(SHIFT_TABLE2) {
     e_1 = { error: e_1_1 };
   } finally {
     try {
-      if (SHIFT_TABLE_1_1 && !SHIFT_TABLE_1_1.done && (_a = SHIFT_TABLE_1.return))
-        _a.call(SHIFT_TABLE_1);
+      if (SHIFT_TABLE_1_1 && !SHIFT_TABLE_1_1.done && (_a = SHIFT_TABLE_1.return)) _a.call(SHIFT_TABLE_1);
     } finally {
-      if (e_1)
-        throw e_1.error;
+      if (e_1) throw e_1.error;
     }
   }
   SHIFT_TABLE2[MODE_UPPER][MODE_PUNCT] = 0;
@@ -26296,16 +25922,13 @@ var SHIFT_TABLE = static_SHIFT_TABLE(Arrays_default.createInt32Array(6, 6));
 // front/node_modules/@zxing/library/esm/core/aztec/encoder/State.js
 var __values41 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var State = (
@@ -26398,11 +26021,9 @@ var State = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (symbols_1_1 && !symbols_1_1.done && (_a = symbols_1.return))
-            _a.call(symbols_1);
+          if (symbols_1_1 && !symbols_1_1.done && (_a = symbols_1.return)) _a.call(symbols_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       return bitArray;
@@ -26531,16 +26152,13 @@ var CHAR_MAP = static_CHAR_MAP(Arrays_default.createInt32Array(5, 256));
 // front/node_modules/@zxing/library/esm/core/aztec/encoder/HighLevelEncoder.js
 var __values42 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var HighLevelEncoder = (
@@ -26596,11 +26214,9 @@ var HighLevelEncoder = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (states_1_1 && !states_1_1.done && (_a = states_1.return))
-            _a.call(states_1);
+          if (states_1_1 && !states_1_1.done && (_a = states_1.return)) _a.call(states_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       return HighLevelEncoder2.simplifyStates(result);
@@ -26642,11 +26258,9 @@ var HighLevelEncoder = (
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (states_2_1 && !states_2_1.done && (_a = states_2.return))
-            _a.call(states_2);
+          if (states_2_1 && !states_2_1.done && (_a = states_2.return)) _a.call(states_2);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       return this.simplifyStates(result);
@@ -26695,11 +26309,9 @@ var HighLevelEncoder = (
             e_4 = { error: e_4_1 };
           } finally {
             try {
-              if (result_1_1 && !result_1_1.done && (_b = result_1.return))
-                _b.call(result_1);
+              if (result_1_1 && !result_1_1.done && (_b = result_1.return)) _b.call(result_1);
             } finally {
-              if (e_4)
-                throw e_4.error;
+              if (e_4) throw e_4.error;
             }
           }
           if (add2) {
@@ -26710,11 +26322,9 @@ var HighLevelEncoder = (
         e_3 = { error: e_3_1 };
       } finally {
         try {
-          if (states_3_1 && !states_3_1.done && (_a = states_3.return))
-            _a.call(states_3);
+          if (states_3_1 && !states_3_1.done && (_a = states_3.return)) _a.call(states_3);
         } finally {
-          if (e_3)
-            throw e_3.error;
+          if (e_3) throw e_3.error;
         }
       }
       return result;
@@ -26727,16 +26337,13 @@ var HighLevelEncoder_default = HighLevelEncoder;
 // front/node_modules/@zxing/library/esm/core/aztec/encoder/Encoder.js
 var __values43 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var Encoder2 = (
@@ -26947,11 +26554,9 @@ var Encoder2 = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a = _b.return))
-            _a.call(_b);
+          if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       return messageBits;
@@ -27115,14 +26720,12 @@ var AztecWriter = (
 );
 
 // front/node_modules/@zxing/browser/esm/common/HTMLCanvasElementLuminanceSource.js
-var __extends69 = function() {
+var __extends69 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -27261,9 +26864,8 @@ var __assign = function() {
   __assign = Object.assign || function(t) {
     for (var s, i = 1, n = arguments.length; i < n; i++) {
       s = arguments[i];
-      for (var p in s)
-        if (Object.prototype.hasOwnProperty.call(s, p))
-          t[p] = s[p];
+      for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+        t[p] = s[p];
     }
     return t;
   };
@@ -27298,8 +26900,7 @@ var __awaiter2 = function(thisArg, _arguments, P, generator) {
 };
 var __generator2 = function(thisArg, body) {
   var _ = { label: 0, sent: function() {
-    if (t[0] & 1)
-      throw t[1];
+    if (t[0] & 1) throw t[1];
     return t[1];
   }, trys: [], ops: [] }, f, y, t, g;
   return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() {
@@ -27311,79 +26912,70 @@ var __generator2 = function(thisArg, body) {
     };
   }
   function step(op) {
-    if (f)
-      throw new TypeError("Generator is already executing.");
-    while (_)
-      try {
-        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done)
-          return t;
-        if (y = 0, t)
-          op = [op[0] & 2, t.value];
-        switch (op[0]) {
-          case 0:
-          case 1:
+    if (f) throw new TypeError("Generator is already executing.");
+    while (_) try {
+      if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+      if (y = 0, t) op = [op[0] & 2, t.value];
+      switch (op[0]) {
+        case 0:
+        case 1:
+          t = op;
+          break;
+        case 4:
+          _.label++;
+          return { value: op[1], done: false };
+        case 5:
+          _.label++;
+          y = op[1];
+          op = [0];
+          continue;
+        case 7:
+          op = _.ops.pop();
+          _.trys.pop();
+          continue;
+        default:
+          if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+            _ = 0;
+            continue;
+          }
+          if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+            _.label = op[1];
+            break;
+          }
+          if (op[0] === 6 && _.label < t[1]) {
+            _.label = t[1];
             t = op;
             break;
-          case 4:
-            _.label++;
-            return { value: op[1], done: false };
-          case 5:
-            _.label++;
-            y = op[1];
-            op = [0];
-            continue;
-          case 7:
-            op = _.ops.pop();
-            _.trys.pop();
-            continue;
-          default:
-            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
-              _ = 0;
-              continue;
-            }
-            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
-              _.label = op[1];
-              break;
-            }
-            if (op[0] === 6 && _.label < t[1]) {
-              _.label = t[1];
-              t = op;
-              break;
-            }
-            if (t && _.label < t[2]) {
-              _.label = t[2];
-              _.ops.push(op);
-              break;
-            }
-            if (t[2])
-              _.ops.pop();
-            _.trys.pop();
-            continue;
-        }
-        op = body.call(thisArg, _);
-      } catch (e) {
-        op = [6, e];
-        y = 0;
-      } finally {
-        f = t = 0;
+          }
+          if (t && _.label < t[2]) {
+            _.label = t[2];
+            _.ops.push(op);
+            break;
+          }
+          if (t[2]) _.ops.pop();
+          _.trys.pop();
+          continue;
       }
-    if (op[0] & 5)
-      throw op[1];
+      op = body.call(thisArg, _);
+    } catch (e) {
+      op = [6, e];
+      y = 0;
+    } finally {
+      f = t = 0;
+    }
+    if (op[0] & 5) throw op[1];
     return { value: op[0] ? op[1] : void 0, done: true };
   }
 };
 var __values44 = function(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var defaultOptions = {
@@ -27459,11 +27051,9 @@ var BrowserCodeReader2 = (
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (tracks_1_1 && !tracks_1_1.done && (_a = tracks_1.return))
-            _a.call(tracks_1);
+          if (tracks_1_1 && !tracks_1_1.done && (_a = tracks_1.return)) _a.call(tracks_1);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       return false;
@@ -27661,11 +27251,9 @@ var BrowserCodeReader2 = (
                 e_2 = { error: e_2_1 };
               } finally {
                 try {
-                  if (devices_1_1 && !devices_1_1.done && (_a = devices_1.return))
-                    _a.call(devices_1);
+                  if (devices_1_1 && !devices_1_1.done && (_a = devices_1.return)) _a.call(devices_1);
                 } finally {
-                  if (e_2)
-                    throw e_2.error;
+                  if (e_2) throw e_2.error;
                 }
               }
               return [2, videoDevices];
@@ -27914,8 +27502,7 @@ var BrowserCodeReader2 = (
                           tracks_2 = __values44(tracks), tracks_2_1 = tracks_2.next();
                           _b.label = 2;
                         case 2:
-                          if (!!tracks_2_1.done)
-                            return [3, 5];
+                          if (!!tracks_2_1.done) return [3, 5];
                           track = tracks_2_1.value;
                           return [4, track.applyConstraints(constraints)];
                         case 3:
@@ -27932,11 +27519,9 @@ var BrowserCodeReader2 = (
                           return [3, 8];
                         case 7:
                           try {
-                            if (tracks_2_1 && !tracks_2_1.done && (_a2 = tracks_2.return))
-                              _a2.call(tracks_2);
+                            if (tracks_2_1 && !tracks_2_1.done && (_a2 = tracks_2.return)) _a2.call(tracks_2);
                           } finally {
-                            if (e_3)
-                              throw e_3.error;
+                            if (e_3) throw e_3.error;
                           }
                           return [
                             7
@@ -28273,8 +27858,7 @@ var BrowserCodeReader2 = (
           switch (_a.label) {
             case 0:
               isImageLoaded = BrowserCodeReader3.isImageLoaded(element);
-              if (!!isImageLoaded)
-                return [3, 2];
+              if (!!isImageLoaded) return [3, 2];
               return [4, BrowserCodeReader3._waitImageLoad(element)];
             case 1:
               _a.sent();
@@ -28290,14 +27874,12 @@ var BrowserCodeReader2 = (
 );
 
 // front/node_modules/@zxing/browser/esm/readers/BrowserAztecCodeReader.js
-var __extends70 = function() {
+var __extends70 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -28321,14 +27903,12 @@ var BrowserAztecCodeReader2 = (
 );
 
 // front/node_modules/@zxing/browser/esm/readers/BrowserMultiFormatOneDReader.js
-var __extends71 = function() {
+var __extends71 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -28352,14 +27932,12 @@ var BrowserMultiFormatOneDReader = (
 );
 
 // front/node_modules/@zxing/browser/esm/readers/BrowserDatamatrixCodeReader.js
-var __extends72 = function() {
+var __extends72 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -28383,14 +27961,12 @@ var BrowserDatamatrixCodeReader2 = (
 );
 
 // front/node_modules/@zxing/browser/esm/readers/BrowserMultiFormatReader.js
-var __extends73 = function() {
+var __extends73 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -28434,14 +28010,12 @@ var BrowserMultiFormatReader2 = (
 );
 
 // front/node_modules/@zxing/browser/esm/readers/BrowserPDF417Reader.js
-var __extends74 = function() {
+var __extends74 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };
@@ -28465,14 +28039,12 @@ var BrowserPDF417Reader2 = (
 );
 
 // front/node_modules/@zxing/browser/esm/readers/BrowserQRCodeReader.js
-var __extends75 = function() {
+var __extends75 = /* @__PURE__ */ function() {
   var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
       d2.__proto__ = b2;
     } || function(d2, b2) {
-      for (var p in b2)
-        if (b2.hasOwnProperty(p))
-          d2[p] = b2[p];
+      for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
     };
     return extendStatics(d, b);
   };

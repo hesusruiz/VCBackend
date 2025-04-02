@@ -28,23 +28,21 @@ import (
 	"log"
 )
 
-const defaultConfigFileName = "server.yaml"
-const defaultBuildConfigFile = "./data/config/devserver.yaml"
-
-var baseDir string
+const (
+	defaultConfigFileName  = "server.yaml"
+	defaultBuildConfigFile = "./data/config/devserver.yaml"
+	devModeEnvVar          = "DOME_DEV_MODE" // Environment variable to enable development mode
+)
 
 func main() {
 
-	// Loosely check if it was executed using "go run"
-	isGoRun := strings.HasPrefix(os.Args[0], os.TempDir())
+	// Determine if we're in development mode (go run or env var)
+	isDevMode := isDevelopmentMode()
 
-	// Detect the location of the main config file
-	if isGoRun {
-		// Probably ran with go run
-		baseDir, _ = os.Getwd()
-	} else {
-		// Probably ran with go build
-		baseDir = filepath.Dir(os.Args[0])
+	// Detect the base directory
+	baseDir, err := detectBaseDir()
+	if err != nil {
+		log.Fatalf("Error detecting base directory: %v", err)
 	}
 
 	// The full path to the default config file, in the same place as the program binary
@@ -67,7 +65,7 @@ func main() {
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		// enable auto creation of migration files when making collection changes in the Admin UI
 		// (the isGoRun check is to enable it only during development)
-		Automigrate: isGoRun,
+		Automigrate: isDevMode,
 	})
 
 	// Customize the root command
@@ -92,7 +90,7 @@ func main() {
 	})
 
 	// Start the new Issuer and block
-	err := iss.Start()
+	err = iss.Start()
 	if err != nil {
 		panic(err)
 	}
@@ -123,7 +121,7 @@ func eIDASCommand(rootCfg *yaml.YAML) *cobra.Command {
 			// Do the work
 			return createCACert(capassword, casubject, caoutput)
 		},
-	}	
+	}
 	createCAcmd.LocalFlags().StringVarP(&capassword, "password", "p", "", "Password for the certificate")
 	createCAcmd.LocalFlags().StringVarP(&casubject, "subject", "s", "eidascert_ca.yaml", "Path to the input data file in YAML format")
 	createCAcmd.LocalFlags().StringVarP(&caoutput, "output", "o", "", "Path to the directory where certificate files will be created")
@@ -556,4 +554,27 @@ func readCertData(certDataFile string) (*yaml.YAML, error) {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+func detectBaseDir() (baseDir string, err error) {
+	// Loosely check if it was executed using "go run"
+	isGoRun := strings.HasPrefix(os.Args[0], os.TempDir())
+
+	if isGoRun {
+		// Probably ran with go run
+		var err error
+		baseDir, err = os.Getwd()
+		if err != nil {
+			return "", fmt.Errorf("getting working directory: %w", err)
+		}
+	} else {
+		// Probably ran with go build
+		baseDir = filepath.Dir(os.Args[0])
+	}
+	return baseDir, nil
+}
+func isDevelopmentMode() bool {
+	// Check for the environment variable or if it's likely "go run"
+	isGoRun := strings.HasPrefix(os.Args[0], os.TempDir())
+	return isGoRun || os.Getenv(devModeEnvVar) == "true"
 }

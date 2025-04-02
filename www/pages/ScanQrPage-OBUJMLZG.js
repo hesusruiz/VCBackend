@@ -4,8 +4,8 @@ import {
 } from "../chunks/chunk-EFHQYD4G.js";
 import {
   html
-} from "../chunks/chunk-U2D4LOFI.js";
-import "../chunks/chunk-U5RRZUYZ.js";
+} from "../chunks/chunk-CRDZSWPZ.js";
+import "../chunks/chunk-NZLE2WMY.js";
 
 // front/src/pages/ScanQrPage.js
 var myerror = window.MHR.storage.myerror;
@@ -44,7 +44,7 @@ MHR.register(
       super(id);
       if (!("BarcodeDetector" in window)) {
         mylog("Barcode Detector is not supported by this browser.");
-        this.zxingPromise = import("../chunks/esm-DDIKW76W.js");
+        this.zxingPromise = import("../chunks/esm-AO7YE4TC.js");
       } else {
         mylog("Barcode Detector supported!");
         this.nativeBarcodeDetector = new BarcodeDetector({ formats: ["qr_code"] });

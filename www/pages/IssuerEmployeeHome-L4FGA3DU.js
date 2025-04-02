@@ -1,7 +1,7 @@
 import {
   Client
-} from "../chunks/chunk-J6D2DG7T.js";
-import "../chunks/chunk-U5RRZUYZ.js";
+} from "../chunks/chunk-K6L5OUL6.js";
+import "../chunks/chunk-NZLE2WMY.js";
 
 // front/src/pages/IssuerEmployeeHome.js
 var pb = new Client(window.location.origin);

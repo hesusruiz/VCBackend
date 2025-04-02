@@ -1,12 +1,12 @@
 import {
   renderAnyCredentialCard,
   signJWT
-} from "../chunks/chunk-G6DM32LG.js";
+} from "../chunks/chunk-BDDLWYLD.js";
 import {
   decodeUnsafeJWT
 } from "../chunks/chunk-3475HZHE.js";
 import "../chunks/chunk-CJ4ZD2TO.js";
-import "../chunks/chunk-U5RRZUYZ.js";
+import "../chunks/chunk-NZLE2WMY.js";
 
 // front/node_modules/js-base64/base64.mjs
 var version = "3.7.5";
