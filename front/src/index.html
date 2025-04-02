@@ -12,12 +12,15 @@
     <script>
         // Set here the default home page for the app, before loading app.js
         window.homePage = "MicroWallet"
+        window.myAppTitle = "Privacy Wallet"
         // Configure the menu items, with entries like:
         //    {page:"NameOfPage", text:"Text in menu item", params: object to pass to page}
         window.menuItems = [
             { page: "MicroWallet", text: "Home", params: "" },
+            { page: "SettingsPage", text: "Settings" },
             { page: "SelectCamera", text: "Camera" },
             { page: "LogsPage", text: "Show technical logs" },
+            { page: "SaveIN2Credential", text: "Save test credential" },
             { page: "ConfirmDeleteAll", text: "Delete ALL credentials" },
             { page: "ConfirmResetApp", text: "Reset application" }
         ]
@@ -128,13 +131,13 @@
 
 <ion-app>
 
-<ion-header id="the_header">
+<ion-header id="the_header" class="half-centered">
 
 </ion-header>
 
 <ion-content id="main-content">
 
-<main>
+<main class="half-centered">
 </main>
 
 </ion-content>

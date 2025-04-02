@@ -116,56 +116,42 @@ In order to run the demo yourself, the minimum changes are related to the domain
 
 ```yaml
 server:
-  listenAddress: "0.0.0.0:3000"
-  staticDir: "back/www"
-  templateDir: "back/views"
   environment: development
+  listenAddress: "0.0.0.0:3030"
+  staticDir: "www"
+  templateDir: "back/views"
   loglevel: DEBUG
   walletProvisioning: "wallet.mycredential.eu"
+  buildFront:
+    buildConfigFile: "data/config/buildfront.yaml"
 
 issuer:
-  id: HappyPets
-  name: HappyPets
-  password: ThePassword
-  store:
-    driverName: "sqlite3"
-    dataSourceName: "file:data/storage/issuer.sqlite?mode=rwc&cache=shared&_fk=1"
+  listenAddress: ":8090"
+  Meta:
+    appName: "DOME Issuer"
+    appUrl: https://issuer.mycredential.eu
+    senderName: Support
+    senderAddress: "admin@mycredential.eu"
+
+  admin:
+    email: jesus@alastria.io
+
+  SMTP:
+    Enabled: true
+    Host: "smtp.serviciodecorreo.es"
+    Port: "465"
+    Tls: true
+    Username: "admin@mycredential.eu"
+
   samedeviceWallet: "https://wallet.mycredential.eu"
   credentialTemplatesDir: "data/credential_templates"
-  credentialInputDataFile: "data/example_data/employee_data.yaml"
+
 
 verifier:
-  id: PacketDelivery
-  name: PacketDelivery
-  password: ThePassword
-  store:
-    driverName: "sqlite3"
-    dataSourceName: "file:data/storage/verifier.sqlite?mode=rwc&cache=shared&_fk=1"
-  jwks_uri: "/.well-known/jwks_uri"
-  authnPolicies: "data/config/authn_policies.py"
-  protectedResource:
-    url: "https://www.google.com"
+  verifierURL: "https://verifier.mycredential.eu"
+  listenAddress: ":9998"
+  authnPolicies: "authn_policies.star"
   samedeviceWallet: "https://wallet.mycredential.eu"
+
   credentialTemplatesDir: "data/credential_templates"
-
-  webauthn:
-    RPDisplayName: "EvidenceLedger"
-    RPID: "mycredential.eu"
-    RPOrigin: "https://wallet.mycredential.eu"
-    AuthenticatorAttachment: "platform"
-    UserVerification: "required"
-    ResidentKey: "required"
-    AttestationConveyancePreference: "indirect"
-
-
-wallet:
-  store:
-    driverName: "sqlite3"
-    dataSourceName: "file:data/storage/wallet.sqlite?mode=rwc&cache=shared&_fk=1"
-
-verifiableregistry:
-  password: ThePassword
-  store:
-    driverName: "sqlite3"
-    dataSourceName: "file:data/storage/verifiableregistry.sqlite?mode=rwc&cache=shared&_fk=1"
 ```

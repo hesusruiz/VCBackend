@@ -1,0 +1,19 @@
+package usertpl
+
+import "github.com/hesusruiz/vcutils/yaml"
+
+templ AfterLEARLogin(lc *yaml.YAML) {
+	@layout() {
+		<div class="w3-panel w3-border">
+			<p>
+				Welcome
+				{ lc.String("credentialSubject.mandate.mandatee.first_name") }
+				{ lc.String("credentialSubject.mandate.mandatee.last_name") }
+				({ lc.String("credentialSubject.mandate.mandator.organizationIdentifier") }).
+			</p>
+		</div>
+		<div class="w3-section">
+			<a href="/lear/pages/learRetrieveAllCredentials" class="w3-btn w3-black" title="Submit button">Retrieve credentials</a>
+		</div>
+	}
+}

@@ -17,20 +17,17 @@ import (
 	"github.com/hesusruiz/vcutils/yaml"
 	"github.com/valyala/fasttemplate"
 
-	"errors"
-
 	"github.com/evanw/esbuild/pkg/api"
 
-	"flag"
 	"log"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/proxy"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/otiai10/copy"
-	zlog "github.com/rs/zerolog/log"
 )
+
+
+
+
+
 
 const (
 	defaultConfigFile              = "./data/config/devserver.yaml"
@@ -46,10 +43,6 @@ const (
 	defaultdevserver_autobuild     = true
 )
 
-var (
-	autobuild = flag.Bool("auto", true, "Perform build on every request to the root path")
-)
-
 func LookupEnvOrString(key string, defaultVal string) string {
 	if val, ok := os.LookupEnv(key); ok {
 		return val
@@ -61,6 +54,13 @@ func BuildFront(configFile string) {
 	// Read configuration file
 	cfg := readConfiguration(configFile)
 	Build(cfg)
+}
+
+func WatchAndBuild(configFile string) error {
+	// Read configuration file
+	cfg := readConfiguration(configFile)
+	watchAndBuild(cfg)
+	return nil
 }
 
 // Build performs a standard Build
@@ -90,6 +90,10 @@ func preprocess(cfg *yaml.YAML) {
 // Clean the target directory from all build artifacts
 func deleteTargetDir(cfg *yaml.YAML) {
 	targetDir := cfg.String("targetdir", defaulttargetdir)
+    if targetDir == "" {
+        log.Println("Warning: targetdir is empty, skipping deletion.")
+        return
+    }
 	if len(targetDir) > 0 {
 		os.RemoveAll(targetDir)
 	}
@@ -114,6 +118,34 @@ func buildAndBundle(cfg *yaml.YAML) api.BuildResult {
 
 }
 
+var riteOnLoadPlugin = api.Plugin{
+	Name: "example",
+	Setup: func(build api.PluginBuild) {
+		// Load ".js" files and process any Rite text in the html tags
+		build.OnLoad(api.OnLoadOptions{Filter: `\.js$`},
+			func(args api.OnLoadArgs) (api.OnLoadResult, error) {
+				if !strings.Contains(args.Path, "src/pages") {
+					return api.OnLoadResult{}, nil
+				}
+
+				// text, err := os.ReadFile(args.Path)
+				// if err != nil {
+				// 	return api.OnLoadResult{}, err
+				// }
+
+				fmt.Println("--plugin-- ", args.Path)
+				return api.OnLoadResult{}, nil
+
+				// contents := string(text)
+
+				// return api.OnLoadResult{
+				// 	Contents: &contents,
+				// 	Loader:   api.LoaderJS,
+				// }, nil
+			})
+	},
+}
+
 // Generate the build options struct for ESBUILD
 func buildOptions(cfg *yaml.YAML) api.BuildOptions {
 
@@ -135,6 +167,7 @@ func buildOptions(cfg *yaml.YAML) api.BuildOptions {
 	options := api.BuildOptions{
 		EntryPoints: entryPoints,
 		Format:      api.FormatESModule,
+		Plugins:     []api.Plugin{riteOnLoadPlugin},
 		Outdir:      cfg.String("targetdir"),
 		Write:       true,
 		Bundle:      true,
@@ -169,9 +202,6 @@ func postprocess(r api.BuildResult, cfg *yaml.YAML) error {
 
 	// Get the outputs field, which is a map with the key as each output file name
 	outputs := meta.Map("outputs")
-	if err != nil {
-		return err
-	}
 
 	targetFullDir := cfg.String("pagedir", defaultpagedir)
 
@@ -244,40 +274,46 @@ func postprocess(r api.BuildResult, cfg *yaml.YAML) error {
 
 	pageNamesMappingJSON, _ := json.MarshalIndent(pageNamesMapping, "", "  ")
 
-	indexFilePath := path.Join(cfg.String("targetdir"), "index.html")
+	indexFiles := cfg.ListString("htmlfiles", []string{defaulthtmlfile})
 
-	// Read the contents of the output HTML file
-	bytesOut, err := os.ReadFile(indexFilePath)
-	if err != nil {
-		log.Fatal(err)
-	}
+	for _, indexf := range indexFiles {
+		fmt.Println(indexf)
+		indexFilePath := path.Join(cfg.String("targetdir"), indexf)
 
-	for outFile, cssBundleBasename := range rootEntryPointMap {
+		// Read the contents of the output HTML file
+		bytesOut, err := os.ReadFile(indexFilePath)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		// Get the base name for the outfile of the entrypoint
-		outFileBaseName := path.Join(cfg.String("subdomainprefix"), filepath.Base(outFile))
-		fullCSS := path.Join(cfg.String("subdomainprefix"), cssBundleBasename)
+		for outFile, cssBundleBasename := range rootEntryPointMap {
 
-		// Replace the entrypoint name for JavaScript
-		bytesOut = bytes.Replace(bytesOut, []byte("PUT_APP_JS_NAME_HERE"), []byte(outFileBaseName), 1)
+			// Get the base name for the outfile of the entrypoint
+			outFileBaseName := path.Join(cfg.String("subdomainprefix"), filepath.Base(outFile))
+			fullCSS := path.Join(cfg.String("subdomainprefix"), cssBundleBasename)
 
-		// Replace the entrypoint name for CSS
-		bytesOut = bytes.Replace(bytesOut, []byte("PUT_APP_CSS_NAME_HERE"), []byte(fullCSS), 1)
+			// Replace the entrypoint name for JavaScript
+			bytesOut = bytes.Replace(bytesOut, []byte("PUT_APP_JS_NAME_HERE"), []byte(outFileBaseName), 1)
 
-		bytesOut = bytes.Replace(bytesOut, []byte("PUT_PAGEMAP_HERE"), pageNamesMappingJSON, 1)
+			// Replace the entrypoint name for CSS
+			bytesOut = bytes.Replace(bytesOut, []byte("PUT_APP_CSS_NAME_HERE"), []byte(fullCSS), 1)
 
-	}
+			bytesOut = bytes.Replace(bytesOut, []byte("PUT_PAGEMAP_HERE"), pageNamesMappingJSON, 1)
 
-	template := string(bytesOut)
-	t := fasttemplate.New(template, "{{", "}}")
-	str := t.ExecuteString(map[string]interface{}{
-		"subdomainprefix": cfg.String("subdomainprefix"),
-	})
+		}
 
-	// Overwrite file with modified contents
-	err = os.WriteFile(indexFilePath, []byte(str), 0755)
-	if err != nil {
-		log.Fatal(err)
+		template := string(bytesOut)
+		t := fasttemplate.New(template, "{{", "}}")
+		str := t.ExecuteString(map[string]interface{}{
+			"subdomainprefix": cfg.String("subdomainprefix"),
+		})
+
+		// Overwrite file with modified contents
+		err = os.WriteFile(indexFilePath, []byte(str), 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 	}
 
 	return nil
@@ -292,10 +328,6 @@ func buildDeps(cfg *yaml.YAML) api.BuildResult {
 
 	return result
 
-}
-
-func performExperiments(cfg *yaml.YAML) api.BuildResult {
-	return api.BuildResult{}
 }
 
 // pageEntryPointsAsMap returns a map with all source page file names (path relative to sourcedir) in the application,
@@ -467,108 +499,6 @@ func processTemplates(cfg *yaml.YAML) {
 
 }
 
-// The Server struct handles the server state
-type Server struct {
-	*fiber.App
-}
-
-// DevServer is a simple development server to help develop PWAs in a
-// tool-less fashion.
-// It supports serving static files locally for the user interface, and
-// proxying other API requests to another server.
-func DevServer(cfg *yaml.YAML) {
-
-	// Define the configuration for Fiber
-	fiberCfg := fiber.Config{
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			code := fiber.StatusInternalServerError
-			var e *fiber.Error
-			if errors.As(err, &e) {
-				code = e.Code
-			}
-			zlog.Err(err).Msg("Error handler")
-			c.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
-			return c.Status(code).SendString(err.Error())
-		},
-	}
-
-	// Create the fiber web server
-	server := Server{
-		App: fiber.New(fiberCfg),
-	}
-
-	// Middleware to recover from panics
-	server.Use(recover.New(recover.Config{EnableStackTrace: true}))
-
-	// Configure logging
-	server.Use(logger.New(logger.Config{
-		// TimeFormat: "02-Jan-1985",
-		TimeZone: "Europe/Brussels",
-	}))
-
-	// Proxy all requests (GET, POST, PUT, etc) for the given prefix
-	proxyList := cfg.List("devserver.proxy")
-	for _, p := range proxyList {
-		proxy := yaml.New(p)
-		server.All(proxy.String("route"), proxyHandler(proxy.String("target")))
-		fmt.Println("Forwarding", proxy.String("route"), "to", proxy.String("target"))
-	}
-
-	// Serve locally from disk all requests not matching the routes above
-	server.Get("/*", func(c *fiber.Ctx) error {
-
-		// Get the name of the requested file (or path)
-		fileName := c.Path()
-
-		// If the request is for the root, perform a standard build if configured
-		if fileName == "/" {
-			// Set the filename to index.html
-			fileName = "/index.html"
-			// Build if configured
-			if *autobuild || cfg.Bool("devserver.autobuild", defaultdevserver_autobuild) {
-				fmt.Println("<<<<<<<<<<<< Building >>>>>>>>>>>>>")
-				Build(cfg)
-			}
-
-		}
-
-		// Get the full path name for the directory serving the files
-		filePath := filepath.Join(cfg.String("targetdir"), fileName)
-
-		// Read the file in memory
-		buf, err := os.ReadFile(filePath)
-		if err != nil {
-			return err
-		}
-
-		// Disable the cache in the browser, so it is always the last version
-		c.Set("Cache-Control", "no-store")
-
-		// Set the MIME-type in the response acceording to the file extension
-		c.Type(filepath.Ext(fileName))
-
-		// Send the file to the browser
-		fmt.Println("Sending:", filePath)
-		return c.Send(buf)
-
-	})
-
-	// Listen on configured port
-	log.Fatal(server.Listen(cfg.String("devserver.listenAddress", defaultdevserver_listenAddress)))
-}
-
-// proxyHandler is a general proxy forwarder with no logic to modify
-// request or reply
-func proxyHandler(targetHost string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		targetURL := targetHost + c.OriginalURL()
-		if err := proxy.Do(c, targetURL); err != nil {
-			return err
-		}
-		return nil
-	}
-}
-
 // Depending on the system, a single "write" can generate many Write events; for
 // example compiling a large Go program can generate hundreds of Write events on
 // the binary.
@@ -590,11 +520,31 @@ func watchAndBuild(cfg *yaml.YAML) {
 	// Start listening for events.
 	go dedupLoop(w, cfg)
 
-	pageSources := path.Join(cfg.String("sourcedir"), cfg.String("pagedir"))
-
-	err = w.Add(pageSources)
+	watchDir := cfg.String("sourcedir", "src")
+	err = w.Add(watchDir)
 	if err != nil {
-		fmt.Printf("%q: %s", pageSources, err)
+		fmt.Printf("%q: %s", watchDir, err)
+		os.Exit(1)
+	}
+
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("pagedir", "pages"))
+	err = w.Add(watchDir)
+	if err != nil {
+		fmt.Printf("%q: %s", watchDir, err)
+		os.Exit(1)
+	}
+
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("components", "components"))
+	err = w.Add(watchDir)
+	if err != nil {
+		fmt.Printf("%q: %s", watchDir, err)
+		os.Exit(1)
+	}
+
+	watchDir = path.Join(cfg.String("sourcedir"), cfg.String("public", "public"))
+	err = w.Add(watchDir)
+	if err != nil {
+		fmt.Printf("%q: %s", watchDir, err)
 		os.Exit(1)
 	}
 

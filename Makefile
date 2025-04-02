@@ -22,5 +22,5 @@ build:
 	go run cmd/faster/faster.go
 
 serve:
-	go run cmd/faster/faster.go
-	go run .
+	templ generate
+	go run . serve

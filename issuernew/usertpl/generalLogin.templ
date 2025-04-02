@@ -1,0 +1,44 @@
+package usertpl
+
+var LoggedUser = ""
+
+templ GeneralLogin(issuerCertificateURL string) {
+	@layout() {
+		<div class="w3-panel w3-border">
+			<div class="w3-cell-row">
+				<div class="w3-container w3-cell w3-cell-bottom">
+					@glIdWithCert(issuerCertificateURL)
+				</div>
+				<div class="w3-container w3-cell w3-cell-bottom">
+					@glIdWithVC()
+				</div>
+			</div>
+		</div>
+	}
+}
+
+templ glIdWithCert(issuerCertificateURL string) {
+	<div class="w3-panel w3-card-2">
+		<h3>Identify with a certificate</h3>
+		<p>
+			If you have a certificate of representation, you can use it to login.
+			Please, click the button below.
+		</p>
+		<div class="w3-section">
+			<a href={ templ.URL(issuerCertificateURL) } class="w3-btn w3-black" title="Submit button">Login with a certificate</a>
+		</div>
+	</div>
+}
+
+templ glIdWithVC() {
+	<div class="w3-panel w3-card-2">
+		<h3>Identify with a LEARCredential</h3>
+		<p>
+			If you are a LEAR you can use your LEARCredential to login.
+			Please, click the button below.
+		</p>
+		<div class="w3-section">
+			<a href="/lear/login" class="w3-btn w3-black" title="Submit button">Login with a VC</a>
+		</div>
+	</div>
+}

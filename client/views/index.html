@@ -1,0 +1,53 @@
+{{ define "content" -}}
+
+<!-- Navigation bar with social media icons -->
+<div class="w3-bar color-primary ">
+  <a href="#" class="w3-bar-item w3-button"><i class="fa fa-linkedin"></i></a>
+  <a href="#" class="w3-bar-item w3-button"><i class="fa fa-facebook-official"></i></a>
+  <a href="#" class="w3-bar-item w3-button"><i class="fa fa-instagram"></i></a>
+  <a href="#" class="w3-bar-item w3-button w3-right"><i class="fa fa-search"></i></a>
+</div>
+
+<!-- Navbar -->
+<div class="w3-bar w3-white w3-padding w3-card" style="letter-spacing:4px;">
+  <a href="/" class="w3-bar-item w3-button">DEMO</a>
+  <!-- Right-sided navbar links. Hide them on small screens -->
+  <div class="w3-right w3-hide-small">
+    <a href="#about" class="w3-bar-item w3-button">About</a>
+    <a href="/login" class="w3-bar-item w3-button">Login</a>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="w3-container w3-half-centered">
+  <h1 class="w3-xxxlarge">Authentication with Verifiable Credentials</h1>
+</header>
+
+<section class="w3-container w3-half-centered w3-large">
+  <p>It is very easy to add Verifiable Credentials as an authentication mechanism for an existing application.</p>
+  <p>If you know how to add a button for social login (e.g., Login with Google),
+    then you already know how to integrate authentication with Verifiable Credentials, because the technical flows are the same.
+    This demo application describes at a high level how it is done. What happens is the following:</p>
+  <ol>
+    <li>When the user clicks the "Login with Credential" button, the application sends the user to an authentication server
+      which knows how to talk with the EUDI-compatible Wallet of the user.</li>
+    <li>This component (called Verifier) hides all the complexity from the application,
+      because for the application is like a social login.</li>
+    <li>The Verifier presents a QR code which is scanned by the user with her Wallet,
+      and the user tells the Wallet to send the Verifiable Credential to the Verifier.</li>
+    <li>The Verifier performs some verifications on the Credential according to defined policies,
+      sends the information of the Credential to the application and redirects the user back to the application.</li>
+    <li>The application receives the information of the Credential (name, surname, and all other data fields inside the credential),
+      performs its own checks and verifications, and logs the user in if satisfied.</li>
+  </ol>
+</section>
+
+<section class="w3-container w3-half-centered w3-large">
+  <p>To visualise the flow, click the button to login with your LEARCredential. You will be sent to the Verifier.
+  </p>
+  <a href="/login" class="btn-primary w3-large">Login with Credential</a>
+  
+</section>
+
+
+{{- end }}
