@@ -366,14 +366,14 @@ async function sendAuthenticationResponse(
    const vp_token = Base64.encodeURI(jwt);
    mylog("The encoded vpToken ", vp_token);
 
-   var formBody =
-      "vp_token=" +
-      vp_token +
-      "&state=" +
-      state +
-      "&presentation_submission=" +
-      Base64.encodeURI(JSON.stringify(presentationSubmissionJSON()));
-
+   // var formBody =
+   //    "vp_token=" +
+   //    vp_token +
+   //    "&state=" +
+   //    state +
+   //    "&presentation_submission=" +
+   //    Base64.encodeURI(JSON.stringify(presentationSubmissionJSON()));
+   var formBody = "vp_token=" + vp_token + "&state=" + state;
    mylog(formBody);
 
    debugger;

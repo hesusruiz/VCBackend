@@ -1228,8 +1228,16 @@ function renderLEARCredentialCard(vc, status) {
                      <img alt="Avatar" src=${avatar} />
                   </ion-thumbnail>
                   <ion-label>
-                     <div><b>From: </b>${vc.validFrom.slice(0, 19)}</div>
-                     <div><b>To: </b>${vc.validUntil.slice(0, 19)}</div>
+                     <table>
+                        <tr>
+                           <td><b>From:</b></td>
+                           <td>${vc.validFrom.slice(0, 19)}</td>
+                        </tr>
+                        <tr>
+                           <td><b>To: </b></td>
+                           <td>${vc.validUntil.slice(0, 19)}</td>
+                        </tr>
+                     </table>
                   </ion-label>
                   ${status != "signed" ? html`<ion-label color="danger"><b>Status: signature pending</b></ion-label>` : null}
                </ion-item>

@@ -4,7 +4,7 @@ import {
 import "../chunks/chunk-BFXLU5VG.js";
 import {
   renderAnyCredentialCard
-} from "../chunks/chunk-BDDLWYLD.js";
+} from "../chunks/chunk-TEA6LPUJ.js";
 import {
   decodeUnsafeJWT
 } from "../chunks/chunk-3475HZHE.js";
