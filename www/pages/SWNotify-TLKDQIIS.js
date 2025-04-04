@@ -1,7 +1,7 @@
 import {
   html
-} from "../chunks/chunk-U2D4LOFI.js";
-import "../chunks/chunk-U5RRZUYZ.js";
+} from "../chunks/chunk-CRDZSWPZ.js";
+import "../chunks/chunk-NZLE2WMY.js";
 
 // front/src/pages/SWNotify.js
 window.MHR.register("SWNotify", class SWNotify extends window.MHR.AbstractPage {

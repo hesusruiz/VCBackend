@@ -40,17 +40,14 @@ var ClientResponseError = class _ClientResponseError extends Error {
 var e = /^[\u0009\u0020-\u007e\u0080-\u00ff]+$/;
 function cookieParse(e2, t2) {
   const i2 = {};
-  if ("string" != typeof e2)
-    return i2;
+  if ("string" != typeof e2) return i2;
   const s2 = Object.assign({}, t2 || {}).decode || defaultDecode;
   let n = 0;
   for (; n < e2.length; ) {
     const t3 = e2.indexOf("=", n);
-    if (-1 === t3)
-      break;
+    if (-1 === t3) break;
     let o = e2.indexOf(";", n);
-    if (-1 === o)
-      o = e2.length;
+    if (-1 === o) o = e2.length;
     else if (o < t3) {
       n = e2.lastIndexOf(";", t3 - 1) + 1;
       continue;
@@ -71,33 +68,27 @@ function cookieParse(e2, t2) {
 }
 function cookieSerialize(t2, i2, s2) {
   const n = Object.assign({}, s2 || {}), o = n.encode || defaultEncode;
-  if (!e.test(t2))
-    throw new TypeError("argument name is invalid");
+  if (!e.test(t2)) throw new TypeError("argument name is invalid");
   const r = o(i2);
-  if (r && !e.test(r))
-    throw new TypeError("argument val is invalid");
+  if (r && !e.test(r)) throw new TypeError("argument val is invalid");
   let a = t2 + "=" + r;
   if (null != n.maxAge) {
     const e2 = n.maxAge - 0;
-    if (isNaN(e2) || !isFinite(e2))
-      throw new TypeError("option maxAge is invalid");
+    if (isNaN(e2) || !isFinite(e2)) throw new TypeError("option maxAge is invalid");
     a += "; Max-Age=" + Math.floor(e2);
   }
   if (n.domain) {
-    if (!e.test(n.domain))
-      throw new TypeError("option domain is invalid");
+    if (!e.test(n.domain)) throw new TypeError("option domain is invalid");
     a += "; Domain=" + n.domain;
   }
   if (n.path) {
-    if (!e.test(n.path))
-      throw new TypeError("option path is invalid");
+    if (!e.test(n.path)) throw new TypeError("option path is invalid");
     a += "; Path=" + n.path;
   }
   if (n.expires) {
     if (!function isDate(e2) {
       return "[object Date]" === Object.prototype.toString.call(e2) || e2 instanceof Date;
-    }(n.expires) || isNaN(n.expires.valueOf()))
-      throw new TypeError("option expires is invalid");
+    }(n.expires) || isNaN(n.expires.valueOf())) throw new TypeError("option expires is invalid");
     a += "; Expires=" + n.expires.toUTCString();
   }
   if (n.httpOnly && (a += "; HttpOnly"), n.secure && (a += "; Secure"), n.priority) {
@@ -143,14 +134,13 @@ function defaultEncode(e2) {
 }
 var t;
 function getTokenPayload(e2) {
-  if (e2)
-    try {
-      const i2 = decodeURIComponent(t(e2.split(".")[1]).split("").map(function(e3) {
-        return "%" + ("00" + e3.charCodeAt(0).toString(16)).slice(-2);
-      }).join(""));
-      return JSON.parse(i2) || {};
-    } catch (e3) {
-    }
+  if (e2) try {
+    const i2 = decodeURIComponent(t(e2.split(".")[1]).split("").map(function(e3) {
+      return "%" + ("00" + e3.charCodeAt(0).toString(16)).slice(-2);
+    }).join(""));
+    return JSON.parse(i2) || {};
+  } catch (e3) {
+  }
   return {};
 }
 function isTokenExpired(e2, t2 = 0) {
@@ -159,10 +149,8 @@ function isTokenExpired(e2, t2 = 0) {
 }
 t = "function" == typeof atob ? atob : (e2) => {
   let t2 = String(e2).replace(/=+$/, "");
-  if (t2.length % 4 == 1)
-    throw new Error("'atob' failed: The string to be decoded is not correctly encoded.");
-  for (var i2, s2, n = 0, o = 0, r = ""; s2 = t2.charAt(o++); ~s2 && (i2 = n % 4 ? 64 * i2 + s2 : s2, n++ % 4) ? r += String.fromCharCode(255 & i2 >> (-2 * n & 6)) : 0)
-    s2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=".indexOf(s2);
+  if (t2.length % 4 == 1) throw new Error("'atob' failed: The string to be decoded is not correctly encoded.");
+  for (var i2, s2, n = 0, o = 0, r = ""; s2 = t2.charAt(o++); ~s2 && (i2 = n % 4 ? 64 * i2 + s2 : s2, n++ % 4) ? r += String.fromCharCode(255 & i2 >> (-2 * n & 6)) : 0) s2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=".indexOf(s2);
   return r;
 };
 var i = "pb_auth";
@@ -210,22 +198,18 @@ var BaseAuthStore = class {
     if (a.model && c > 4096) {
       a.model = { id: null === (s2 = null == a ? void 0 : a.model) || void 0 === s2 ? void 0 : s2.id, email: null === (n = null == a ? void 0 : a.model) || void 0 === n ? void 0 : n.email };
       const i2 = ["collectionId", "username", "verified"];
-      for (const e3 in this.model)
-        i2.includes(e3) && (a.model[e3] = this.model[e3]);
+      for (const e3 in this.model) i2.includes(e3) && (a.model[e3] = this.model[e3]);
       l = cookieSerialize(t2, JSON.stringify(a), e2);
     }
     return l;
   }
   onChange(e2, t2 = false) {
     return this._onChangeCallbacks.push(e2), t2 && e2(this.token, this.model), () => {
-      for (let t3 = this._onChangeCallbacks.length - 1; t3 >= 0; t3--)
-        if (this._onChangeCallbacks[t3] == e2)
-          return delete this._onChangeCallbacks[t3], void this._onChangeCallbacks.splice(t3, 1);
+      for (let t3 = this._onChangeCallbacks.length - 1; t3 >= 0; t3--) if (this._onChangeCallbacks[t3] == e2) return delete this._onChangeCallbacks[t3], void this._onChangeCallbacks.splice(t3, 1);
     };
   }
   triggerChange() {
-    for (const e2 of this._onChangeCallbacks)
-      e2 && e2(this.token, this.model);
+    for (const e2 of this._onChangeCallbacks) e2 && e2(this.token, this.model);
   }
 };
 var LocalAuthStore = class extends BaseAuthStore {
@@ -259,8 +243,7 @@ var LocalAuthStore = class extends BaseAuthStore {
     if ("undefined" != typeof window && (null === window || void 0 === window ? void 0 : window.localStorage)) {
       let i2 = t2;
       "string" != typeof t2 && (i2 = JSON.stringify(t2)), window.localStorage.setItem(e2, i2);
-    } else
-      this.storageFallback[e2] = t2;
+    } else this.storageFallback[e2] = t2;
   }
   _storageRemove(e2) {
     var t2;
@@ -268,8 +251,7 @@ var LocalAuthStore = class extends BaseAuthStore {
   }
   _bindStorageEvent() {
     "undefined" != typeof window && (null === window || void 0 === window ? void 0 : window.localStorage) && window.addEventListener && window.addEventListener("storage", (e2) => {
-      if (e2.key != this.storageKey)
-        return;
+      if (e2.key != this.storageKey) return;
       const t2 = this._storageGet(this.storageKey) || {};
       super.save(t2.token || "", t2.model || null);
     });
@@ -302,8 +284,7 @@ var CrudService = class extends BaseService {
     return e2;
   }
   getFullList(e2, t2) {
-    if ("number" == typeof e2)
-      return this._getFullList(e2, t2);
+    if ("number" == typeof e2) return this._getFullList(e2, t2);
     let i2 = 500;
     return (t2 = Object.assign({}, e2, t2)).batch && (i2 = t2.batch, delete t2.batch), this._getFullList(i2, t2);
   }
@@ -316,8 +297,7 @@ var CrudService = class extends BaseService {
   getFirstListItem(e2, t2) {
     return (t2 = Object.assign({ requestKey: "one_by_filter_" + this.baseCrudPath + "_" + e2 }, t2)).query = Object.assign({ filter: e2, skipTotal: 1 }, t2.query), this.getList(1, 1, t2).then((e3) => {
       var t3;
-      if (!(null === (t3 = null == e3 ? void 0 : e3.items) || void 0 === t3 ? void 0 : t3.length))
-        throw new ClientResponseError({ status: 404, data: { code: 404, message: "The requested resource wasn't found.", data: {} } });
+      if (!(null === (t3 = null == e3 ? void 0 : e3.items) || void 0 === t3 ? void 0 : t3.length)) throw new ClientResponseError({ status: 404, data: { code: 404, message: "The requested resource wasn't found.", data: {} } });
       return e3.items[0];
     });
   }
@@ -389,22 +369,19 @@ var AdminService = class extends CrudService {
         }, e3.beforeSend = (o3, r3) => __awaiter(this, void 0, void 0, function* () {
           var a;
           const l = e3.authStore.token;
-          if (null === (a = r3.query) || void 0 === a ? void 0 : a.autoRefresh)
-            return n2 ? n2(o3, r3) : { url: o3, sendOptions: r3 };
+          if (null === (a = r3.query) || void 0 === a ? void 0 : a.autoRefresh) return n2 ? n2(o3, r3) : { url: o3, sendOptions: r3 };
           let c = e3.authStore.isValid;
-          if (c && isTokenExpired(e3.authStore.token, t3))
-            try {
-              yield i3();
-            } catch (e4) {
-              c = false;
-            }
+          if (c && isTokenExpired(e3.authStore.token, t3)) try {
+            yield i3();
+          } catch (e4) {
+            c = false;
+          }
           c || (yield s3());
           const d = r3.headers || {};
-          for (let t4 in d)
-            if ("authorization" == t4.toLowerCase() && l == d[t4] && e3.authStore.token) {
-              d[t4] = e3.authStore.token;
-              break;
-            }
+          for (let t4 in d) if ("authorization" == t4.toLowerCase() && l == d[t4] && e3.authStore.token) {
+            d[t4] = e3.authStore.token;
+            break;
+          }
           return r3.headers = d, n2 ? n2(o3, r3) : { url: o3, sendOptions: r3 };
         });
       }(this.client, o, () => this.authRefresh({ autoRefresh: true }), () => this.authWithPassword(e2, t2, Object.assign({ autoRefresh: true }, n))), r;
@@ -433,8 +410,7 @@ var RealtimeService = class extends BaseService {
   subscribe(e2, t2) {
     var i2;
     return __awaiter(this, void 0, void 0, function* () {
-      if (!e2)
-        throw new Error("topic must be set.");
+      if (!e2) throw new Error("topic must be set.");
       const listener = function(e3) {
         const i3 = e3;
         let s2;
@@ -454,11 +430,9 @@ var RealtimeService = class extends BaseService {
     return __awaiter(this, void 0, void 0, function* () {
       if (this.hasSubscriptionListeners(e2)) {
         if (e2) {
-          for (let i2 of this.subscriptions[e2])
-            null === (t2 = this.eventSource) || void 0 === t2 || t2.removeEventListener(e2, i2);
+          for (let i2 of this.subscriptions[e2]) null === (t2 = this.eventSource) || void 0 === t2 || t2.removeEventListener(e2, i2);
           delete this.subscriptions[e2];
-        } else
-          this.subscriptions = {};
+        } else this.subscriptions = {};
         this.hasSubscriptionListeners() ? this.hasSubscriptionListeners(e2) || (yield this.submitSubscriptions()) : this.disconnect();
       }
     });
@@ -467,43 +441,34 @@ var RealtimeService = class extends BaseService {
     var t2;
     return __awaiter(this, void 0, void 0, function* () {
       let i2 = false;
-      for (let s2 in this.subscriptions)
-        if (s2.startsWith(e2)) {
-          i2 = true;
-          for (let e3 of this.subscriptions[s2])
-            null === (t2 = this.eventSource) || void 0 === t2 || t2.removeEventListener(s2, e3);
-          delete this.subscriptions[s2];
-        }
+      for (let s2 in this.subscriptions) if (s2.startsWith(e2)) {
+        i2 = true;
+        for (let e3 of this.subscriptions[s2]) null === (t2 = this.eventSource) || void 0 === t2 || t2.removeEventListener(s2, e3);
+        delete this.subscriptions[s2];
+      }
       i2 && (this.hasSubscriptionListeners() ? yield this.submitSubscriptions() : this.disconnect());
     });
   }
   unsubscribeByTopicAndListener(e2, t2) {
     var i2;
     return __awaiter(this, void 0, void 0, function* () {
-      if (!Array.isArray(this.subscriptions[e2]) || !this.subscriptions[e2].length)
-        return;
+      if (!Array.isArray(this.subscriptions[e2]) || !this.subscriptions[e2].length) return;
       let s2 = false;
-      for (let n = this.subscriptions[e2].length - 1; n >= 0; n--)
-        this.subscriptions[e2][n] === t2 && (s2 = true, delete this.subscriptions[e2][n], this.subscriptions[e2].splice(n, 1), null === (i2 = this.eventSource) || void 0 === i2 || i2.removeEventListener(e2, t2));
+      for (let n = this.subscriptions[e2].length - 1; n >= 0; n--) this.subscriptions[e2][n] === t2 && (s2 = true, delete this.subscriptions[e2][n], this.subscriptions[e2].splice(n, 1), null === (i2 = this.eventSource) || void 0 === i2 || i2.removeEventListener(e2, t2));
       s2 && (this.subscriptions[e2].length || delete this.subscriptions[e2], this.hasSubscriptionListeners() ? this.hasSubscriptionListeners(e2) || (yield this.submitSubscriptions()) : this.disconnect());
     });
   }
   hasSubscriptionListeners(e2) {
     var t2, i2;
-    if (this.subscriptions = this.subscriptions || {}, e2)
-      return !!(null === (t2 = this.subscriptions[e2]) || void 0 === t2 ? void 0 : t2.length);
-    for (let e3 in this.subscriptions)
-      if (null === (i2 = this.subscriptions[e3]) || void 0 === i2 ? void 0 : i2.length)
-        return true;
+    if (this.subscriptions = this.subscriptions || {}, e2) return !!(null === (t2 = this.subscriptions[e2]) || void 0 === t2 ? void 0 : t2.length);
+    for (let e3 in this.subscriptions) if (null === (i2 = this.subscriptions[e3]) || void 0 === i2 ? void 0 : i2.length) return true;
     return false;
   }
   submitSubscriptions() {
     return __awaiter(this, void 0, void 0, function* () {
-      if (this.clientId)
-        return this.addAllSubscriptionListeners(), this.lastSentTopics = this.getNonEmptySubscriptionTopics(), this.client.send("/api/realtime", { method: "POST", body: { clientId: this.clientId, subscriptions: this.lastSentTopics }, query: { requestKey: this.getSubscriptionsCancelKey() } }).catch((e2) => {
-          if (!(null == e2 ? void 0 : e2.isAbort))
-            throw e2;
-        });
+      if (this.clientId) return this.addAllSubscriptionListeners(), this.lastSentTopics = this.getNonEmptySubscriptionTopics(), this.client.send("/api/realtime", { method: "POST", body: { clientId: this.clientId, subscriptions: this.lastSentTopics }, query: { requestKey: this.getSubscriptionsCancelKey() } }).catch((e2) => {
+        if (!(null == e2 ? void 0 : e2.isAbort)) throw e2;
+      });
     });
   }
   getSubscriptionsCancelKey() {
@@ -511,30 +476,23 @@ var RealtimeService = class extends BaseService {
   }
   getNonEmptySubscriptionTopics() {
     const e2 = [];
-    for (let t2 in this.subscriptions)
-      this.subscriptions[t2].length && e2.push(t2);
+    for (let t2 in this.subscriptions) this.subscriptions[t2].length && e2.push(t2);
     return e2;
   }
   addAllSubscriptionListeners() {
     if (this.eventSource) {
       this.removeAllSubscriptionListeners();
-      for (let e2 in this.subscriptions)
-        for (let t2 of this.subscriptions[e2])
-          this.eventSource.addEventListener(e2, t2);
+      for (let e2 in this.subscriptions) for (let t2 of this.subscriptions[e2]) this.eventSource.addEventListener(e2, t2);
     }
   }
   removeAllSubscriptionListeners() {
-    if (this.eventSource)
-      for (let e2 in this.subscriptions)
-        for (let t2 of this.subscriptions[e2])
-          this.eventSource.removeEventListener(e2, t2);
+    if (this.eventSource) for (let e2 in this.subscriptions) for (let t2 of this.subscriptions[e2]) this.eventSource.removeEventListener(e2, t2);
   }
   connect() {
     return __awaiter(this, void 0, void 0, function* () {
-      if (!(this.reconnectAttempts > 0))
-        return new Promise((e2, t2) => {
-          this.pendingConnects.push({ resolve: e2, reject: t2 }), this.pendingConnects.length > 1 || this.initConnect();
-        });
+      if (!(this.reconnectAttempts > 0)) return new Promise((e2, t2) => {
+        this.pendingConnects.push({ resolve: e2, reject: t2 }), this.pendingConnects.length > 1 || this.initConnect();
+      });
     });
   }
   initConnect() {
@@ -546,11 +504,9 @@ var RealtimeService = class extends BaseService {
       const t2 = e2;
       this.clientId = null == t2 ? void 0 : t2.lastEventId, this.submitSubscriptions().then(() => __awaiter(this, void 0, void 0, function* () {
         let e3 = 3;
-        for (; this.hasUnsentSubscriptions() && e3 > 0; )
-          e3--, yield this.submitSubscriptions();
+        for (; this.hasUnsentSubscriptions() && e3 > 0; ) e3--, yield this.submitSubscriptions();
       })).then(() => {
-        for (let e3 of this.pendingConnects)
-          e3.resolve();
+        for (let e3 of this.pendingConnects) e3.resolve();
         this.pendingConnects = [], this.reconnectAttempts = 0, clearTimeout(this.reconnectTimeoutId), clearTimeout(this.connectTimeoutId);
       }).catch((e3) => {
         this.clientId = "", this.connectErrorHandler(e3);
@@ -559,17 +515,13 @@ var RealtimeService = class extends BaseService {
   }
   hasUnsentSubscriptions() {
     const e2 = this.getNonEmptySubscriptionTopics();
-    if (e2.length != this.lastSentTopics.length)
-      return true;
-    for (const t2 of e2)
-      if (!this.lastSentTopics.includes(t2))
-        return true;
+    if (e2.length != this.lastSentTopics.length) return true;
+    for (const t2 of e2) if (!this.lastSentTopics.includes(t2)) return true;
     return false;
   }
   connectErrorHandler(e2) {
     if (clearTimeout(this.connectTimeoutId), clearTimeout(this.reconnectTimeoutId), !this.clientId && !this.reconnectAttempts || this.reconnectAttempts > this.maxReconnectAttempts) {
-      for (let t3 of this.pendingConnects)
-        t3.reject(new ClientResponseError(e2));
+      for (let t3 of this.pendingConnects) t3.reject(new ClientResponseError(e2));
       return this.pendingConnects = [], void this.disconnect();
     }
     this.disconnect(true);
@@ -582,8 +534,7 @@ var RealtimeService = class extends BaseService {
     var t2;
     if (clearTimeout(this.connectTimeoutId), clearTimeout(this.reconnectTimeoutId), this.removeAllSubscriptionListeners(), this.client.cancelRequest(this.getSubscriptionsCancelKey()), null === (t2 = this.eventSource) || void 0 === t2 || t2.close(), this.eventSource = null, this.clientId = "", !e2) {
       this.reconnectAttempts = 0;
-      for (let e3 of this.pendingConnects)
-        e3.resolve();
+      for (let e3 of this.pendingConnects) e3.resolve();
       this.pendingConnects = [];
     }
   }
@@ -605,12 +556,9 @@ var RecordService = class extends CrudService {
   }
   subscribe(e2, t2) {
     return __awaiter(this, void 0, void 0, function* () {
-      if ("function" == typeof e2)
-        return console.warn("PocketBase: subscribe(callback) is deprecated. Please replace it with subscribe('*', callback)."), this.client.realtime.subscribe(this.collectionIdOrName, e2);
-      if (!t2)
-        throw new Error("Missing subscription callback.");
-      if ("" === e2)
-        throw new Error("Missing topic.");
+      if ("function" == typeof e2) return console.warn("PocketBase: subscribe(callback) is deprecated. Please replace it with subscribe('*', callback)."), this.client.realtime.subscribe(this.collectionIdOrName, e2);
+      if (!t2) throw new Error("Missing subscription callback.");
+      if ("" === e2) throw new Error("Missing topic.");
       let i2 = this.collectionIdOrName;
       return "*" !== e2 && (i2 += "/" + e2), this.client.realtime.subscribe(i2, t2);
     });
@@ -621,8 +569,7 @@ var RecordService = class extends CrudService {
     });
   }
   getFullList(e2, t2) {
-    if ("number" == typeof e2)
-      return super.getFullList(e2, t2);
+    if ("number" == typeof e2) return super.getFullList(e2, t2);
     const i2 = Object.assign({}, e2, t2);
     return super.getFullList(i2);
   }
@@ -667,11 +614,9 @@ var RecordService = class extends CrudService {
   }
   authWithOAuth2(...e2) {
     return __awaiter(this, void 0, void 0, function* () {
-      if (e2.length > 1 || "string" == typeof (null == e2 ? void 0 : e2[0]))
-        return console.warn("PocketBase: This form of authWithOAuth2() is deprecated and may get removed in the future. Please replace with authWithOAuth2Code() OR use the authWithOAuth2() realtime form as shown in https://pocketbase.io/docs/authentication/#oauth2-integration."), this.authWithOAuth2Code((null == e2 ? void 0 : e2[0]) || "", (null == e2 ? void 0 : e2[1]) || "", (null == e2 ? void 0 : e2[2]) || "", (null == e2 ? void 0 : e2[3]) || "", (null == e2 ? void 0 : e2[4]) || {}, (null == e2 ? void 0 : e2[5]) || {}, (null == e2 ? void 0 : e2[6]) || {});
+      if (e2.length > 1 || "string" == typeof (null == e2 ? void 0 : e2[0])) return console.warn("PocketBase: This form of authWithOAuth2() is deprecated and may get removed in the future. Please replace with authWithOAuth2Code() OR use the authWithOAuth2() realtime form as shown in https://pocketbase.io/docs/authentication/#oauth2-integration."), this.authWithOAuth2Code((null == e2 ? void 0 : e2[0]) || "", (null == e2 ? void 0 : e2[1]) || "", (null == e2 ? void 0 : e2[2]) || "", (null == e2 ? void 0 : e2[3]) || "", (null == e2 ? void 0 : e2[4]) || {}, (null == e2 ? void 0 : e2[5]) || {}, (null == e2 ? void 0 : e2[6]) || {});
       const t2 = (null == e2 ? void 0 : e2[0]) || {}, i2 = (yield this.listAuthMethods()).authProviders.find((e3) => e3.name === t2.provider);
-      if (!i2)
-        throw new ClientResponseError(new Error(`Missing or invalid provider "${t2.provider}".`));
+      if (!i2) throw new ClientResponseError(new Error(`Missing or invalid provider "${t2.provider}".`));
       const s2 = this.client.buildUrl("/api/oauth2-redirect"), n = new RealtimeService(this.client);
       let o = null;
       function cleanup() {
@@ -683,8 +628,7 @@ var RecordService = class extends CrudService {
           yield n.subscribe("@oauth2", (o2) => __awaiter(this, void 0, void 0, function* () {
             const a2 = n.clientId;
             try {
-              if (!o2.state || a2 !== o2.state)
-                throw new Error("State parameters don't match.");
+              if (!o2.state || a2 !== o2.state) throw new Error("State parameters don't match.");
               const n2 = Object.assign({}, t2);
               delete n2.provider, delete n2.scopes, delete n2.createData, delete n2.urlCallback;
               const r2 = yield this.authWithOAuth2Code(i2.name, o2.code, i2.codeVerifier, s2, t2.createData, n2);
@@ -746,22 +690,18 @@ var RecordService = class extends CrudService {
     e2.indexOf("?") >= 0 && (i2 = e2.substring(0, e2.indexOf("?")), s2 = e2.substring(e2.indexOf("?") + 1));
     const n = {}, o = s2.split("&");
     for (const e3 of o) {
-      if ("" == e3)
-        continue;
+      if ("" == e3) continue;
       const t3 = e3.split("=");
       n[decodeURIComponent(t3[0].replace(/\+/g, " "))] = decodeURIComponent((t3[1] || "").replace(/\+/g, " "));
     }
-    for (let e3 in t2)
-      t2.hasOwnProperty(e3) && (null == t2[e3] ? delete n[e3] : n[e3] = t2[e3]);
+    for (let e3 in t2) t2.hasOwnProperty(e3) && (null == t2[e3] ? delete n[e3] : n[e3] = t2[e3]);
     s2 = "";
-    for (let e3 in n)
-      n.hasOwnProperty(e3) && ("" != s2 && (s2 += "&"), s2 += encodeURIComponent(e3.replace(/%20/g, "+")) + "=" + encodeURIComponent(n[e3].replace(/%20/g, "+")));
+    for (let e3 in n) n.hasOwnProperty(e3) && ("" != s2 && (s2 += "&"), s2 += encodeURIComponent(e3.replace(/%20/g, "+")) + "=" + encodeURIComponent(n[e3].replace(/%20/g, "+")));
     return "" != s2 ? i2 + "?" + s2 : i2;
   }
 };
 function openBrowserPopup(e2) {
-  if ("undefined" == typeof window || !(null === window || void 0 === window ? void 0 : window.open))
-    throw new ClientResponseError(new Error("Not in a browser context - please pass a custom urlCallback function."));
+  if ("undefined" == typeof window || !(null === window || void 0 === window ? void 0 : window.open)) throw new ClientResponseError(new Error("Not in a browser context - please pass a custom urlCallback function."));
   let t2 = 1024, i2 = 768, s2 = window.innerWidth, n = window.innerHeight;
   t2 = t2 > s2 ? s2 : t2, i2 = i2 > n ? n : i2;
   let o = s2 / 2 - t2 / 2, r = n / 2 - i2 / 2;
@@ -795,8 +735,7 @@ var HealthService = class extends BaseService {
 };
 var FileService = class extends BaseService {
   getUrl(e2, t2, i2 = {}) {
-    if (!t2 || !(null == e2 ? void 0 : e2.id) || !(null == e2 ? void 0 : e2.collectionId) && !(null == e2 ? void 0 : e2.collectionName))
-      return "";
+    if (!t2 || !(null == e2 ? void 0 : e2.id) || !(null == e2 ? void 0 : e2.collectionId) && !(null == e2 ? void 0 : e2.collectionName)) return "";
     const s2 = [];
     s2.push("api"), s2.push("files"), s2.push(encodeURIComponent(e2.collectionId || e2.collectionName)), s2.push(encodeURIComponent(e2.id)), s2.push(encodeURIComponent(t2));
     let n = this.client.buildUrl(s2.join("/"));
@@ -846,8 +785,7 @@ var Client = class {
     return this.cancelControllers[e2] && (this.cancelControllers[e2].abort(), delete this.cancelControllers[e2]), this;
   }
   cancelAllRequests() {
-    for (let e2 in this.cancelControllers)
-      this.cancelControllers[e2].abort();
+    for (let e2 in this.cancelControllers) this.cancelControllers[e2].abort();
     return this.cancelControllers = {}, this;
   }
   getFileUrl(e2, t2, i2 = {}) {
@@ -877,8 +815,7 @@ var Client = class {
           t3 = yield e3.json();
         } catch (e4) {
         }
-        if (this.afterSend && (t3 = yield this.afterSend(e3, t3)), e3.status >= 400)
-          throw new ClientResponseError({ url: e3.url, status: e3.status, data: t3 });
+        if (this.afterSend && (t3 = yield this.afterSend(e3, t3)), e3.status >= 400) throw new ClientResponseError({ url: e3.url, status: e3.status, data: t3 });
         return t3;
       })).catch((e3) => {
         throw new ClientResponseError(e3);
@@ -887,8 +824,7 @@ var Client = class {
   }
   initSendOptions(e2, t2) {
     (t2 = Object.assign({ method: "GET" }, t2)).query = t2.query || {}, t2.body = this.convertToFormDataIfNeeded(t2.body);
-    for (let e3 in t2)
-      s.includes(e3) || (t2.query[e3] = t2[e3], delete t2[e3]);
+    for (let e3 in t2) s.includes(e3) || (t2.query[e3] = t2[e3], delete t2[e3]);
     if (t2.query = Object.assign({}, t2.params, t2.query), void 0 === t2.requestKey && (false === t2.$autoCancel || false === t2.query.$autoCancel ? t2.requestKey = null : (t2.$cancelKey || t2.query.$cancelKey) && (t2.requestKey = t2.$cancelKey || t2.query.$cancelKey)), delete t2.$autoCancel, delete t2.query.$autoCancel, delete t2.$cancelKey, delete t2.query.$cancelKey, null !== this.getHeader(t2.headers, "Content-Type") || this.isFormData(t2.body) || (t2.headers = Object.assign({}, t2.headers, { "Content-Type": "application/json" })), null === this.getHeader(t2.headers, "Accept-Language") && (t2.headers = Object.assign({}, t2.headers, { "Accept-Language": this.lang })), this.authStore.token && null === this.getHeader(t2.headers, "Authorization") && (t2.headers = Object.assign({}, t2.headers, { Authorization: this.authStore.token })), this.enableAutoCancellation && null !== t2.requestKey) {
       const i2 = t2.requestKey || (t2.method || "GET") + e2;
       delete t2.requestKey, this.cancelRequest(i2);
@@ -898,30 +834,24 @@ var Client = class {
     return t2;
   }
   convertToFormDataIfNeeded(e2) {
-    if ("undefined" == typeof FormData || void 0 === e2 || "object" != typeof e2 || null === e2 || this.isFormData(e2) || !this.hasBlobField(e2))
-      return e2;
+    if ("undefined" == typeof FormData || void 0 === e2 || "object" != typeof e2 || null === e2 || this.isFormData(e2) || !this.hasBlobField(e2)) return e2;
     const t2 = new FormData();
     for (let i2 in e2) {
       const s2 = Array.isArray(e2[i2]) ? e2[i2] : [e2[i2]];
-      for (let e3 of s2)
-        t2.append(i2, e3);
+      for (let e3 of s2) t2.append(i2, e3);
     }
     return t2;
   }
   hasBlobField(e2) {
     for (let t2 in e2) {
       const i2 = Array.isArray(e2[t2]) ? e2[t2] : [e2[t2]];
-      for (let e3 of i2)
-        if ("undefined" != typeof Blob && e3 instanceof Blob || "undefined" != typeof File && e3 instanceof File)
-          return true;
+      for (let e3 of i2) if ("undefined" != typeof Blob && e3 instanceof Blob || "undefined" != typeof File && e3 instanceof File) return true;
     }
     return false;
   }
   getHeader(e2, t2) {
     e2 = e2 || {}, t2 = t2.toLowerCase();
-    for (let i2 in e2)
-      if (i2.toLowerCase() == t2)
-        return e2[i2];
+    for (let i2 in e2) if (i2.toLowerCase() == t2) return e2[i2];
     return null;
   }
   isFormData(e2) {
@@ -930,14 +860,10 @@ var Client = class {
   serializeQueryParams(e2) {
     const t2 = [];
     for (const i2 in e2) {
-      if (null === e2[i2])
-        continue;
+      if (null === e2[i2]) continue;
       const s2 = e2[i2], n = encodeURIComponent(i2);
-      if (Array.isArray(s2))
-        for (const e3 of s2)
-          t2.push(n + "=" + encodeURIComponent(e3));
-      else
-        s2 instanceof Date ? t2.push(n + "=" + encodeURIComponent(s2.toISOString())) : null !== typeof s2 && "object" == typeof s2 ? t2.push(n + "=" + encodeURIComponent(JSON.stringify(s2))) : t2.push(n + "=" + encodeURIComponent(s2));
+      if (Array.isArray(s2)) for (const e3 of s2) t2.push(n + "=" + encodeURIComponent(e3));
+      else s2 instanceof Date ? t2.push(n + "=" + encodeURIComponent(s2.toISOString())) : null !== typeof s2 && "object" == typeof s2 ? t2.push(n + "=" + encodeURIComponent(JSON.stringify(s2))) : t2.push(n + "=" + encodeURIComponent(s2));
     }
     return t2.join("&");
   }

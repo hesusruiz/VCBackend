@@ -2,13 +2,13 @@ import {
   html,
   render,
   svg
-} from "./chunks/chunk-U2D4LOFI.js";
+} from "./chunks/chunk-CRDZSWPZ.js";
 import {
   storage
 } from "./chunks/chunk-XVNNYFGL.js";
 import "./chunks/chunk-BFXLU5VG.js";
 import "./chunks/chunk-CJ4ZD2TO.js";
-import "./chunks/chunk-U5RRZUYZ.js";
+import "./chunks/chunk-NZLE2WMY.js";
 
 // front/src/i18n/translations.js
 var translations = {
@@ -183,7 +183,7 @@ window.addEventListener("load", async (event) => {
     console.log("In production");
   }
   if (INSTALL_SERVICE_WORKER && "serviceWorker" in navigator) {
-    const { Workbox } = await import("./chunks/workbox-window.prod.es5-BUJUVSTR.js");
+    const { Workbox } = await import("./chunks/workbox-window.prod.es5-SCNZGSRA.js");
     const wb = new Workbox("./sw.js");
     wb.addEventListener("message", (event2) => {
       if (event2.data.type === "CACHE_UPDATED") {

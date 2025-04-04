@@ -251,8 +251,7 @@ var createHTML = (html2) => {
 };
 var xml;
 var createSVG = (svg2) => {
-  if (!xml)
-    xml = createElementNS("http://www.w3.org/2000/svg", "svg");
+  if (!xml) xml = createElementNS("http://www.w3.org/2000/svg", "svg");
   xml.innerHTML = svg2;
   const content = createDocumentFragment();
   content.append(...xml.childNodes);
@@ -288,6 +287,7 @@ var handleAnything = (comment) => {
   let oldValue, text2, nodes = [];
   const anyContent = (newValue) => {
     switch (typeof newValue) {
+      // primitives are handled as text content
       case "string":
       case "number":
       case "boolean":
@@ -299,6 +299,7 @@ var handleAnything = (comment) => {
           nodes = diff(comment, nodes, [text2]);
         }
         break;
+      // null, and undefined are used to cleanup previous content
       case "object":
       case "undefined":
         if (newValue == null) {
@@ -349,8 +350,7 @@ var handleAttribute = (node, name) => {
     case "@":
       return event(node, "on" + name.slice(1));
     case "o":
-      if (name[1] === "n")
-        return event(node, name);
+      if (name[1] === "n") return event(node, name);
   }
   switch (name) {
     case "ref":

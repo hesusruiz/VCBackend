@@ -1,49 +1,63 @@
 {{ define "content" -}}
 
 <!-- Navigation bar with social media icons -->
-<div class="w3-bar color-primary ">
-  <a href="#" class="w3-bar-item w3-button"><i class="fa fa-linkedin"></i></a>
-  <a href="#" class="w3-bar-item w3-button"><i class="fa fa-facebook-official"></i></a>
-  <a href="#" class="w3-bar-item w3-button"><i class="fa fa-instagram"></i></a>
-  <a href="#" class="w3-bar-item w3-button w3-right"><i class="fa fa-search"></i></a>
+<div class="w3-bar color-primary">
+   <a href="#" class="w3-bar-item w3-button"><i class="fa fa-linkedin"></i></a>
+   <a href="#" class="w3-bar-item w3-button"><i class="fa fa-facebook-official"></i></a>
+   <a href="#" class="w3-bar-item w3-button"><i class="fa fa-instagram"></i></a>
+   <a href="#" class="w3-bar-item w3-button w3-right"><i class="fa fa-search"></i></a>
 </div>
 
 <!-- Navbar -->
-<div class="w3-bar w3-white w3-padding w3-card" style="letter-spacing:4px;">
-  <a href="/" class="w3-bar-item w3-button">DEMO</a>
-  <!-- Right-sided navbar links. Hide them on small screens -->
-  <div class="w3-right w3-hide-small">
-    <a href="#about" class="w3-bar-item w3-button">About</a>
-    <a href="/login" class="w3-bar-item w3-button">Login</a>
-  </div>
+<div class="w3-bar w3-white w3-padding w3-card" style="letter-spacing: 4px">
+   <a href="/" class="w3-bar-item w3-button">DEMO</a>
+   <!-- Right-sided navbar links. Hide them on small screens -->
+   <div class="w3-right w3-hide-small">
+      <a href="#about" class="w3-bar-item w3-button">About</a>
+      <a href="/login" class="w3-bar-item w3-button">Login</a>
+   </div>
 </div>
 
 {{with .learCredential.credentialSubject.mandate}}
 
 <!-- Header -->
 <header class="w3-container w3-half-centered">
-  <h1 class="w3-xxxlarge">Bienvenido, {{.mandatee.first_name}} {{.mandatee.last_name}}!</h1>
+   <h1 class="w3-xxxlarge">Bienvenido, {{.mandatee.firstName}} {{.mandatee.lastName}}!</h1>
 </header>
 
 <section class="w3-container w3-half-centered w3-large">
-  <p>Hemos recibido información sobre tí, que podemos usar para permitirte entrar en la aplicación o no.
-  </p>
-  <p>De hecho, hemos recibido un Mandato electrónico, en forma de Credencial Verificable, firmado digitalmente por <b>{{.mandator.commonName}}</b>, representante legal de <b>{{.mandator.organization}} ({{.mandator.organizationIdentifier}})</b> y que declara que tú eres un empleado suyo.</p> 
+   <p>
+      Hemos recibido información sobre tí, que podemos usar para permitirte entrar en la aplicación
+      o no.
+   </p>
+   <p>
+      De hecho, hemos recibido un Mandato electrónico, en forma de Credencial Verificable, firmado
+      digitalmente por <b>{{.mandator.commonName}}</b>, representante legal de
+      <b>{{.mandator.organization}} ({{.mandator.organizationIdentifier}})</b> y que declara que tú
+      eres un empleado suyo.
+   </p>
 
-  <p>Confiamos en la credencial porque el certificado con la que está firmada fue emitido por un Proveedor de Servicios Cualificado incluido en la EU LOTL (List of Trusted Lists) y confiamos en el Marco de Confianza eIDAS que gobierna a esos proveedores de confianza.</p>
-  <p>Para los técnicos, podéis ver más abajo la credencial que ha recibido la aplicación.</p>
-  <p>Más detalles los podeis encontrar en este documento: <a href="https://dome-marketplace.github.io/powers-of-representation/index.html">Authentication and authorization of entities acting on behalf of legal persons with Verifiable Credentials under eIDAS framework</a>
-  </p>
-
+   <p>
+      Confiamos en la credencial porque el certificado con la que está firmada fue emitido por un
+      Proveedor de Servicios Cualificado incluido en la EU LOTL (List of Trusted Lists) y confiamos
+      en el Marco de Confianza eIDAS que gobierna a esos proveedores de confianza.
+   </p>
+   <p>Para los técnicos, podéis ver más abajo la credencial que ha recibido la aplicación.</p>
+   <p>
+      Más detalles los podeis encontrar en este documento:
+      <a href="https://dome-marketplace.github.io/powers-of-representation/index.html"
+         >Authentication and authorization of entities acting on behalf of legal persons with
+         Verifiable Credentials under eIDAS framework</a
+      >
+   </p>
 </section>
 
 {{end}}
 
 <section class="w3-container w3-half-centered w3-large">
-  <pre><code class="language-json">{{ .learCredentialSerialised }}</code></pre>
+   <pre><code class="language-json">{{ .learCredentialSerialised }}</code></pre>
 </section>
 
-<img src="/static/img/kpmg_footer.jpeg" style="width:100%">
-
+<img src="/static/img/kpmg_footer.jpeg" style="width: 100%" />
 
 {{- end }}

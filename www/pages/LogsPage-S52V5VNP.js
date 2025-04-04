@@ -1,6 +1,6 @@
-import "../chunks/chunk-U2D4LOFI.js";
+import "../chunks/chunk-CRDZSWPZ.js";
 import "../chunks/chunk-BFXLU5VG.js";
-import "../chunks/chunk-U5RRZUYZ.js";
+import "../chunks/chunk-NZLE2WMY.js";
 
 // front/src/pages/LogsPage.js
 var recentLogs = window.MHR.storage.recentLogs;

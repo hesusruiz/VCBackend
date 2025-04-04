@@ -1,7 +1,7 @@
 import {
   getPreferredVideoDevice
 } from "../chunks/chunk-EFHQYD4G.js";
-import "../chunks/chunk-U5RRZUYZ.js";
+import "../chunks/chunk-NZLE2WMY.js";
 
 // front/src/pages/SelectCamera.js
 var gotoPage = window.MHR.gotoPage;

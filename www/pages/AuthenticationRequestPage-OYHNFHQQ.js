@@ -1,12 +1,12 @@
 import {
   renderAnyCredentialCard,
   signJWT
-} from "../chunks/chunk-G6DM32LG.js";
+} from "../chunks/chunk-TEA6LPUJ.js";
 import {
   decodeUnsafeJWT
 } from "../chunks/chunk-3475HZHE.js";
 import "../chunks/chunk-CJ4ZD2TO.js";
-import "../chunks/chunk-U5RRZUYZ.js";
+import "../chunks/chunk-NZLE2WMY.js";
 
 // front/node_modules/js-base64/base64.mjs
 var version = "3.7.5";
@@ -425,7 +425,7 @@ async function sendAuthenticationResponse(e, holder, response_uri, credentials, 
   const jwt = await signJWT(jwtHeaders, vp_token_payload, domedid.privateKey);
   const vp_token = gBase64.encodeURI(jwt);
   mylog("The encoded vpToken ", vp_token);
-  var formBody = "vp_token=" + vp_token + "&state=" + state + "&presentation_submission=" + gBase64.encodeURI(JSON.stringify(presentationSubmissionJSON()));
+  var formBody = "vp_token=" + vp_token + "&state=" + state;
   mylog(formBody);
   debugger;
   const response = await doPOST(response_uri, formBody, "application/x-www-form-urlencoded");
@@ -462,23 +462,6 @@ window.MHR.register(
     }
   }
 );
-function presentationSubmissionJSON() {
-  return {
-    definition_id: "SingleCredentialPresentation",
-    id: "SingleCredentialSubmission",
-    descriptor_map: [
-      {
-        id: "single_credential",
-        path: "$",
-        format: "jwt_vp_json",
-        path_nested: {
-          format: "jwt_vc_json",
-          path: "$.verifiableCredential[0]"
-        }
-      }
-    ]
-  };
-}
 async function getAuthRequest(uri) {
   mylog("Fetching AuthReq from", uri);
   var response = await fetch(uri);

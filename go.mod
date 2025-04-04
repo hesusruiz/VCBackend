@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/a-h/templ v0.2.778
-	github.com/evanw/esbuild v0.19.3
+	github.com/evanw/esbuild v0.25.2
 	github.com/foolin/goview v0.3.0
 	github.com/go-chi/chi/v5 v5.2.0
 	github.com/go-chi/cors v1.2.1

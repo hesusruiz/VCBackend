@@ -5,7 +5,7 @@ import {
   __commonJS,
   __export,
   __toESM
-} from "./chunk-U5RRZUYZ.js";
+} from "./chunk-NZLE2WMY.js";
 
 // front/node_modules/lodash.isplainobject/index.js
 var require_lodash = __commonJS({
@@ -1228,8 +1228,16 @@ function renderLEARCredentialCard(vc, status) {
                      <img alt="Avatar" src=${avatar} />
                   </ion-thumbnail>
                   <ion-label>
-                     <div><b>From: </b>${vc.validFrom.slice(0, 19)}</div>
-                     <div><b>To: </b>${vc.validUntil.slice(0, 19)}</div>
+                     <table>
+                        <tr>
+                           <td><b>From:</b></td>
+                           <td>${vc.validFrom.slice(0, 19)}</td>
+                        </tr>
+                        <tr>
+                           <td><b>To: </b></td>
+                           <td>${vc.validUntil.slice(0, 19)}</td>
+                        </tr>
+                     </table>
                   </ion-label>
                   ${status != "signed" ? html`<ion-label color="danger"><b>Status: signature pending</b></ion-label>` : null}
                </ion-item>
@@ -1306,8 +1314,7 @@ InvalidDidError.code = "invalidDid";
 // front/node_modules/multiformats/src/bytes.js
 var empty = new Uint8Array(0);
 var equals = (aa, bb) => {
-  if (aa === bb)
-    return true;
+  if (aa === bb) return true;
   if (aa.byteLength !== bb.byteLength) {
     return false;
   }
@@ -1319,10 +1326,8 @@ var equals = (aa, bb) => {
   return true;
 };
 var coerce = (o) => {
-  if (o instanceof Uint8Array && o.constructor.name === "Uint8Array")
-    return o;
-  if (o instanceof ArrayBuffer)
-    return new Uint8Array(o);
+  if (o instanceof Uint8Array && o.constructor.name === "Uint8Array") return o;
+  if (o instanceof ArrayBuffer) return new Uint8Array(o);
   if (ArrayBuffer.isView(o)) {
     return new Uint8Array(o.buffer, o.byteOffset, o.byteLength);
   }
@@ -1351,8 +1356,7 @@ function base(ALPHABET, name) {
   var FACTOR = Math.log(BASE) / Math.log(256);
   var iFACTOR = Math.log(256) / Math.log(BASE);
   function encode4(source) {
-    if (source instanceof Uint8Array)
-      ;
+    if (source instanceof Uint8Array) ;
     else if (ArrayBuffer.isView(source)) {
       source = new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
     } else if (Array.isArray(source)) {
@@ -2299,6 +2303,7 @@ var CID = class _CID {
 };
 var parseCIDtoBytes = (source, base2) => {
   switch (source[0]) {
+    // CIDv0 is parsed differently
     case "Q": {
       const decoder = base2 || base58btc;
       return [
@@ -7284,12 +7289,8 @@ var AsnConvert = class _AsnConvert {
 // front/node_modules/tslib/tslib.es6.mjs
 function __decorate(decorators, target, key, desc) {
   var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-  if (typeof Reflect === "object" && typeof Reflect.decorate === "function")
-    r = Reflect.decorate(decorators, target, key, desc);
-  else
-    for (var i = decorators.length - 1; i >= 0; i--)
-      if (d = decorators[i])
-        r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+  if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+  else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
   return c > 3 && r && Object.defineProperty(target, key, r), r;
 }
 
@@ -9826,9 +9827,7 @@ var extendStatics = function(d, b) {
   extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
     d2.__proto__ = b2;
   } || function(d2, b2) {
-    for (var p in b2)
-      if (b2.hasOwnProperty(p))
-        d2[p] = b2[p];
+    for (var p in b2) if (b2.hasOwnProperty(p)) d2[p] = b2[p];
   };
   return extendStatics(d, b);
 };
@@ -9868,8 +9867,7 @@ function __awaiter(thisArg, _arguments, P, generator) {
 }
 function __generator(thisArg, body) {
   var _ = { label: 0, sent: function() {
-    if (t[0] & 1)
-      throw t[1];
+    if (t[0] & 1) throw t[1];
     return t[1];
   }, trys: [], ops: [] }, f, y, t, g;
   return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() {
@@ -9881,98 +9879,85 @@ function __generator(thisArg, body) {
     };
   }
   function step(op) {
-    if (f)
-      throw new TypeError("Generator is already executing.");
-    while (_)
-      try {
-        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done)
-          return t;
-        if (y = 0, t)
-          op = [op[0] & 2, t.value];
-        switch (op[0]) {
-          case 0:
-          case 1:
+    if (f) throw new TypeError("Generator is already executing.");
+    while (_) try {
+      if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+      if (y = 0, t) op = [op[0] & 2, t.value];
+      switch (op[0]) {
+        case 0:
+        case 1:
+          t = op;
+          break;
+        case 4:
+          _.label++;
+          return { value: op[1], done: false };
+        case 5:
+          _.label++;
+          y = op[1];
+          op = [0];
+          continue;
+        case 7:
+          op = _.ops.pop();
+          _.trys.pop();
+          continue;
+        default:
+          if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+            _ = 0;
+            continue;
+          }
+          if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+            _.label = op[1];
+            break;
+          }
+          if (op[0] === 6 && _.label < t[1]) {
+            _.label = t[1];
             t = op;
             break;
-          case 4:
-            _.label++;
-            return { value: op[1], done: false };
-          case 5:
-            _.label++;
-            y = op[1];
-            op = [0];
-            continue;
-          case 7:
-            op = _.ops.pop();
-            _.trys.pop();
-            continue;
-          default:
-            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
-              _ = 0;
-              continue;
-            }
-            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
-              _.label = op[1];
-              break;
-            }
-            if (op[0] === 6 && _.label < t[1]) {
-              _.label = t[1];
-              t = op;
-              break;
-            }
-            if (t && _.label < t[2]) {
-              _.label = t[2];
-              _.ops.push(op);
-              break;
-            }
-            if (t[2])
-              _.ops.pop();
-            _.trys.pop();
-            continue;
-        }
-        op = body.call(thisArg, _);
-      } catch (e) {
-        op = [6, e];
-        y = 0;
-      } finally {
-        f = t = 0;
+          }
+          if (t && _.label < t[2]) {
+            _.label = t[2];
+            _.ops.push(op);
+            break;
+          }
+          if (t[2]) _.ops.pop();
+          _.trys.pop();
+          continue;
       }
-    if (op[0] & 5)
-      throw op[1];
+      op = body.call(thisArg, _);
+    } catch (e) {
+      op = [6, e];
+      y = 0;
+    } finally {
+      f = t = 0;
+    }
+    if (op[0] & 5) throw op[1];
     return { value: op[0] ? op[1] : void 0, done: true };
   }
 }
 function __values(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m)
-    return m.call(o);
-  if (o && typeof o.length === "number")
-    return {
-      next: function() {
-        if (o && i >= o.length)
-          o = void 0;
-        return { value: o && o[i++], done: !o };
-      }
-    };
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 }
 function __read(o, n) {
   var m = typeof Symbol === "function" && o[Symbol.iterator];
-  if (!m)
-    return o;
+  if (!m) return o;
   var i = m.call(o), r, ar = [], e;
   try {
-    while ((n === void 0 || n-- > 0) && !(r = i.next()).done)
-      ar.push(r.value);
+    while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
   } catch (error) {
     e = { error };
   } finally {
     try {
-      if (r && !r.done && (m = i["return"]))
-        m.call(i);
+      if (r && !r.done && (m = i["return"])) m.call(i);
     } finally {
-      if (e)
-        throw e.error;
+      if (e) throw e.error;
     }
   }
   return ar;
@@ -10135,7 +10120,7 @@ var Registry = function(_super) {
 var registry_default = Registry;
 
 // front/node_modules/tsyringe/dist/esm5/resolution-context.js
-var ResolutionContext = function() {
+var ResolutionContext = /* @__PURE__ */ function() {
   function ResolutionContext2() {
     this.scopedResolutions = /* @__PURE__ */ new Map();
   }
@@ -10191,7 +10176,7 @@ var PostResolutionInterceptors = function(_super) {
   }
   return PostResolutionInterceptors2;
 }(registry_base_default);
-var Interceptors = function() {
+var Interceptors = /* @__PURE__ */ function() {
   function Interceptors2() {
     this.preResolution = new PreResolutionInterceptors();
     this.postResolution = new PostResolutionInterceptors();
@@ -10323,11 +10308,9 @@ var InternalDependencyContainer = function() {
         e_1 = { error: e_1_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a3 = _b.return))
-            _a3.call(_b);
+          if (_c && !_c.done && (_a3 = _b.return)) _a3.call(_b);
         } finally {
-          if (e_1)
-            throw e_1.error;
+          if (e_1) throw e_1.error;
         }
       }
       this.interceptors.preResolution.setAll(token, remainingInterceptors);
@@ -10349,11 +10332,9 @@ var InternalDependencyContainer = function() {
         e_2 = { error: e_2_1 };
       } finally {
         try {
-          if (_c && !_c.done && (_a3 = _b.return))
-            _a3.call(_b);
+          if (_c && !_c.done && (_a3 = _b.return)) _a3.call(_b);
         } finally {
-          if (e_2)
-            throw e_2.error;
+          if (e_2) throw e_2.error;
         }
       }
       this.interceptors.postResolution.setAll(token, remainingInterceptors);
@@ -10436,11 +10417,9 @@ var InternalDependencyContainer = function() {
       e_3 = { error: e_3_1 };
     } finally {
       try {
-        if (_c && !_c.done && (_a3 = _b.return))
-          _a3.call(_b);
+        if (_c && !_c.done && (_a3 = _b.return)) _a3.call(_b);
       } finally {
-        if (e_3)
-          throw e_3.error;
+        if (e_3) throw e_3.error;
       }
     }
   };
@@ -10470,11 +10449,9 @@ var InternalDependencyContainer = function() {
       e_4 = { error: e_4_1 };
     } finally {
       try {
-        if (_c && !_c.done && (_a3 = _b.return))
-          _a3.call(_b);
+        if (_c && !_c.done && (_a3 = _b.return)) _a3.call(_b);
       } finally {
-        if (e_4)
-          throw e_4.error;
+        if (e_4) throw e_4.error;
       }
     }
     return childContainer;

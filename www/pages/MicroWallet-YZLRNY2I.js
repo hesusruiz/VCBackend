@@ -4,12 +4,12 @@ import {
 import "../chunks/chunk-BFXLU5VG.js";
 import {
   renderAnyCredentialCard
-} from "../chunks/chunk-G6DM32LG.js";
+} from "../chunks/chunk-TEA6LPUJ.js";
 import {
   decodeUnsafeJWT
 } from "../chunks/chunk-3475HZHE.js";
 import "../chunks/chunk-CJ4ZD2TO.js";
-import "../chunks/chunk-U5RRZUYZ.js";
+import "../chunks/chunk-NZLE2WMY.js";
 
 // front/src/components/crypto_ec.js
 async function generateP256did() {
@@ -346,7 +346,7 @@ async function pasteImage() {
       }
       const blob = await item.getType("image/png");
       var destinationImage = URL.createObjectURL(blob);
-      const zxing = await import("../chunks/esm-DDIKW76W.js");
+      const zxing = await import("../chunks/esm-AO7YE4TC.js");
       const zxingReader = new zxing.BrowserQRCodeReader();
       const resultImage = await zxingReader.decodeFromImageUrl(destinationImage);
       mylog(resultImage.getText());

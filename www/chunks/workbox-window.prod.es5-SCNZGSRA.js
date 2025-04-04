@@ -1,4 +1,4 @@
-import "./chunk-U5RRZUYZ.js";
+import "./chunk-NZLE2WMY.js";
 
 // front/node_modules/workbox-window/build/workbox-window.prod.es5.mjs
 try {
@@ -21,8 +21,7 @@ function t(n2, t2) {
 }
 function r(n2, t2) {
   (null == t2 || t2 > n2.length) && (t2 = n2.length);
-  for (var r2 = 0, e2 = new Array(t2); r2 < t2; r2++)
-    e2[r2] = n2[r2];
+  for (var r2 = 0, e2 = new Array(t2); r2 < t2; r2++) e2[r2] = n2[r2];
   return e2;
 }
 function e(n2, t2) {
@@ -30,8 +29,7 @@ function e(n2, t2) {
   if ("undefined" == typeof Symbol || null == n2[Symbol.iterator]) {
     if (Array.isArray(n2) || (e2 = function(n3, t3) {
       if (n3) {
-        if ("string" == typeof n3)
-          return r(n3, t3);
+        if ("string" == typeof n3) return r(n3, t3);
         var e3 = Object.prototype.toString.call(n3).slice(8, -1);
         return "Object" === e3 && n3.constructor && (e3 = n3.constructor.name), "Map" === e3 || "Set" === e3 ? Array.from(n3) : "Arguments" === e3 || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(e3) ? r(n3, t3) : void 0;
       }
@@ -70,8 +68,7 @@ function c() {
 }
 var f = { type: "SKIP_WAITING" };
 function s(n2, t2) {
-  if (!t2)
-    return n2 && n2.then ? n2.then(c) : Promise.resolve();
+  if (!t2) return n2 && n2.then ? n2.then(c) : Promise.resolve();
 }
 var v = function(r2) {
   var e2, c2;
@@ -94,8 +91,7 @@ var v = function(r2) {
         e3.an.has(i2) && e3.dispatchEvent(new u("message", { data: t3, originalEvent: n3, ports: r3, sw: i2 }));
       });
     }, function() {
-      for (var n3 = [], t3 = 0; t3 < arguments.length; t3++)
-        n3[t3] = arguments[t3];
+      for (var n3 = [], t3 = 0; t3 < arguments.length; t3++) n3[t3] = arguments[t3];
       try {
         return Promise.resolve(c3.apply(this, n3));
       } catch (n4) {
@@ -111,14 +107,12 @@ var v = function(r2) {
       var e3 = this;
       return function(n3, t3) {
         var r4 = n3();
-        if (r4 && r4.then)
-          return r4.then(t3);
+        if (r4 && r4.then) return r4.then(t3);
         return t3(r4);
       }(function() {
-        if (!r3 && "complete" !== document.readyState)
-          return s(new Promise(function(n3) {
-            return window.addEventListener("load", n3);
-          }));
+        if (!r3 && "complete" !== document.readyState) return s(new Promise(function(n3) {
+          return window.addEventListener("load", n3);
+        }));
       }, function() {
         return e3.mn = Boolean(navigator.serviceWorker.controller), e3.yn = e3.pn(), a(e3.bn(), function(n3) {
           e3.fn = n3, e3.yn && (e3.hn = e3.yn, e3.en.resolve(e3.yn), e3.on.resolve(e3.yn), e3.yn.addEventListener("statechange", e3.ln, { once: true }));
@@ -162,8 +156,7 @@ var v = function(r2) {
         } catch (n4) {
           return t2(n4);
         }
-        if (r3 && r3.then)
-          return r3.then(void 0, t2);
+        if (r3 && r3.then) return r3.then(void 0, t2);
         return r3;
       }(function() {
         return a(navigator.serviceWorker.register(n2.sn, n2.nn), function(t2) {

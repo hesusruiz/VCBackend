@@ -15,6 +15,7 @@ import (
 	"github.com/foolin/goview"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/hesusruiz/vcutils/yaml"
 	"github.com/sirupsen/logrus"
 	"github.com/skip2/go-qrcode"
@@ -118,15 +119,15 @@ func (l *login) createRouter() {
 
 	// The Wallet calls this route to send the Authentication Response with the LEARCredential
 	l.router.Post("/authenticationresponse", func(w http.ResponseWriter, r *http.Request) {
-		var theCredential *yaml.YAML
 
-		body, _ := io.ReadAll(r.Body)
-
+		// Parse the received body as a form (URLencoded)
 		err := r.ParseForm()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
 			return
 		}
+
+		// The state parameter is used to identify the in-memory AutRequest that was sent to the wallet
 		authReqId := r.FormValue("state")
 		log.Println("APIWalletAuthenticationResponse", "stateKey", authReqId)
 
@@ -137,32 +138,35 @@ func (l *login) createRouter() {
 			return
 		}
 
-		// Decode into a map
-		authResponse, err := yaml.ParseJson(string(body))
-		if err != nil {
-			http.Error(w, fmt.Sprintf("cannot parse body:%s", err), http.StatusInternalServerError)
-			return
-		}
-
 		// Get the vp_token field
-		vp_token := authResponse.String("vp_token")
+		vp_token := r.FormValue("vp_token")
 		if len(vp_token) == 0 {
 			http.Error(w, "vp_token not found", http.StatusInternalServerError)
 			return
 		}
-		// Decode VP from B64Url
-		rawVP, err := base64.RawURLEncoding.DecodeString(vp_token)
+
+		// Decode VP token from B64Url to get a JWT
+		vpJWT, err := base64.RawURLEncoding.DecodeString(vp_token)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error decoding VP:%s", err), http.StatusInternalServerError)
 			return
 		}
 
-		// Parse the VP object into a map
-		vp, err := yaml.ParseJson(string(rawVP))
+		// The VP object is a JWT, signed with the private key associated to the user did:key
+		// We must verify the signature and decode the JWT payload to get the VerifiablePresentation
+		// TODO: We do not check the signature.
+		var pc = jwt.MapClaims{}
+		tokenParser := jwt.NewParser()
+		_, _, err = tokenParser.ParseUnverified(string(vpJWT), &pc)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("error parsing the VP object:%s", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("error parsing the JWT:%s", err), http.StatusInternalServerError)
 			return
 		}
+
+		fmt.Print(pc["vp"])
+
+		// Parse the VP object into a map
+		vp := yaml.New(pc["vp"])
 
 		// Get the list of credentials in the VP
 		credentials := vp.List("verifiableCredential")
@@ -172,11 +176,18 @@ func (l *login) createRouter() {
 		}
 
 		// TODO: for the moment, we accept only the first credential inside the VP
-		firstCredential := credentials[0]
-		theCredential = yaml.New(firstCredential)
+		firstCredentialJWT := credentials[0].(string)
+
+		// The credential is in 'jwt_vc_json' format (which is a JWT)
+		var credMap = jwt.MapClaims{}
+		_, _, err = tokenParser.ParseUnverified(firstCredentialJWT, &credMap)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error parsing the JWT:%s", err), http.StatusInternalServerError)
+			return
+		}
 
 		// Serialize the credential into a JSON string
-		serialCredential, err := json.Marshal(theCredential.Data())
+		serialCredential, err := json.Marshal(credMap["vc"])
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error serialising the credential:%s", err), http.StatusInternalServerError)
 			return
@@ -195,8 +206,10 @@ func (l *login) createRouter() {
 			return
 		}
 
+		wcred := yaml.New(credMap["vc"])
+
 		// Update the internal AuthRequest with the LEARCredential received from the Wallet.
-		err = l.authenticate.SaveWalletAuthenticationResponse(authReqId, theCredential)
+		err = l.authenticate.SaveWalletAuthenticationResponse(authReqId, wcred)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error updating Wallet authentication response:%s", err), http.StatusInternalServerError)
 			return

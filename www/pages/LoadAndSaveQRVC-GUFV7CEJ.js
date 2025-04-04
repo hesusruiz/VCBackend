@@ -6,12 +6,12 @@ import {
   getOrCreateDidKey,
   renderAnyCredentialCard,
   signJWT
-} from "../chunks/chunk-G6DM32LG.js";
+} from "../chunks/chunk-TEA6LPUJ.js";
 import {
   decodeUnsafeJWT
 } from "../chunks/chunk-3475HZHE.js";
 import "../chunks/chunk-CJ4ZD2TO.js";
-import "../chunks/chunk-U5RRZUYZ.js";
+import "../chunks/chunk-NZLE2WMY.js";
 
 // front/src/pages/LoadAndSaveQRVC.js
 var gotoPage = window.MHR.gotoPage;
